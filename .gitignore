@@ -3,6 +3,16 @@ node_modules/
 dist/
 build/
 .svelte-kit/
+package/
+
+# Vite
+vite.config.js.timestamp-*
+vite.config.ts.timestamp-*
+
+# Env
+.env
+.env.*
+!.env.example
 
 # Rust / Tauri
 src-tauri/target/
@@ -12,7 +22,6 @@ src-tauri/gen/
 .DS_Store
 Thumbs.db
 
-# Editor
-.vscode/
+# Editor (keep .vscode/ since it has project-level recommendations)
 .idea/
 *.swp
