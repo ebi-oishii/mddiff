@@ -1,19 +1,20 @@
+mod app;
+mod markdown;
+mod views;
+
 use std::io;
 use std::path::PathBuf;
 
 use anyhow::Result;
 use clap::{Parser, ValueEnum};
-use crossterm::event::{self, Event, KeyCode, KeyEventKind};
 use crossterm::execute;
 use crossterm::terminal::{
     disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen,
 };
-use mdv_core::DocState;
 use ratatui::backend::CrosstermBackend;
-use ratatui::layout::{Constraint, Direction, Layout};
-use ratatui::style::{Color, Style};
-use ratatui::widgets::{Block, Borders, Paragraph};
 use ratatui::Terminal;
+
+use app::{App, Mode};
 
 #[derive(Parser, Debug)]
 #[command(name = "mdv-tui", version, about = "Terminal UI for mdv")]
@@ -22,26 +23,39 @@ struct Args {
     file: Option<PathBuf>,
     /// Initial mode.
     #[arg(long, value_enum, default_value = "source")]
-    mode: Mode,
+    mode: ModeArg,
     /// Open as read-only.
     #[arg(long)]
     read_only: bool,
 }
 
 #[derive(Debug, Clone, Copy, ValueEnum)]
-enum Mode {
+enum ModeArg {
     Source,
     Preview,
-    Diff,
+}
+
+impl From<ModeArg> for Mode {
+    fn from(m: ModeArg) -> Self {
+        match m {
+            ModeArg::Source => Mode::Source,
+            ModeArg::Preview => Mode::Preview,
+        }
+    }
 }
 
 fn main() -> Result<()> {
     let args = Args::parse();
 
-    let doc = match &args.file {
-        Some(p) => DocState::from_text(std::fs::read_to_string(p)?, Some(p.clone())),
-        None => DocState::empty(),
+    let (initial_text, path) = match &args.file {
+        Some(p) => {
+            let text = mdv_core::fs::read_text_file(p)?;
+            (text, Some(p.clone()))
+        }
+        None => (String::new(), None),
     };
+
+    let mut app = App::new(initial_text, path, args.mode.into(), args.read_only);
 
     enable_raw_mode()?;
     let mut stdout = io::stdout();
@@ -49,66 +63,10 @@ fn main() -> Result<()> {
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
 
-    let result = run(&mut terminal, &doc, &args);
+    let result = app.run(&mut terminal);
 
     disable_raw_mode()?;
     execute!(terminal.backend_mut(), LeaveAlternateScreen)?;
     terminal.show_cursor()?;
     result
-}
-
-fn run<B: ratatui::backend::Backend>(
-    terminal: &mut Terminal<B>,
-    doc: &DocState,
-    args: &Args,
-) -> Result<()> {
-    loop {
-        terminal.draw(|frame| {
-            let area = frame.area();
-            let chunks = Layout::default()
-                .direction(Direction::Vertical)
-                .constraints([
-                    Constraint::Length(1),
-                    Constraint::Min(0),
-                    Constraint::Length(1),
-                ])
-                .split(area);
-
-            let title = match &doc.path {
-                Some(p) => format!(" mdv-tui  {} ", p.display()),
-                None => " mdv-tui ".to_string(),
-            };
-            let header = Paragraph::new(title).style(Style::default().fg(Color::Cyan));
-            frame.render_widget(header, chunks[0]);
-
-            let body_text = if doc.text.is_empty() {
-                "(no file loaded — Phase 0.5 scaffold)\n\nPress q to quit.".to_string()
-            } else {
-                let preview: String = doc.text.lines().take(20).collect::<Vec<_>>().join("\n");
-                format!("{preview}\n\n…\n\nPress q to quit.")
-            };
-            let body = Paragraph::new(body_text)
-                .block(Block::default().borders(Borders::ALL).title(" Source "));
-            frame.render_widget(body, chunks[1]);
-
-            let footer = format!(
-                " mode: {:?} | {} ",
-                args.mode,
-                if args.read_only { "RO" } else { "RW" }
-            );
-            frame.render_widget(
-                Paragraph::new(footer).style(Style::default().fg(Color::DarkGray)),
-                chunks[2],
-            );
-        })?;
-
-        if let Event::Key(key) = event::read()? {
-            if key.kind == KeyEventKind::Press
-                && matches!(key.code, KeyCode::Char('q') | KeyCode::Esc)
-            {
-                break;
-            }
-        }
-    }
-    Ok(())
 }

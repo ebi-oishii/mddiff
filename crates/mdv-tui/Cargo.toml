@@ -16,3 +16,5 @@ ratatui = "0.29"
 crossterm = "0.28"
 clap = { version = "4", features = ["derive"] }
 anyhow = { workspace = true }
+tui-textarea = "0.7"
+pulldown-cmark = { version = "0.12", default-features = false }
