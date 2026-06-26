@@ -1,8 +1,12 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { DiffLine, HunkSummary } from "$lib/types";
+import type { BaseOption, DiffLine, HunkSummary } from "$lib/types";
 
 export async function gitIsRepo(path: string): Promise<boolean> {
   return await invoke<boolean>("git_is_repo", { path });
+}
+
+export async function gitListBases(path: string): Promise<BaseOption[]> {
+  return await invoke<BaseOption[]>("git_list_bases", { path });
 }
 
 export async function gitHunks(

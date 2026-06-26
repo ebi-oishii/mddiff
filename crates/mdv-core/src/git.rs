@@ -1,10 +1,31 @@
 use std::path::{Path, PathBuf};
 
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::diff::{full_diff, line_diff, DiffLine, HunkSummary};
 
 pub const DEFAULT_BASE: &str = "HEAD";
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum BaseKind {
+    Special,
+    Branch,
+    Tag,
+    Commit,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BaseOption {
+    /// String to pass to git (revparse_single).
+    pub revspec: String,
+    /// Display label for UI lists.
+    pub label: String,
+    pub kind: BaseKind,
+    /// Optional supplementary info (commit summary, etc.).
+    pub detail: Option<String>,
+}
 
 #[derive(Debug, Error)]
 pub enum GitError {
@@ -82,4 +103,78 @@ fn read_revision_blob(
 
 fn canonicalize_lossy(p: &Path) -> PathBuf {
     p.canonicalize().unwrap_or_else(|_| p.to_path_buf())
+}
+
+pub fn list_bases(file: &Path) -> Result<Vec<BaseOption>, GitError> {
+    let file_abs = canonicalize_lossy(file);
+    let repo = git2::Repository::discover(&file_abs).map_err(|_| GitError::NotARepo)?;
+
+    let mut out = vec![
+        BaseOption {
+            revspec: "HEAD".into(),
+            label: "HEAD".into(),
+            kind: BaseKind::Special,
+            detail: Some("current commit".into()),
+        },
+        BaseOption {
+            revspec: "HEAD~1".into(),
+            label: "HEAD~1".into(),
+            kind: BaseKind::Special,
+            detail: Some("one commit before HEAD".into()),
+        },
+        BaseOption {
+            revspec: "HEAD~5".into(),
+            label: "HEAD~5".into(),
+            kind: BaseKind::Special,
+            detail: Some("five commits before HEAD".into()),
+        },
+    ];
+
+    if let Ok(branches) = repo.branches(Some(git2::BranchType::Local)) {
+        for entry in branches.flatten() {
+            let (branch, _) = entry;
+            if let Ok(Some(name)) = branch.name() {
+                out.push(BaseOption {
+                    revspec: name.to_string(),
+                    label: name.to_string(),
+                    kind: BaseKind::Branch,
+                    detail: None,
+                });
+            }
+        }
+    }
+
+    if let Ok(tags) = repo.tag_names(None) {
+        for tag in tags.iter().flatten() {
+            out.push(BaseOption {
+                revspec: tag.to_string(),
+                label: tag.to_string(),
+                kind: BaseKind::Tag,
+                detail: None,
+            });
+        }
+    }
+
+    if let Ok(mut walk) = repo.revwalk() {
+        let _ = walk.push_head();
+        for oid_res in walk.take(15) {
+            let Ok(oid) = oid_res else { continue };
+            let Ok(commit) = repo.find_commit(oid) else { continue };
+            let short = format!("{:.7}", oid);
+            let summary: String = commit
+                .summary()
+                .unwrap_or("")
+                .chars()
+                .take(70)
+                .collect();
+            out.push(BaseOption {
+                revspec: short.clone(),
+                label: format!("{}  {}", short, summary),
+                kind: BaseKind::Commit,
+                detail: None,
+            });
+        }
+    }
+
+    Ok(out)
 }

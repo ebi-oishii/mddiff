@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use mdv_core::diff::{DiffLine, HunkSummary};
-use mdv_core::git::DEFAULT_BASE;
+use mdv_core::git::{BaseOption, DEFAULT_BASE};
 
 fn resolve(base: Option<String>) -> String {
     base.filter(|s| !s.trim().is_empty())
@@ -11,6 +11,11 @@ fn resolve(base: Option<String>) -> String {
 #[tauri::command]
 pub async fn git_is_repo(path: PathBuf) -> Result<bool, String> {
     Ok(mdv_core::git::is_in_repo(&path))
+}
+
+#[tauri::command]
+pub async fn git_list_bases(path: PathBuf) -> Result<Vec<BaseOption>, String> {
+    mdv_core::git::list_bases(&path).map_err(|e| e.to_string())
 }
 
 #[tauri::command]

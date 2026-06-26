@@ -1,5 +1,6 @@
 mod app;
 mod markdown;
+mod picker;
 mod views;
 
 use std::io;

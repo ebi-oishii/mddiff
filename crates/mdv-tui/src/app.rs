@@ -7,6 +7,7 @@ use ratatui::style::{Color, Style};
 use ratatui::widgets::Paragraph;
 use ratatui::Terminal;
 
+use crate::picker::BasePicker;
 use crate::views::diff::DiffView;
 use crate::views::preview::PreviewView;
 use crate::views::source::SourceView;
@@ -53,6 +54,7 @@ pub struct App {
     pub diff_base: String,
     pub saved_text: String,
     pub status: Option<String>,
+    pub picker: Option<BasePicker>,
 }
 
 impl App {
@@ -79,6 +81,7 @@ impl App {
             diff_base,
             saved_text: initial_text,
             status: None,
+            picker: None,
         }
     }
 
@@ -92,6 +95,7 @@ impl App {
     ) -> Result<()> {
         loop {
             terminal.draw(|frame| self.draw(frame))?;
+            // draw mutated picker state (ListState); nothing else to do.
 
             if let Event::Key(key) = event::read()? {
                 if key.kind != KeyEventKind::Press {
@@ -106,6 +110,28 @@ impl App {
     }
 
     fn handle_key(&mut self, key: KeyEvent) -> Result<bool> {
+        // Picker captures all input while open.
+        if self.picker.is_some() {
+            let picker = self.picker.as_mut().unwrap();
+            match key.code {
+                KeyCode::Esc => self.picker = None,
+                KeyCode::Up | KeyCode::Char('k') => picker.up(),
+                KeyCode::Down | KeyCode::Char('j') => picker.down(),
+                KeyCode::Enter => {
+                    if let Some(opt) = picker.current() {
+                        self.diff_base = opt.revspec.clone();
+                        self.status = Some(format!("compare base: {}", self.diff_base));
+                        if self.mode != Mode::Diff && self.git_available {
+                            self.mode = Mode::Diff;
+                        }
+                    }
+                    self.picker = None;
+                }
+                _ => {}
+            }
+            return Ok(false);
+        }
+
         let ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
 
         if ctrl {
@@ -121,6 +147,10 @@ impl App {
                 }
                 KeyCode::Char('d') if self.mode == Mode::Diff => {
                     self.diff.toggle_submode();
+                    return Ok(false);
+                }
+                KeyCode::Char('b') if self.git_available => {
+                    self.open_picker();
                     return Ok(false);
                 }
                 _ => {}
@@ -139,6 +169,7 @@ impl App {
                 KeyCode::PageDown | KeyCode::Char(' ') => self.preview.scroll_down(10),
                 KeyCode::PageUp => self.preview.scroll_up(10),
                 KeyCode::Tab => self.mode = self.mode.next(self.git_available),
+                KeyCode::Char('b') if self.git_available => self.open_picker(),
                 _ => {}
             },
             Mode::Diff => match key.code {
@@ -149,10 +180,17 @@ impl App {
                 KeyCode::PageUp => self.diff.scroll_up(10),
                 KeyCode::Char('d') | KeyCode::Tab => self.diff.toggle_submode(),
                 KeyCode::Char('e') => self.mode = self.mode.next(self.git_available),
+                KeyCode::Char('b') => self.open_picker(),
                 _ => {}
             },
         }
         Ok(false)
+    }
+
+    fn open_picker(&mut self) {
+        if let Some(path) = &self.path {
+            self.picker = Some(BasePicker::open(path));
+        }
     }
 
     fn save(&mut self) {
@@ -174,7 +212,7 @@ impl App {
         }
     }
 
-    fn draw(&self, frame: &mut ratatui::Frame<'_>) {
+    fn draw(&mut self, frame: &mut ratatui::Frame<'_>) {
         let area = frame.area();
         let chunks = Layout::default()
             .direction(Direction::Vertical)
@@ -192,6 +230,10 @@ impl App {
             Mode::Diff => self.render_diff(frame, chunks[1]),
         }
         self.draw_footer(frame, chunks[2]);
+
+        if let Some(picker) = self.picker.as_mut() {
+            picker.render(frame, area);
+        }
     }
 
     fn render_diff(&self, frame: &mut ratatui::Frame<'_>, area: ratatui::layout::Rect) {
@@ -246,11 +288,11 @@ impl App {
                 col,
             ),
             (None, Mode::Preview) => format!(
-                " [{}]   j/k scroll  s save  Tab mode  q quit",
+                " [{}]   j/k scroll  s save  Tab mode  b base  q quit",
                 self.mode.label(),
             ),
             (None, Mode::Diff) => format!(
-                " [Diff · {}]  vs {}   j/k scroll  Tab/^D submode  ^E mode  q quit",
+                " [Diff · {}]  vs {}   j/k scroll  Tab/^D submode  b base  ^E mode  q quit",
                 self.diff.submode.label(),
                 self.diff_base,
             ),

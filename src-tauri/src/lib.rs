@@ -11,6 +11,7 @@ pub fn run() {
         read_text_file,
         write_text_file,
         commands::git::git_is_repo,
+        commands::git::git_list_bases,
         commands::git::git_hunks,
         commands::git::git_full_diff,
     ]);

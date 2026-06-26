@@ -15,3 +15,12 @@ export type DiffLine =
   | { kind: "removed"; old_no: number; text: string };
 
 export type DiffSubmode = "highlight" | "full";
+
+export type BaseKind = "special" | "branch" | "tag" | "commit";
+
+export interface BaseOption {
+  revspec: string;
+  label: string;
+  kind: BaseKind;
+  detail: string | null;
+}

@@ -1,19 +1,38 @@
 <script lang="ts">
   import { doc } from "$lib/stores/doc.svelte";
-  import { gitFullDiff, gitHunks } from "$lib/ipc/git";
-  import type { DiffLine, DiffSubmode, HunkSummary } from "$lib/types";
+  import { gitFullDiff, gitHunks, gitListBases } from "$lib/ipc/git";
+  import type {
+    BaseKind,
+    BaseOption,
+    DiffLine,
+    DiffSubmode,
+    HunkSummary,
+  } from "$lib/types";
   import HighlightView from "./diff/HighlightView.svelte";
   import FullDiffView from "./diff/FullDiffView.svelte";
 
+  const CUSTOM = "__custom__";
+
   let submode = $state<DiffSubmode>("highlight");
-  let base = $state("HEAD");
-  let baseInput = $state("HEAD");
+  let bases = $state<BaseOption[]>([]);
+  let selected = $state<string>("HEAD");
+  let customBase = $state("HEAD");
   let hunks = $state<HunkSummary[]>([]);
   let lines = $state<DiffLine[]>([]);
   let error = $state<string | null>(null);
   let loading = $state(false);
 
-  let timer: ReturnType<typeof setTimeout> | null = null;
+  let diffTimer: ReturnType<typeof setTimeout> | null = null;
+
+  const isCustom = $derived(selected === CUSTOM);
+  const base = $derived(isCustom ? customBase.trim() || "HEAD" : selected);
+
+  $effect(() => {
+    if (!doc.path || !doc.gitAvailable) return;
+    gitListBases(doc.path).then((b) => {
+      bases = b;
+    });
+  });
 
   $effect(() => {
     void doc.path;
@@ -22,10 +41,10 @@
     void base;
 
     if (!doc.path || !doc.gitAvailable) return;
-    if (timer) clearTimeout(timer);
-    timer = setTimeout(load, 250);
+    if (diffTimer) clearTimeout(diffTimer);
+    diffTimer = setTimeout(load, 250);
     return () => {
-      if (timer) clearTimeout(timer);
+      if (diffTimer) clearTimeout(diffTimer);
     };
   });
 
@@ -46,9 +65,13 @@
     }
   }
 
-  function applyBase(e: SubmitEvent) {
+  function byKind(kind: BaseKind): BaseOption[] {
+    return bases.filter((b) => b.kind === kind);
+  }
+
+  function applyCustom(e: SubmitEvent) {
     e.preventDefault();
-    base = baseInput.trim() || "HEAD";
+    customBase = customBase.trim() || "HEAD";
   }
 
   const addedCount = $derived(
@@ -82,18 +105,51 @@
           Full
         </button>
       </div>
-      <form class="base-form" onsubmit={applyBase}>
+      <label class="base-select">
         <span class="prefix">vs</span>
-        <input
-          type="text"
-          bind:value={baseInput}
-          spellcheck="false"
-          autocomplete="off"
-          placeholder="HEAD"
-          aria-label="Compare base revision"
-        />
-        <button type="submit" disabled={baseInput === base}>Apply</button>
-      </form>
+        <select bind:value={selected} aria-label="Compare base revision">
+          <optgroup label="Special">
+            {#each byKind("special") as b}
+              <option value={b.revspec} title={b.detail ?? undefined}>{b.label}</option>
+            {/each}
+          </optgroup>
+          {#if byKind("branch").length > 0}
+            <optgroup label="Branches">
+              {#each byKind("branch") as b}
+                <option value={b.revspec}>{b.label}</option>
+              {/each}
+            </optgroup>
+          {/if}
+          {#if byKind("tag").length > 0}
+            <optgroup label="Tags">
+              {#each byKind("tag") as b}
+                <option value={b.revspec}>{b.label}</option>
+              {/each}
+            </optgroup>
+          {/if}
+          {#if byKind("commit").length > 0}
+            <optgroup label="Recent commits">
+              {#each byKind("commit") as b}
+                <option value={b.revspec}>{b.label}</option>
+              {/each}
+            </optgroup>
+          {/if}
+          <option value={CUSTOM}>Custom…</option>
+        </select>
+      </label>
+      {#if isCustom}
+        <form class="custom-form" onsubmit={applyCustom}>
+          <input
+            type="text"
+            bind:value={customBase}
+            spellcheck="false"
+            autocomplete="off"
+            placeholder="revspec"
+            aria-label="Custom revision"
+          />
+          <button type="submit">Apply</button>
+        </form>
+      {/if}
     </div>
     <div class="meta">
       {#if loading}<span class="loading">…</span>{/if}
@@ -162,17 +218,30 @@
     background: light-dark(#e3eaf5, #2b3a55);
     color: light-dark(#16325c, #b9d0ff);
   }
-  .base-form {
+  .base-select {
     display: inline-flex;
     align-items: center;
     gap: 0.4rem;
     color: light-dark(#666, #999);
   }
-  .base-form .prefix {
+  .base-select .prefix {
     user-select: none;
   }
-  .base-form input {
-    width: 9em;
+  .base-select select {
+    font: inherit;
+    background: light-dark(#fff, #1a1a1a);
+    color: inherit;
+    border: 1px solid light-dark(#ccc, #444);
+    border-radius: 4px;
+    padding: 0.18rem 0.4rem;
+    max-width: 24em;
+  }
+  .custom-form {
+    display: inline-flex;
+    gap: 0.4rem;
+  }
+  .custom-form input {
+    width: 12em;
     padding: 0.2rem 0.5rem;
     font: inherit;
     font-family: ui-monospace, "SF Mono", Menlo, monospace;
@@ -181,7 +250,7 @@
     border: 1px solid light-dark(#ccc, #444);
     border-radius: 4px;
   }
-  .base-form button {
+  .custom-form button {
     background: transparent;
     border: 1px solid light-dark(#ccc, #444);
     border-radius: 4px;
@@ -190,12 +259,8 @@
     color: inherit;
     cursor: pointer;
   }
-  .base-form button:hover:not(:disabled) {
+  .custom-form button:hover {
     background: light-dark(#eee, #2a2a2a);
-  }
-  .base-form button:disabled {
-    opacity: 0.4;
-    cursor: default;
   }
   .meta {
     display: flex;
