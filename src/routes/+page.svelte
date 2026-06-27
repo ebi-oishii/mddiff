@@ -1,7 +1,13 @@
 <script lang="ts">
   import { doc } from "$lib/stores/doc.svelte";
-  import { pickAndReadFile, pickAndWriteFile, writeFile } from "$lib/ipc/fs";
+  import {
+    pickAndReadFile,
+    pickAndWriteFile,
+    pickSavePath,
+    writeFile,
+  } from "$lib/ipc/fs";
   import { gitIsRepo } from "$lib/ipc/git";
+  import { printAsPdf, renderToHtml, renderToPlainText } from "$lib/export";
   import ModeBar from "$lib/components/ModeBar.svelte";
   import SourceView from "$lib/views/SourceView.svelte";
   import LivePreviewView from "$lib/views/LivePreviewView.svelte";
@@ -36,6 +42,46 @@
     // No path: untitled, will Save As on first save.
     doc.load(null, SAMPLE_MD, false);
     mode = "preview";
+  }
+
+  let exportOpen = $state(false);
+
+  function exportTitle(): string {
+    return basename(doc.path).replace(/\.[^.]+$/, "") || "untitled";
+  }
+
+  async function exportHtml() {
+    exportOpen = false;
+    error = null;
+    try {
+      const path = await pickSavePath("html", "HTML", doc.path);
+      if (!path) return;
+      await writeFile(path, renderToHtml(doc.text, exportTitle()));
+    } catch (e) {
+      error = String(e);
+    }
+  }
+
+  async function exportPdf() {
+    exportOpen = false;
+    error = null;
+    try {
+      await printAsPdf(doc.text, exportTitle());
+    } catch (e) {
+      error = String(e);
+    }
+  }
+
+  async function exportPlainText() {
+    exportOpen = false;
+    error = null;
+    try {
+      const path = await pickSavePath("txt", "Plain text", doc.path);
+      if (!path) return;
+      await writeFile(path, renderToPlainText(doc.text));
+    } catch (e) {
+      error = String(e);
+    }
   }
 
   async function save() {
@@ -74,6 +120,19 @@
   $effect(() => {
     void doc.path;
     if (mode !== "wysiwyg") normalization = null;
+  });
+
+  // Close the Export dropdown on any click that's not inside it.
+  $effect(() => {
+    if (!exportOpen) return;
+    function onClick(e: MouseEvent) {
+      const target = e.target as HTMLElement | null;
+      if (!target?.closest(".export-dd")) {
+        exportOpen = false;
+      }
+    }
+    window.addEventListener("click", onClick);
+    return () => window.removeEventListener("click", onClick);
   });
 
   $effect(() => {
@@ -122,6 +181,22 @@
     <div class="actions">
       <button onclick={open}>Open</button>
       <button onclick={save}>Save</button>
+      <div class="export-dd" class:open={exportOpen}>
+        <button
+          onclick={() => (exportOpen = !exportOpen)}
+          aria-haspopup="menu"
+          aria-expanded={exportOpen}
+        >
+          Export ▾
+        </button>
+        {#if exportOpen}
+          <div role="menu" class="export-menu">
+            <button role="menuitem" onclick={exportHtml}>HTML</button>
+            <button role="menuitem" onclick={exportPdf}>PDF (via print)</button>
+            <button role="menuitem" onclick={exportPlainText}>Plain text</button>
+          </div>
+        {/if}
+      </div>
       <button onclick={loadSample} title="Load a built-in sample document">Sample</button>
     </div>
   </header>
@@ -217,6 +292,37 @@
   }
   .actions button:hover {
     background: light-dark(#eee, #2a2a2a);
+  }
+  .export-dd {
+    position: relative;
+    display: inline-block;
+  }
+  .export-menu {
+    position: absolute;
+    top: calc(100% + 4px);
+    right: 0;
+    z-index: 10;
+    background: light-dark(#fff, #1f1f1f);
+    border: 1px solid light-dark(#ccc, #444);
+    border-radius: 6px;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
+    min-width: 11em;
+    padding: 0.25rem;
+    display: flex;
+    flex-direction: column;
+  }
+  .export-menu button {
+    background: transparent;
+    border: 0;
+    border-radius: 4px;
+    padding: 0.45rem 0.7rem;
+    font: inherit;
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+  .export-menu button:hover {
+    background: light-dark(#f0f0f0, #2a2a2a);
   }
   /* Mobile / narrow window: stack header rows, make tap targets larger. */
   @media (max-width: 640px) {

@@ -24,3 +24,23 @@ export async function pickAndWriteFile(text: string): Promise<string | null> {
 export async function writeFile(path: string, text: string): Promise<void> {
   await invoke("write_text_file", { path, content: text });
 }
+
+/**
+ * Open a Save As dialog for an arbitrary extension. Suggests `defaultPath`
+ * derived from the currently open file (or "untitled") with the extension
+ * swapped, so users can typically just hit Enter.
+ */
+export async function pickSavePath(
+  ext: string,
+  label: string,
+  currentPath: string | null,
+): Promise<string | null> {
+  const defaultPath = currentPath
+    ? currentPath.replace(/\.[^./\\]*$/, "") + "." + ext
+    : "untitled." + ext;
+  const path = await saveDialog({
+    defaultPath,
+    filters: [{ name: label, extensions: [ext] }],
+  });
+  return typeof path === "string" ? path : null;
+}
