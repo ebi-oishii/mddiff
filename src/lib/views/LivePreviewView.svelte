@@ -51,8 +51,11 @@
   onDestroy(() => {
     if (view) {
       try {
-        const block = view.lineBlockAtHeight(view.scrollDOM.scrollTop);
-        doc.currentLine = view.state.doc.lineAt(block.from).number;
+        const rect = view.scrollDOM.getBoundingClientRect();
+        const pos = view.posAtCoords({ x: rect.left + 8, y: rect.top + 4 });
+        if (pos != null) {
+          doc.currentLine = view.state.doc.lineAt(pos).number;
+        }
       } catch {
         // best-effort
       }

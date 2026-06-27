@@ -28,7 +28,11 @@
         token.attrJoin("data-mdv-line", String(token.map[0] + 1));
       }
     }
-    return DOMPurify.sanitize(md.renderer.render(tokens, md.options, {}));
+    // DOMPurify 3 keeps `data-*` by default but be explicit; some installs run
+    // hardened configs that strip them.
+    return DOMPurify.sanitize(md.renderer.render(tokens, md.options, {}), {
+      ADD_ATTR: ["data-mdv-line"],
+    });
   });
 
   let scroller: HTMLDivElement;
