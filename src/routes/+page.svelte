@@ -44,6 +44,8 @@
   const SHIFT = isMac ? "⇧" : "Shift+";
 
   let menuUnlisten: UnlistenFn | null = null;
+  let resizeUnlisten: UnlistenFn | null = null;
+  let isFullscreen = $state(false);
 
   onMount(async () => {
     settings.hydrate();
@@ -60,10 +62,27 @@
     } catch {
       // listen unavailable (e.g. browser / SSR) — fall back to in-app menu only
     }
+
+    // Track fullscreen state so we can show filename/mode in-app exactly when
+    // the OS title bar disappears. Tauri's resize event fires on the
+    // fullscreen toggle (window dimensions change), and isFullscreen() reads
+    // the OS-level state — works for Mac green-button, Win F11, Linux WM.
+    try {
+      const win = getCurrentWindow();
+      isFullscreen = await win.isFullscreen();
+      resizeUnlisten = await win.onResized(async () => {
+        try {
+          isFullscreen = await win.isFullscreen();
+        } catch {}
+      });
+    } catch {
+      // not in Tauri
+    }
   });
 
   onDestroy(() => {
     menuUnlisten?.();
+    resizeUnlisten?.();
   });
 
   function handleMenuEvent(id: string) {
@@ -378,10 +397,18 @@
 
 <div class="app">
   <header>
-    <!-- Filename / dirty / current mode live in the OS window title bar
-         (see the setTitle effect). The in-app header is just chrome for
-         the menu trigger now. -->
-    <div class="header-spacer"></div>
+    <!-- Filename / dirty / current mode normally live in the OS window
+         title bar. Mac fullscreen (green button) hides that bar, so when
+         we detect fullscreen we surface the same info in-app instead. -->
+    {#if isFullscreen}
+      <div class="title">
+        <span class="filename">{basename(doc.path)}</span>
+        {#if doc.dirty}<span class="dirty" title="Unsaved changes">●</span>{/if}
+        <span class="mode-name">{modeLabel(mode)}</span>
+      </div>
+    {:else}
+      <div class="header-spacer"></div>
+    {/if}
     <div class="menu-wrap" class:open={menuOpen}>
       <button
         class="menu-trigger"
@@ -590,6 +617,33 @@
   }
   .header-spacer {
     flex: 1;
+  }
+  /* Shown only in fullscreen — see the markup above. */
+  .title {
+    display: flex;
+    align-items: baseline;
+    gap: 0.4rem;
+    min-width: 0;
+    flex: 1 1 12ch;
+  }
+  .filename {
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .dirty {
+    color: var(--mdv-warn-fg);
+  }
+  .mode-name {
+    margin-left: 0.5rem;
+    padding: 0.05rem 0.55rem;
+    border-radius: 999px;
+    font-size: 0.74rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--mdv-accent-fg);
+    background: var(--mdv-accent-bg);
   }
 
   /* ---------- Menu ---------- */
