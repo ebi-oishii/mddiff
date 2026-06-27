@@ -14,8 +14,11 @@
     renderToHtml,
     renderToPlainText,
   } from "$lib/export";
+  import { onMount } from "svelte";
   import ModeBar from "$lib/components/ModeBar.svelte";
   import MdvExportDialog from "$lib/components/MdvExportDialog.svelte";
+  import SettingsDialog from "$lib/components/SettingsDialog.svelte";
+  import { settings, FONT_SIZE_PX } from "$lib/stores/settings.svelte";
   import SourceView from "$lib/views/SourceView.svelte";
   import LivePreviewView from "$lib/views/LivePreviewView.svelte";
   import WysiwygView from "$lib/views/WysiwygView.svelte";
@@ -27,6 +30,32 @@
   let mode = $state<Mode>("source");
   let error = $state<string | null>(null);
   let normalization = $state<string | null>(null);
+  let settingsOpen = $state(false);
+
+  onMount(() => {
+    settings.hydrate();
+    // Once persisted settings are in, switch to the user's preferred default
+    // mode. Honor it only if no file has been loaded yet (don't surprise the
+    // user mid-flow).
+    if (!doc.path && !doc.text) {
+      mode = settings.defaultMode;
+    }
+  });
+
+  // Apply the chosen theme by toggling `color-scheme` on <html>. CSS rules
+  // below resolve `light-dark()` based on that. "auto" lets the OS decide.
+  $effect(() => {
+    if (typeof document === "undefined") return;
+    document.documentElement.dataset.theme = settings.theme;
+  });
+
+  // Editor font size is propagated via a CSS custom property so CodeMirror's
+  // `.cm-editor` and the Live Preview view both pick it up.
+  $effect(() => {
+    if (typeof document === "undefined") return;
+    const px = FONT_SIZE_PX[settings.editorFontSize];
+    document.documentElement.style.setProperty("--mdv-editor-font-size", `${px}px`);
+  });
 
   function handleNormalize(_orig: string, normalized: string) {
     normalization =
@@ -259,6 +288,14 @@
         {/if}
       </div>
       <button onclick={loadSample} title="Load a built-in sample document">Sample</button>
+      <button
+        onclick={() => (settingsOpen = true)}
+        title="Settings"
+        aria-label="Settings"
+        class="icon-btn"
+      >
+        ⚙
+      </button>
     </div>
   </header>
 
@@ -309,6 +346,9 @@
       onCancel={() => (mdvDialogOpen = false)}
     />
   {/if}
+  {#if settingsOpen}
+    <SettingsDialog onClose={() => (settingsOpen = false)} />
+  {/if}
 </div>
 
 <style>
@@ -322,6 +362,18 @@
     font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
     background: light-dark(#fff, #1a1a1a);
     color: light-dark(#222, #ddd);
+    --mdv-editor-font-size: 14px;
+  }
+  /* Theme: when the user picks an explicit value, force the color scheme
+     so `light-dark()` resolves in our favor. "auto" leaves both. */
+  :global(:root[data-theme="light"]) {
+    color-scheme: light;
+  }
+  :global(:root[data-theme="dark"]) {
+    color-scheme: dark;
+  }
+  :global(:root[data-theme="auto"]) {
+    color-scheme: light dark;
   }
   .app {
     display: flex;
@@ -368,6 +420,11 @@
   }
   .actions button:hover {
     background: light-dark(#eee, #2a2a2a);
+  }
+  .actions .icon-btn {
+    padding: 0.35rem 0.55rem;
+    font-size: 1.05rem;
+    line-height: 1;
   }
   .export-dd {
     position: relative;

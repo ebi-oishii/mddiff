@@ -78,4 +78,5 @@ MIT — [LICENSE](LICENSE) 参照。
 - [docs/decisions.md](docs/decisions.md) — 技術選定 (14 ADRs)
 - [docs/roadmap.md](docs/roadmap.md) — フェーズと進捗
 - [docs/tooling-research.md](docs/tooling-research.md) — 既存ツールから取り入れる使用感
-- [docs/mdv-protocol.md](docs/mdv-protocol.md) — `.mdv` portable package format (設計のみ、未実装)
+- [docs/mdv-protocol.md](docs/mdv-protocol.md) — `.mdv` portable package format v1
+- [docs/issues.md](docs/issues.md) — 取り組み候補リスト（バグ・ポリッシュ・機能候補）

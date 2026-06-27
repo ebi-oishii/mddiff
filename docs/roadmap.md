@@ -101,6 +101,16 @@ Live Preview と WYSIWYG は両方入れる。ただし役割を分ける。
 **DoD**: TestFlight / 内部配布で実機動作確認。実機ステップは
 ユーザー側で `npm run tauri android dev` / `... ios dev` を実行。
 
+## Phase 8 — Settings + テーマ ✓ 完了（MVP）
+- [x] Settings store（Svelte 5 runes + localStorage 永続化）
+- [x] SettingsDialog（⚙ ボタンから起動、変更は即反映）
+- [x] テーマ切替：auto（OS 追従） / light / dark
+- [x] エディタ font size：small / medium / large
+- [x] Default mode on open
+- [x] 「Restore defaults」で設定リセット
+
+未対応の細かい項目は [docs/issues.md](issues.md) に集約
+
 ## Phase 7 — `.mdv` パッケージ入出力 ✓ 完了（MVP）
 
 仕様: [`docs/mdv-protocol.md`](mdv-protocol.md)

@@ -67,7 +67,9 @@
       "Hiragino Sans",
       "Yu Gothic",
       sans-serif;
-    font-size: 15.5px;
+    /* Live Preview scales the editor font with the user setting but bumps it
+       a notch since it's prose-styled rather than monospace. */
+    font-size: calc(var(--mdv-editor-font-size, 14px) + 1.5px);
     line-height: 1.7;
   }
   :global(.live .cm-scroller) {

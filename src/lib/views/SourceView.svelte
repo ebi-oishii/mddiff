@@ -61,7 +61,7 @@
   :global(.cm-editor) {
     height: 100%;
     font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-    font-size: 14px;
+    font-size: var(--mdv-editor-font-size, 14px);
   }
   :global(.cm-scroller) {
     overflow: auto;
