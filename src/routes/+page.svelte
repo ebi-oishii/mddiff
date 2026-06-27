@@ -8,6 +8,7 @@
   import WysiwygView from "$lib/views/WysiwygView.svelte";
   import PreviewView from "$lib/views/PreviewView.svelte";
   import DiffView from "$lib/views/DiffView.svelte";
+  import { SAMPLE_MD } from "$lib/sample";
   import type { Mode } from "$lib/types";
 
   let mode = $state<Mode>("source");
@@ -27,6 +28,14 @@
     } catch (e) {
       error = String(e);
     }
+  }
+
+  function loadSample() {
+    error = null;
+    normalization = null;
+    // No path: untitled, will Save As on first save.
+    doc.load(null, SAMPLE_MD, false);
+    mode = "preview";
   }
 
   async function save() {
@@ -113,6 +122,7 @@
     <div class="actions">
       <button onclick={open}>Open</button>
       <button onclick={save}>Save</button>
+      <button onclick={loadSample} title="Load a built-in sample document">Sample</button>
     </div>
   </header>
 
@@ -123,6 +133,11 @@
     <div class="warn">
       {normalization}
       <button class="dismiss" onclick={() => (normalization = null)}>×</button>
+    </div>
+  {/if}
+  {#if !doc.path && !doc.text}
+    <div class="hint">
+      Tap <strong>Sample</strong> for a quick demo, <strong>Open</strong> to pick a file, or just start typing.
     </div>
   {/if}
 
@@ -252,6 +267,17 @@
     color: inherit;
     cursor: pointer;
     padding: 0 0.3em;
+  }
+  .hint {
+    padding: 0.5rem 1rem;
+    background: light-dark(#f0f6ff, #1a2538);
+    color: light-dark(#456, #99aacc);
+    border-bottom: 1px solid light-dark(#cde, #2a3a55);
+    font-size: 0.85rem;
+  }
+  .hint strong {
+    color: light-dark(#16325c, #b9d0ff);
+    font-weight: 600;
   }
   main {
     flex: 1;

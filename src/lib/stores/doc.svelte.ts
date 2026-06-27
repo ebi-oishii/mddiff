@@ -12,7 +12,7 @@ class DocStore {
     this.text = t;
   }
 
-  load(path: string, text: string, gitAvailable: boolean) {
+  load(path: string | null, text: string, gitAvailable: boolean) {
     this.path = path;
     this.text = text;
     this.savedText = text;
