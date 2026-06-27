@@ -65,23 +65,26 @@ Live Preview と WYSIWYG は両方入れる。ただし役割を分ける。
 - Live Preview: Markdown source を保ったまま、編集中も rendered result に近い見え方にする
 - WYSIWYG: Markdown source を意識せずに軽く直したい時の rich editing mode
 
-### Phase 3A — Live Preview
-- [ ] Live Preview mode を追加（Source / Preview / Live Preview / WYSIWYG / Diff）
-- [ ] 現在行は raw source、非アクティブ行は軽く rendered 表示
-- [ ] 見出し、強調、インラインコード、リンク、リストを優先対応
-- [ ] コードブロック、テーブル、画像は初期実装では source fallback
-- [ ] 表記正規化をしない（`*foo*` / `_foo_` 等はそのまま保持）
-- [ ] Source / Preview とのスクロール位置・選択位置の移行を検証
-- [ ] CJK / IME 入力で破綻しないことを確認
+### Phase 3A — Live Preview ✓ 完了
+- [x] Live Preview mode を追加（Source / Live Preview / WYSIWYG / Preview / Diff）
+- [x] 現在行 / 選択範囲のかかる行は raw source、それ以外は inline render
+- [x] 見出し、強調（bold/italic）、インラインコード、リンクに対応
+- [x] コードブロック、テーブル、画像、引用、リストは raw のまま fallback
+- [x] 表記正規化をしない（CodeMirror 上の decoration のみで source は無加工）
+- [x] EditorView.atomicRanges で隠した範囲をカーソル移動で一気に飛ぶ
+- [ ] Source / Preview とのスクロール位置・選択位置の移行 — Phase 5 へ
+- [ ] CJK / IME 入力での検証 — ユーザー実機確認
 
-### Phase 3B — WYSIWYG
-- [ ] Milkdown 統合（Svelte ラッパ）
-- [ ] DocStore との双方向バインド
-- [ ] CJK / リスト / コードブロック / 画像の round-trip 検証
-- [ ] 表記正規化が起きるケースのユーザ通知
-- [ ] Source / Live Preview / WYSIWYG の切替時に編集内容を失わない
+### Phase 3B — WYSIWYG ✓ 完了
+- [x] Milkdown 7.21.2 を framework-agnostic に統合
+- [x] DocStore との双方向バインド（listenerCtx + replaceAll）
+- [x] 起動時に getMarkdown で正規化結果を検査、差分があれば banner 通知
+  + 正規化後の text を upstream に push
+- [x] Source / Live Preview / WYSIWYG / Preview / Diff の切替で内容保持
+  （DocStore.text 経由）
+- [ ] CJK / リスト / コードブロック / 画像の round-trip 詳細検証 — ユーザー実機確認
 
-**DoD**: Live Preview では source 表記を保持して編集でき、WYSIWYG では rich editing から Markdown として保存できる。
+**DoD**: Live Preview では source 表記を保持して編集でき、WYSIWYG では rich editing から Markdown として保存できる。✓
 
 ## Phase 4 — モバイル（並行可、別ブランチ）
 - [ ] iOS / Android で GUI 起動
