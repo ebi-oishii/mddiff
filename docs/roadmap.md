@@ -102,11 +102,17 @@ Live Preview と WYSIWYG は両方入れる。ただし役割を分ける。
 ユーザー側で `npm run tauri android dev` / `... ios dev` を実行。
 
 ## Phase 5 — 仕上げ
-- [ ] テーマ（ライト/ダーク/エディタ配色、TUI は ANSI カラースキーム）
+- [ ] テーマ（ライト/ダーク手動切替、エディタ配色、TUI は ANSI カラースキーム）
+  ※ 現状 OS の color-scheme に自動追従
 - [ ] 設定画面
-- [ ] 大容量ファイルガード
-- [ ] エラー時の挙動（ファイル消失、Git なしリポジトリなど）
-- [ ] 先送り項目: GUI スクロール同期、TUI コマンドモード、TUI Diff キャッシュ、
-  Side-by-Side の文字単位 inline diff、ペイン間スクロール同期、
-  TUI Side-by-Side の左右独立スクロール
+- [x] 大容量ファイルガード（5MB 超は拒否）
+- [x] TUI Diff キャッシュ（フレームごとの再計算を回避）
+- [x] TUI コマンドモード（:w :q :wq :q!）
+- [ ] 残り先送り項目:
+  - [ ] GUI スクロール同期（Source / Preview / Live Preview 間）
+  - [ ] Side-by-Side の文字単位 inline diff（現状はブロック単位）
+  - [ ] GUI Side-by-Side のペイン間スクロール同期
+  - [ ] TUI Side-by-Side の左右独立スクロール
+  - [ ] エラー時の詳細ハンドリング（ファイル消失検知、再読込ボタン等）
+- [ ] WYSIWYG タスクリストのクリック toggle
 - [ ] パッケージ署名と配布（GUI: dmg/msi/AppImage、TUI: cargo install / Homebrew formula）
