@@ -156,6 +156,27 @@
   :global(.wys li) {
     margin: 0.2em 0;
   }
+  /* GFM task list items: Milkdown emits attributes only, draw the box ourselves. */
+  :global(.wys li[data-item-type="task"]) {
+    list-style: none;
+    margin-left: -0.4em;
+  }
+  :global(.wys li[data-item-type="task"] > p) {
+    display: inline;
+    margin: 0;
+  }
+  :global(.wys li[data-item-type="task"]::before) {
+    content: "☐ ";
+    display: inline-block;
+    width: 1.2em;
+    color: light-dark(#888, #888);
+    font-size: 1.05em;
+    vertical-align: -1px;
+  }
+  :global(.wys li[data-item-type="task"][data-checked="true"]::before) {
+    content: "☑ ";
+    color: light-dark(#2ea043, #3fb950);
+  }
   :global(.wys table) {
     border-collapse: collapse;
     margin: 1em 0;

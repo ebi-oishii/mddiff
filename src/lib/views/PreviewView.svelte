@@ -1,6 +1,7 @@
 <script lang="ts">
   import MarkdownIt from "markdown-it";
   import DOMPurify from "dompurify";
+  import taskLists from "markdown-it-task-lists";
 
   let { text }: { text: string } = $props();
 
@@ -10,6 +11,7 @@
     breaks: false,
     typographer: true,
   });
+  md.use(taskLists, { enabled: false, label: false });
 
   const html = $derived(DOMPurify.sanitize(md.render(text)));
 </script>
@@ -80,6 +82,15 @@
   .preview :global(ul),
   .preview :global(ol) {
     padding-left: 1.5em;
+  }
+  .preview :global(li.task-list-item) {
+    list-style: none;
+    margin-left: -1.5em;
+  }
+  .preview :global(li.task-list-item input.task-list-item-checkbox) {
+    margin-right: 0.5em;
+    cursor: default;
+    vertical-align: middle;
   }
   .preview :global(table) {
     border-collapse: collapse;

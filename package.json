@@ -23,7 +23,8 @@
     "@tauri-apps/plugin-dialog": "^2",
     "codemirror": "^6.0.2",
     "dompurify": "^3.4.11",
-    "markdown-it": "^14.2.0"
+    "markdown-it": "^14.2.0",
+    "markdown-it-task-lists": "^2.1.1"
   },
   "devDependencies": {
     "@sveltejs/adapter-static": "^3.0.6",
