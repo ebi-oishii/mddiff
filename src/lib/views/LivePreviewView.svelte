@@ -6,6 +6,7 @@
   import { markdown } from "@codemirror/lang-markdown";
   import { livePreviewExtension } from "./livepreview";
   import { doc } from "$lib/stores/doc.svelte";
+  import { mdvCmTheme } from "./cm-theme";
 
   let {
     text,
@@ -25,6 +26,7 @@
         keymap.of([...defaultKeymap, ...historyKeymap]),
         markdown(),
         EditorView.lineWrapping,
+        mdvCmTheme,
         livePreviewExtension,
         EditorView.updateListener.of((u) => {
           if (u.docChanged) {
@@ -90,21 +92,23 @@
       "Hiragino Sans",
       "Yu Gothic",
       sans-serif;
-    /* Live Preview scales the editor font with the user setting but bumps it
-       a notch since it's prose-styled rather than monospace. */
-    font-size: calc(var(--mdv-editor-font-size, 14px) + 1.5px);
+    font-size: var(--mdv-editor-font-size, 14px);
     line-height: 1.7;
   }
   :global(.live .cm-scroller) {
     overflow: auto;
-    padding: 1rem 2rem 4rem;
+    /* Layout matched to PreviewView: padding on the content block itself so
+       the visible "card" of text has the same outer rect (92ch + 6rem) as
+       Preview. */
+    padding: 0;
   }
   :global(.live .cm-content) {
     max-width: 92ch;
     margin: 0 auto;
+    padding: 2rem 3rem 4rem;
   }
   :global(.live .cm-line) {
-    padding: 0 4px;
+    padding: 0;
   }
 
   /* Heading sizes (mark decorations). */

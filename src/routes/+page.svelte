@@ -435,24 +435,26 @@
     color-scheme: light dark;
     font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Hiragino Sans", "Yu Gothic", sans-serif;
 
-    /* Surfaces — GitHub Primer-inspired so both modes feel cohesive. */
-    --mdv-bg:           light-dark(#ffffff, #0d1117);
-    --mdv-surface:      light-dark(#f6f8fa, #161b22);
-    --mdv-surface-hi:   light-dark(#eaeef2, #21262d);
-    --mdv-surface-pop:  light-dark(#ffffff, #1c2128);
-    /* Editor surface — slightly lighter than canvas so the editor reads like
-       a terminal pane in dark mode instead of pure black. */
+    /* Surfaces — dark mode unified on terminal-clear dark (#1e1e1e) so the
+       canvas, editor and all view backgrounds stay the same as the user
+       switches between modes. Header / popovers / hover use a slightly
+       lighter step for chrome separation, never the canvas going dark
+       further. */
+    --mdv-bg:           light-dark(#ffffff, #1e1e1e);
+    --mdv-surface:      light-dark(#f6f8fa, #252526);
+    --mdv-surface-hi:   light-dark(#eaeef2, #2d2d2e);
+    --mdv-surface-pop:  light-dark(#ffffff, #2a2a2b);
     --mdv-editor-bg:    light-dark(#ffffff, #1e1e1e);
-    --mdv-editor-gutter:light-dark(#f6f8fa, #1a1a1a);
+    --mdv-editor-gutter:light-dark(#f6f8fa, #252526);
 
     /* Text */
-    --mdv-text:         light-dark(#1f2328, #c9d1d9);
-    --mdv-text-mute:    light-dark(#656d76, #8b949e);
-    --mdv-text-subtle:  light-dark(#8c959f, #6e7681);
+    --mdv-text:         light-dark(#1f2328, #d4d4d4);
+    --mdv-text-mute:    light-dark(#656d76, #9d9d9d);
+    --mdv-text-subtle:  light-dark(#8c959f, #6e6e6e);
 
     /* Borders */
-    --mdv-border:       light-dark(#d0d7de, #30363d);
-    --mdv-border-mute:  light-dark(#eaeef2, #21262d);
+    --mdv-border:       light-dark(#d0d7de, #3c3c3c);
+    --mdv-border-mute:  light-dark(#eaeef2, #2d2d2d);
 
     /* Accent */
     --mdv-accent:       light-dark(#0969da, #58a6ff);
@@ -687,5 +689,10 @@
     flex: 1;
     overflow: hidden;
     min-height: 0;
+    /* Anchor the canvas color here so every mode (Preview / WYSIWYG / Diff /
+       editors) sits on the same background. Editors override via CM theme
+       but use the same token, so they read as one continuous surface. */
+    background: var(--mdv-bg);
+    color: var(--mdv-text);
   }
 </style>
