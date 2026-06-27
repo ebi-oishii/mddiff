@@ -101,6 +101,26 @@ Live Preview と WYSIWYG は両方入れる。ただし役割を分ける。
 **DoD**: TestFlight / 内部配布で実機動作確認。実機ステップは
 ユーザー側で `npm run tauri android dev` / `... ios dev` を実行。
 
+## Phase 7 — `.mdv` パッケージ入出力 ✓ 完了（MVP）
+
+仕様: [`docs/mdv-protocol.md`](mdv-protocol.md)
+
+- [x] `mdv-core::pack::pack(file, current_text, base)`：HEAD → base の
+  履歴を bundle 化、現在テキストを virtual head として追加、
+  zstd+base64 で HTML コメント包装
+- [x] `mdv-core::pack::extract_body`：受信側で trailing package block を剥がす
+- [x] Tauri command `mdv_pack` / `mdv_extract_body`
+- [x] GUI: MdvExportDialog で base picker + Save .mdv、Export ▾ から起動
+- [x] 受信: `.mdv` を Open すると自動で本文だけを表示（履歴 bundle は破棄）
+- [x] ファイル名フィルタに `.mdv` を追加
+
+未対応 (後続候補):
+- [ ] 厳密 JCS 準拠（現在は serde_json + BTreeMap で sorted keys）
+- [ ] received `.mdv` の履歴を「versions」ビューで閲覧
+- [ ] 2 つの `.mdv` の bundle マージ（同一 repo_id）
+- [ ] checkpoint / sidecar 履歴の永続化
+- [ ] TUI からの pack/extract
+
 ## Phase 6 — Export to other formats ✓ 完了
 GUI から複数形式へのエクスポート機能。`src/lib/export.ts` で共通化。
 

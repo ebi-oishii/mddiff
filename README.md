@@ -21,6 +21,9 @@ GUI（Desktop / Mobile）と TUI を 1 つの core 実装で動かす。
   ratatui の popup で base ピッカー + vim 風 `:w` `:q` `:wq` `:q!`
 - **Export to HTML / PDF / Plain text / DOCX**: GUI の Export ▾ ボタンから。
   PDF は OS のプリントダイアログ経由（追加依存なし）
+- **`.mdv` パッケージ入出力**: Git 配下のファイルを履歴ごと 1 ファイルに
+  bundle（zstd+base64 を HTML コメント内）。受信側は Git なしで本文を
+  読める。仕様は [docs/mdv-protocol.md](docs/mdv-protocol.md)
 - **配布形態**:
   - GUI = Tauri 2（Mac / Windows / Linux / iOS / Android）
   - TUI = 単独バイナリ（リリースビルドで 2.3MB）
