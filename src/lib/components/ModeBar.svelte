@@ -36,25 +36,29 @@
     display: inline-flex;
     border-radius: 6px;
     overflow: hidden;
-    border: 1px solid light-dark(#ddd, #444);
+    border: 1px solid var(--mdv-border);
   }
   button {
     background: transparent;
     border: 0;
-    padding: 0.35rem 0.9rem;
+    padding: 0.3rem 0.85rem;
     font: inherit;
-    color: light-dark(#444, #ccc);
+    color: var(--mdv-text-mute);
     cursor: pointer;
+    transition:
+      background-color 0.12s,
+      color 0.12s;
   }
   button + button {
-    border-left: 1px solid light-dark(#ddd, #444);
+    border-left: 1px solid var(--mdv-border);
   }
-  button:hover:not(:disabled) {
-    background: light-dark(#f2f2f2, #2a2a2a);
+  button:hover:not(:disabled):not(.active) {
+    background: var(--mdv-surface-hi);
+    color: var(--mdv-text);
   }
   button.active {
-    background: light-dark(#e3eaf5, #2b3a55);
-    color: light-dark(#16325c, #b9d0ff);
+    background: var(--mdv-accent-bg);
+    color: var(--mdv-accent-fg);
   }
   button:disabled {
     opacity: 0.4;

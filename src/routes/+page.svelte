@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount } from "svelte";
   import { doc } from "$lib/stores/doc.svelte";
   import {
     pickAndReadFile,
@@ -14,7 +15,6 @@
     renderToHtml,
     renderToPlainText,
   } from "$lib/export";
-  import { onMount } from "svelte";
   import ModeBar from "$lib/components/ModeBar.svelte";
   import MdvExportDialog from "$lib/components/MdvExportDialog.svelte";
   import SettingsDialog from "$lib/components/SettingsDialog.svelte";
@@ -31,26 +31,29 @@
   let error = $state<string | null>(null);
   let normalization = $state<string | null>(null);
   let settingsOpen = $state(false);
+  let menuOpen = $state(false);
+  let mdvDialogOpen = $state(false);
+  let mdvStatus = $state<string | null>(null);
+
+  // Detect Mac at runtime for shortcut hint glyphs. Non-Mac users see "Ctrl+"
+  // instead of ⌘ so the menu hint actually matches the key they need to press.
+  const isMac =
+    typeof navigator !== "undefined" && /mac/i.test(navigator.platform);
+  const MOD = isMac ? "⌘" : "Ctrl+";
+  const SHIFT = isMac ? "⇧" : "Shift+";
 
   onMount(() => {
     settings.hydrate();
-    // Once persisted settings are in, switch to the user's preferred default
-    // mode. Honor it only if no file has been loaded yet (don't surprise the
-    // user mid-flow).
     if (!doc.path && !doc.text) {
       mode = settings.defaultMode;
     }
   });
 
-  // Apply the chosen theme by toggling `color-scheme` on <html>. CSS rules
-  // below resolve `light-dark()` based on that. "auto" lets the OS decide.
   $effect(() => {
     if (typeof document === "undefined") return;
     document.documentElement.dataset.theme = settings.theme;
   });
 
-  // Editor font size is propagated via a CSS custom property so CodeMirror's
-  // `.cm-editor` and the Live Preview view both pick it up.
   $effect(() => {
     if (typeof document === "undefined") return;
     const px = FONT_SIZE_PX[settings.editorFontSize];
@@ -60,13 +63,11 @@
   function handleNormalize(_orig: string, normalized: string) {
     normalization =
       "WYSIWYG により表記が正規化されました（例: `*foo*` / `_foo_` の統一、リンクの展開、改行整理など）。Source モードで内容を確認できます。";
-    // Adopt the normalized form as the new baseline so we don't show a spurious
-    // dirty mark just from opening WYSIWYG. If the user already had unsaved
-    // edits, `adoptNormalized` preserves them.
     doc.adoptNormalized(normalized);
   }
 
   async function open() {
+    closeMenu();
     error = null;
     try {
       const loaded = await pickAndReadFile();
@@ -76,22 +77,50 @@
     }
   }
 
+  async function save() {
+    closeMenu();
+    error = null;
+    try {
+      if (doc.path) {
+        await writeFile(doc.path, doc.text);
+        doc.markSaved();
+      } else {
+        await saveAs();
+      }
+    } catch (e) {
+      error = String(e);
+    }
+  }
+
+  async function saveAs() {
+    closeMenu();
+    error = null;
+    try {
+      const path = await pickAndWriteFile(doc.text);
+      if (path) {
+        doc.path = path;
+        doc.gitAvailable = await gitIsRepo(path);
+        doc.markSaved();
+      }
+    } catch (e) {
+      error = String(e);
+    }
+  }
+
   function loadSample() {
+    closeMenu();
     error = null;
     normalization = null;
-    // No path: untitled, will Save As on first save.
     doc.load(null, SAMPLE_MD, false);
     mode = "preview";
   }
-
-  let exportOpen = $state(false);
 
   function exportTitle(): string {
     return basename(doc.path).replace(/\.[^.]+$/, "") || "untitled";
   }
 
   async function exportHtml() {
-    exportOpen = false;
+    closeMenu();
     error = null;
     try {
       const path = await pickSavePath("html", "HTML", doc.path);
@@ -103,7 +132,7 @@
   }
 
   async function exportPdf() {
-    exportOpen = false;
+    closeMenu();
     error = null;
     try {
       await printAsPdf(doc.text, exportTitle());
@@ -113,7 +142,7 @@
   }
 
   async function exportPlainText() {
-    exportOpen = false;
+    closeMenu();
     error = null;
     try {
       const path = await pickSavePath("txt", "Plain text", doc.path);
@@ -125,7 +154,7 @@
   }
 
   async function exportDocx() {
-    exportOpen = false;
+    closeMenu();
     error = null;
     try {
       const path = await pickSavePath("docx", "Word document", doc.path);
@@ -137,10 +166,8 @@
     }
   }
 
-  let mdvDialogOpen = $state(false);
-
   function openMdvDialog() {
-    exportOpen = false;
+    closeMenu();
     error = null;
     if (!doc.path) {
       error = ".mdv export requires a saved file in a Git repository";
@@ -153,8 +180,6 @@
     mdvDialogOpen = true;
   }
 
-  let mdvStatus = $state<string | null>(null);
-
   function onMdvSaved(msg: string) {
     mdvDialogOpen = false;
     mdvStatus = msg;
@@ -163,23 +188,13 @@
     }, 6000);
   }
 
-  async function save() {
-    error = null;
-    try {
-      if (doc.path) {
-        await writeFile(doc.path, doc.text);
-        doc.markSaved();
-      } else {
-        const path = await pickAndWriteFile(doc.text);
-        if (path) {
-          doc.path = path;
-          doc.gitAvailable = await gitIsRepo(path);
-          doc.markSaved();
-        }
-      }
-    } catch (e) {
-      error = String(e);
-    }
+  function openSettings() {
+    closeMenu();
+    settingsOpen = true;
+  }
+
+  function closeMenu() {
+    menuOpen = false;
   }
 
   function basename(p: string | null): string {
@@ -194,37 +209,35 @@
     }
   });
 
-  // Clear the WYSIWYG normalization banner whenever we leave WYSIWYG, or
-  // when a new file is loaded.
   $effect(() => {
     void doc.path;
     if (mode !== "wysiwyg") normalization = null;
   });
 
-  // Close the Export dropdown on any click that's not inside it.
+  // Close the popover on outside click / Escape.
   $effect(() => {
-    if (!exportOpen) return;
+    if (!menuOpen) return;
     function onClick(e: MouseEvent) {
       const target = e.target as HTMLElement | null;
-      if (!target?.closest(".export-dd")) {
-        exportOpen = false;
-      }
+      if (!target?.closest(".menu-wrap")) closeMenu();
+    }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") closeMenu();
     }
     window.addEventListener("click", onClick);
-    return () => window.removeEventListener("click", onClick);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("click", onClick);
+      window.removeEventListener("keydown", onKey);
+    };
   });
 
   $effect(() => {
     function onKey(e: KeyboardEvent) {
       const mod = e.metaKey || e.ctrlKey;
       if (!mod) return;
-      if (e.key === "o") {
-        e.preventDefault();
-        open();
-      } else if (e.key === "s") {
-        e.preventDefault();
-        save();
-      } else if (e.key === "1") {
+      // Mode shortcuts
+      if (e.key === "1") {
         e.preventDefault();
         mode = "source";
       } else if (e.key === "2") {
@@ -239,6 +252,20 @@
       } else if (e.key === "5" && doc.gitAvailable) {
         e.preventDefault();
         mode = "diff";
+      }
+      // File ops
+      else if (e.key === "o") {
+        e.preventDefault();
+        open();
+      } else if (e.key === "s" && e.shiftKey) {
+        e.preventDefault();
+        saveAs();
+      } else if (e.key === "s") {
+        e.preventDefault();
+        save();
+      } else if (e.key === ",") {
+        e.preventDefault();
+        openSettings();
       }
     }
     window.addEventListener("keydown", onKey);
@@ -257,66 +284,75 @@
       {#if doc.dirty}<span class="dirty" title="Unsaved changes">●</span>{/if}
     </div>
     <ModeBar bind:mode gitAvailable={doc.gitAvailable} />
-    <div class="actions">
-      <button onclick={open}>Open</button>
-      <button onclick={save}>Save</button>
-      <div class="export-dd" class:open={exportOpen}>
-        <button
-          onclick={() => (exportOpen = !exportOpen)}
-          aria-haspopup="menu"
-          aria-expanded={exportOpen}
-        >
-          Export ▾
-        </button>
-        {#if exportOpen}
-          <div role="menu" class="export-menu">
-            <button role="menuitem" onclick={exportHtml}>HTML</button>
-            <button role="menuitem" onclick={exportPdf}>PDF (via print)</button>
-            <button role="menuitem" onclick={exportPlainText}>Plain text</button>
-            <button role="menuitem" onclick={exportDocx}>DOCX</button>
-            <button
-              role="menuitem"
-              onclick={openMdvDialog}
-              disabled={!doc.gitAvailable}
-              title={doc.gitAvailable
-                ? "Bundle history into a .mdv package"
-                : "Requires a Git-managed file"}
-            >
-              .mdv (with history)
-            </button>
-          </div>
-        {/if}
-      </div>
-      <button onclick={loadSample} title="Load a built-in sample document">Sample</button>
+    <div class="menu-wrap" class:open={menuOpen}>
       <button
-        onclick={() => (settingsOpen = true)}
-        title="Settings"
-        aria-label="Settings"
-        class="icon-btn"
+        class="menu-trigger"
+        onclick={() => (menuOpen = !menuOpen)}
+        aria-haspopup="menu"
+        aria-expanded={menuOpen}
+        aria-label="Menu"
+        title="Menu"
       >
-        ⚙
+        ☰
       </button>
+      {#if menuOpen}
+        <div role="menu" class="menu">
+          <button role="menuitem" onclick={open}>
+            <span>Open…</span><kbd>{MOD}O</kbd>
+          </button>
+          <button role="menuitem" onclick={save}>
+            <span>Save</span><kbd>{MOD}S</kbd>
+          </button>
+          <button role="menuitem" onclick={saveAs}>
+            <span>Save As…</span><kbd>{MOD}{SHIFT}S</kbd>
+          </button>
+          <div class="sep"></div>
+          <div class="section">Export as</div>
+          <button role="menuitem" onclick={exportHtml}>HTML</button>
+          <button role="menuitem" onclick={exportPdf}>PDF <span class="muted">(via print)</span></button>
+          <button role="menuitem" onclick={exportPlainText}>Plain text</button>
+          <button role="menuitem" onclick={exportDocx}>DOCX</button>
+          <button
+            role="menuitem"
+            onclick={openMdvDialog}
+            disabled={!doc.gitAvailable}
+            title={doc.gitAvailable
+              ? "Bundle history into a .mdv package"
+              : "Requires a Git-managed file"}
+          >
+            .mdv <span class="muted">(with history)</span>
+          </button>
+          <div class="sep"></div>
+          <button role="menuitem" onclick={loadSample}>Load sample</button>
+          <button role="menuitem" onclick={openSettings}>
+            <span>Settings…</span><kbd>{MOD},</kbd>
+          </button>
+        </div>
+      {/if}
     </div>
   </header>
 
   {#if error}
-    <div class="error">{error}</div>
+    <div class="banner error">
+      <span>{error}</span>
+      <button class="dismiss" aria-label="Dismiss" onclick={() => (error = null)}>×</button>
+    </div>
   {/if}
   {#if mdvStatus}
-    <div class="info">
-      {mdvStatus}
-      <button class="dismiss" onclick={() => (mdvStatus = null)}>×</button>
+    <div class="banner info">
+      <span>{mdvStatus}</span>
+      <button class="dismiss" aria-label="Dismiss" onclick={() => (mdvStatus = null)}>×</button>
     </div>
   {/if}
   {#if normalization && mode === "wysiwyg"}
-    <div class="warn">
-      {normalization}
-      <button class="dismiss" onclick={() => (normalization = null)}>×</button>
+    <div class="banner warn">
+      <span>{normalization}</span>
+      <button class="dismiss" aria-label="Dismiss" onclick={() => (normalization = null)}>×</button>
     </div>
   {/if}
   {#if !doc.path && !doc.text}
-    <div class="hint">
-      Tap <strong>Sample</strong> for a quick demo, <strong>Open</strong> to pick a file, or just start typing.
+    <div class="banner hint">
+      Press <kbd>{MOD}O</kbd> to open a file, or use the <strong>☰</strong> menu for Sample and other actions.
     </div>
   {/if}
 
@@ -357,15 +393,53 @@
     margin: 0;
     height: 100%;
   }
+
+  /* ---------- Design tokens ---------- */
   :global(:root) {
     color-scheme: light dark;
-    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-    background: light-dark(#fff, #1a1a1a);
-    color: light-dark(#222, #ddd);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Hiragino Sans", "Yu Gothic", sans-serif;
+
+    /* Surfaces — GitHub Primer-inspired so both modes feel cohesive. */
+    --mdv-bg:           light-dark(#ffffff, #0d1117);
+    --mdv-surface:      light-dark(#f6f8fa, #161b22);
+    --mdv-surface-hi:   light-dark(#eaeef2, #21262d);
+    --mdv-surface-pop:  light-dark(#ffffff, #1c2128);
+
+    /* Text */
+    --mdv-text:         light-dark(#1f2328, #c9d1d9);
+    --mdv-text-mute:    light-dark(#656d76, #8b949e);
+    --mdv-text-subtle:  light-dark(#8c959f, #6e7681);
+
+    /* Borders */
+    --mdv-border:       light-dark(#d0d7de, #30363d);
+    --mdv-border-mute:  light-dark(#eaeef2, #21262d);
+
+    /* Accent */
+    --mdv-accent:       light-dark(#0969da, #58a6ff);
+    --mdv-accent-bg:    light-dark(#ddf4ff, #1f3551);
+    --mdv-accent-fg:    light-dark(#0a3069, #b9d4ff);
+
+    /* Status colors */
+    --mdv-warn-fg:      light-dark(#9a6700, #d4a72c);
+    --mdv-warn-bg:      light-dark(#fff8c5, #2c241a);
+    --mdv-warn-border:  light-dark(#f0d68c, #3d3214);
+    --mdv-danger-fg:    light-dark(#cf222e, #f85149);
+    --mdv-danger-bg:    light-dark(#ffebe9, #2c1a1a);
+    --mdv-danger-border:light-dark(#f8b4ad, #3d2020);
+    --mdv-success-fg:   light-dark(#1a7f37, #3fb950);
+    --mdv-success-bg:   light-dark(#dafbe1, #1a2e1f);
+    --mdv-success-border:light-dark(#a4d9b1, #2a4530);
+    --mdv-info-fg:      light-dark(#16325c, #b9d4ff);
+    --mdv-info-bg:      light-dark(#ddf4ff, #1a2538);
+    --mdv-info-border:  light-dark(#bcd8fa, #2a3a55);
+
+    --mdv-shadow:       light-dark(rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.5));
+
     --mdv-editor-font-size: 14px;
+
+    background: var(--mdv-bg);
+    color: var(--mdv-text);
   }
-  /* Theme: when the user picks an explicit value, force the color scheme
-     so `light-dark()` resolves in our favor. "auto" leaves both. */
   :global(:root[data-theme="light"]) {
     color-scheme: light;
   }
@@ -375,6 +449,8 @@
   :global(:root[data-theme="auto"]) {
     color-scheme: light dark;
   }
+
+  /* ---------- Shell ---------- */
   .app {
     display: flex;
     flex-direction: column;
@@ -385,8 +461,8 @@
     align-items: center;
     gap: 1rem;
     padding: 0.5rem 1rem;
-    border-bottom: 1px solid light-dark(#ddd, #333);
-    background: light-dark(#fafafa, #222);
+    border-bottom: 1px solid var(--mdv-border);
+    background: var(--mdv-surface);
     flex-wrap: wrap;
   }
   .title {
@@ -403,61 +479,138 @@
     white-space: nowrap;
   }
   .dirty {
-    color: light-dark(#cc7000, #ffb84d);
+    color: var(--mdv-warn-fg);
   }
-  .actions {
-    display: flex;
-    gap: 0.4rem;
-  }
-  .actions button {
-    background: transparent;
-    border: 1px solid light-dark(#ccc, #555);
-    border-radius: 5px;
-    padding: 0.35rem 0.9rem;
-    font: inherit;
-    color: inherit;
-    cursor: pointer;
-  }
-  .actions button:hover {
-    background: light-dark(#eee, #2a2a2a);
-  }
-  .actions .icon-btn {
-    padding: 0.35rem 0.55rem;
-    font-size: 1.05rem;
-    line-height: 1;
-  }
-  .export-dd {
+
+  /* ---------- Menu ---------- */
+  .menu-wrap {
     position: relative;
     display: inline-block;
   }
-  .export-menu {
+  .menu-trigger {
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 5px;
+    padding: 0.25rem 0.55rem;
+    font: inherit;
+    font-size: 1.1rem;
+    line-height: 1;
+    color: var(--mdv-text);
+    cursor: pointer;
+  }
+  .menu-trigger:hover,
+  .menu-wrap.open .menu-trigger {
+    background: var(--mdv-surface-hi);
+    border-color: var(--mdv-border);
+  }
+  .menu {
     position: absolute;
-    top: calc(100% + 4px);
+    top: calc(100% + 6px);
     right: 0;
-    z-index: 10;
-    background: light-dark(#fff, #1f1f1f);
-    border: 1px solid light-dark(#ccc, #444);
+    z-index: 50;
+    background: var(--mdv-surface-pop);
+    border: 1px solid var(--mdv-border);
     border-radius: 6px;
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
-    min-width: 11em;
+    box-shadow: 0 8px 24px var(--mdv-shadow);
+    min-width: 16em;
     padding: 0.25rem;
     display: flex;
     flex-direction: column;
+    font-size: 0.88rem;
   }
-  .export-menu button {
+  .menu button {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    width: 100%;
+    padding: 0.4rem 0.7rem;
+    text-align: left;
     background: transparent;
     border: 0;
     border-radius: 4px;
-    padding: 0.45rem 0.7rem;
+    color: var(--mdv-text);
     font: inherit;
-    color: inherit;
-    text-align: left;
     cursor: pointer;
   }
-  .export-menu button:hover {
-    background: light-dark(#f0f0f0, #2a2a2a);
+  .menu button:hover:not(:disabled) {
+    background: var(--mdv-surface-hi);
   }
-  /* Mobile / narrow window: stack header rows, make tap targets larger. */
+  .menu button:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+  .menu .section {
+    padding: 0.4rem 0.7rem 0.15rem;
+    font-size: 0.7rem;
+    color: var(--mdv-text-mute);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .menu .sep {
+    height: 1px;
+    background: var(--mdv-border-mute);
+    margin: 0.25rem 0;
+  }
+  .menu .muted {
+    color: var(--mdv-text-mute);
+    font-size: 0.88em;
+  }
+  .menu kbd,
+  .banner kbd {
+    font: inherit;
+    font-size: 0.76em;
+    color: var(--mdv-text-mute);
+    background: var(--mdv-surface-hi);
+    padding: 0.05em 0.4em;
+    border-radius: 3px;
+    border: 1px solid var(--mdv-border-mute);
+  }
+
+  /* ---------- Banners ---------- */
+  .banner {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    border-bottom: 1px solid transparent;
+    font-size: 0.85rem;
+  }
+  .banner.error {
+    background: var(--mdv-danger-bg);
+    color: var(--mdv-danger-fg);
+    border-bottom-color: var(--mdv-danger-border);
+  }
+  .banner.warn {
+    background: var(--mdv-warn-bg);
+    color: var(--mdv-warn-fg);
+    border-bottom-color: var(--mdv-warn-border);
+  }
+  .banner.info {
+    background: var(--mdv-success-bg);
+    color: var(--mdv-success-fg);
+    border-bottom-color: var(--mdv-success-border);
+  }
+  .banner.hint {
+    background: var(--mdv-info-bg);
+    color: var(--mdv-info-fg);
+    border-bottom-color: var(--mdv-info-border);
+  }
+  .banner.hint strong {
+    color: var(--mdv-accent-fg);
+  }
+  .banner .dismiss {
+    margin-left: auto;
+    background: transparent;
+    border: 0;
+    font-size: 1.1rem;
+    line-height: 1;
+    color: inherit;
+    cursor: pointer;
+    padding: 0 0.3em;
+  }
+
+  /* ---------- Mobile ---------- */
   @media (max-width: 640px) {
     header {
       padding: 0.4rem 0.6rem;
@@ -473,71 +626,15 @@
       overflow-x: auto;
       -webkit-overflow-scrolling: touch;
     }
-    .actions {
+    .menu-wrap {
       order: 2;
+      margin-left: auto;
     }
-    .actions button {
-      padding: 0.5rem 0.9rem;
+    .menu-trigger {
+      padding: 0.45rem 0.7rem;
     }
   }
-  .error {
-    padding: 0.5rem 1rem;
-    background: light-dark(#fff0f0, #4a2222);
-    color: light-dark(#a33, #ffb4b4);
-    border-bottom: 1px solid light-dark(#fcc, #663);
-    font-size: 0.85rem;
-  }
-  .warn {
-    display: flex;
-    align-items: flex-start;
-    gap: 0.5rem;
-    padding: 0.5rem 1rem;
-    background: light-dark(#fff8e5, #3a3220);
-    color: light-dark(#7a5a00, #e8c97a);
-    border-bottom: 1px solid light-dark(#f0d68c, #5a4a20);
-    font-size: 0.85rem;
-  }
-  .info {
-    display: flex;
-    align-items: flex-start;
-    gap: 0.5rem;
-    padding: 0.5rem 1rem;
-    background: light-dark(#eaf6ed, #1e3023);
-    color: light-dark(#1a5d2a, #8edda1);
-    border-bottom: 1px solid light-dark(#bfe2c8, #2a4530);
-    font-size: 0.85rem;
-  }
-  .info .dismiss {
-    margin-left: auto;
-    background: transparent;
-    border: 0;
-    font-size: 1.1rem;
-    line-height: 1;
-    color: inherit;
-    cursor: pointer;
-    padding: 0 0.3em;
-  }
-  .warn .dismiss {
-    margin-left: auto;
-    background: transparent;
-    border: 0;
-    font-size: 1.1rem;
-    line-height: 1;
-    color: inherit;
-    cursor: pointer;
-    padding: 0 0.3em;
-  }
-  .hint {
-    padding: 0.5rem 1rem;
-    background: light-dark(#f0f6ff, #1a2538);
-    color: light-dark(#456, #99aacc);
-    border-bottom: 1px solid light-dark(#cde, #2a3a55);
-    font-size: 0.85rem;
-  }
-  .hint strong {
-    color: light-dark(#16325c, #b9d0ff);
-    font-weight: 600;
-  }
+
   main {
     flex: 1;
     overflow: hidden;

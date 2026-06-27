@@ -90,32 +90,31 @@
     height: 100%;
     font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
     font-size: var(--mdv-editor-font-size, 14px);
-    background: light-dark(#fff, #1a1a1a);
-    color: light-dark(#222, #ddd);
+    background: var(--mdv-bg);
+    color: var(--mdv-text);
   }
   :global(.cm-scroller) {
     overflow: auto;
   }
-  /* CodeMirror 6 doesn't honor color-scheme on its own; teach the gutter,
-     selection and cursor to follow `data-theme` via `light-dark()`. Affects
-     every CodeMirror instance in the app (Source, Live Preview). */
+  /* CodeMirror 6 doesn't honor color-scheme on its own; pipe the design
+     tokens through so gutter / selection / cursor follow `data-theme`. */
   :global(.cm-gutters) {
-    background: light-dark(#fafafa, #1a1a1a);
-    border-right: 1px solid light-dark(#eee, #2a2a2a);
-    color: light-dark(#888, #666);
+    background: var(--mdv-bg);
+    border-right: 1px solid var(--mdv-border-mute);
+    color: var(--mdv-text-subtle);
   }
   :global(.cm-activeLine) {
-    background: light-dark(rgba(0, 0, 0, 0.035), rgba(255, 255, 255, 0.04));
+    background: light-dark(rgba(9, 105, 218, 0.05), rgba(88, 166, 255, 0.06));
   }
   :global(.cm-activeLineGutter) {
-    background: light-dark(rgba(0, 0, 0, 0.06), rgba(255, 255, 255, 0.06));
-    color: light-dark(#444, #bbb);
+    background: light-dark(rgba(9, 105, 218, 0.08), rgba(88, 166, 255, 0.1));
+    color: var(--mdv-text);
   }
   :global(.cm-cursor) {
-    border-left-color: light-dark(#000, #ddd);
+    border-left-color: var(--mdv-text);
   }
   :global(.cm-selectionBackground),
   :global(.cm-content ::selection) {
-    background: light-dark(#bcd8fa, #2b4a73) !important;
+    background: var(--mdv-accent-bg) !important;
   }
 </style>

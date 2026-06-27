@@ -234,8 +234,8 @@
     justify-content: space-between;
     gap: 0.75rem;
     padding: 0.5rem 1rem;
-    border-bottom: 1px solid light-dark(#ddd, #333);
-    background: light-dark(#fafafa, #222);
+    border-bottom: 1px solid var(--mdv-border);
+    background: var(--mdv-surface);
     flex-shrink: 0;
     flex-wrap: wrap;
     font-size: 0.85rem;
@@ -257,7 +257,7 @@
   }
   .submode-toggle {
     display: inline-flex;
-    border: 1px solid light-dark(#ddd, #444);
+    border: 1px solid var(--mdv-border);
     border-radius: 5px;
     overflow: hidden;
   }
@@ -266,32 +266,32 @@
     border: 0;
     padding: 0.25rem 0.7rem;
     font: inherit;
-    color: light-dark(#444, #ccc);
+    color: var(--mdv-text-mute);
     cursor: pointer;
   }
   .submode-toggle button + button {
-    border-left: 1px solid light-dark(#ddd, #444);
+    border-left: 1px solid var(--mdv-border);
   }
   .submode-toggle button.active {
-    background: light-dark(#e3eaf5, #2b3a55);
-    color: light-dark(#16325c, #b9d0ff);
+    background: var(--mdv-accent-bg);
+    color: var(--mdv-accent-fg);
   }
   .base-select {
     display: inline-flex;
     align-items: center;
     gap: 0.4rem;
-    color: light-dark(#666, #999);
+    color: var(--mdv-text-mute);
   }
   .base-select .prefix {
     user-select: none;
   }
   .base-select select {
     font: inherit;
-    background: light-dark(#fff, #1a1a1a);
-    color: inherit;
-    border: 1px solid light-dark(#ccc, #444);
+    background: var(--mdv-bg);
+    color: var(--mdv-text);
+    border: 1px solid var(--mdv-border);
     border-radius: 4px;
-    padding: 0.18rem 0.4rem;
+    padding: 0.22rem 0.4rem;
     max-width: 24em;
   }
   .custom-form {
@@ -303,22 +303,22 @@
     padding: 0.2rem 0.5rem;
     font: inherit;
     font-family: ui-monospace, "SF Mono", Menlo, monospace;
-    background: light-dark(#fff, #1a1a1a);
-    color: inherit;
-    border: 1px solid light-dark(#ccc, #444);
+    background: var(--mdv-bg);
+    color: var(--mdv-text);
+    border: 1px solid var(--mdv-border);
     border-radius: 4px;
   }
   .custom-form button {
     background: transparent;
-    border: 1px solid light-dark(#ccc, #444);
+    border: 1px solid var(--mdv-border);
     border-radius: 4px;
     padding: 0.2rem 0.6rem;
     font: inherit;
-    color: inherit;
+    color: var(--mdv-text);
     cursor: pointer;
   }
   .custom-form button:hover {
-    background: light-dark(#eee, #2a2a2a);
+    background: var(--mdv-surface-hi);
   }
   .meta {
     display: flex;
@@ -326,21 +326,21 @@
     font-family: ui-monospace, monospace;
   }
   .added {
-    color: #2ea043;
+    color: var(--mdv-success-fg);
   }
   .removed {
-    color: #cf222e;
+    color: var(--mdv-danger-fg);
   }
   .loading {
-    color: light-dark(#888, #666);
+    color: var(--mdv-text-mute);
   }
   .empty,
   .error {
     padding: 2rem;
     text-align: center;
-    color: light-dark(#888, #aaa);
+    color: var(--mdv-text-mute);
   }
   .error {
-    color: light-dark(#a33, #ffb4b4);
+    color: var(--mdv-danger-fg);
   }
 </style>

@@ -133,7 +133,7 @@
   .overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.4);
+    background: rgba(0, 0, 0, 0.45);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -141,13 +141,14 @@
     padding: 1rem;
   }
   .modal {
-    background: light-dark(#fff, #1e1e1e);
-    color: inherit;
+    background: var(--mdv-surface-pop);
+    color: var(--mdv-text);
+    border: 1px solid var(--mdv-border);
     border-radius: 8px;
     padding: 1.25rem 1.5rem;
     max-width: 36em;
     width: 100%;
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+    box-shadow: 0 12px 40px var(--mdv-shadow);
   }
   h2 {
     margin: 0 0 0.5rem;
@@ -156,14 +157,14 @@
   .help {
     margin: 0 0 1rem;
     font-size: 0.88rem;
-    color: light-dark(#555, #aaa);
+    color: var(--mdv-text-mute);
     line-height: 1.5;
   }
   .help code {
     font-family: ui-monospace, "SF Mono", Menlo, monospace;
     font-size: 0.92em;
     padding: 0 0.25em;
-    background: light-dark(#f3f3f3, #2a2a2a);
+    background: var(--mdv-surface-hi);
     border-radius: 3px;
   }
   .row {
@@ -179,16 +180,17 @@
   .row select {
     flex: 1;
     font: inherit;
-    padding: 0.25rem 0.5rem;
-    background: light-dark(#fff, #1a1a1a);
-    color: inherit;
-    border: 1px solid light-dark(#ccc, #444);
+    padding: 0.3rem 0.5rem;
+    background: var(--mdv-bg);
+    color: var(--mdv-text);
+    border: 1px solid var(--mdv-border);
     border-radius: 4px;
   }
   .error {
     padding: 0.5rem 0.7rem;
-    background: light-dark(#fff0f0, #4a2222);
-    color: light-dark(#a33, #ffb4b4);
+    background: var(--mdv-danger-bg);
+    color: var(--mdv-danger-fg);
+    border: 1px solid var(--mdv-danger-border);
     border-radius: 4px;
     font-size: 0.85rem;
     margin: 0.5rem 0;
@@ -201,23 +203,23 @@
   }
   .actions button {
     background: transparent;
-    border: 1px solid light-dark(#ccc, #555);
+    border: 1px solid var(--mdv-border);
     border-radius: 5px;
     padding: 0.4rem 1rem;
     font: inherit;
-    color: inherit;
+    color: var(--mdv-text);
     cursor: pointer;
   }
   .actions button:hover:not(:disabled) {
-    background: light-dark(#eee, #2a2a2a);
+    background: var(--mdv-surface-hi);
   }
   .actions button.primary {
-    background: light-dark(#16325c, #2b3a55);
+    background: var(--mdv-accent);
     color: #fff;
     border-color: transparent;
   }
   .actions button.primary:hover:not(:disabled) {
-    background: light-dark(#0d2440, #3a4a6b);
+    filter: brightness(0.92);
   }
   .actions button:disabled {
     opacity: 0.5;

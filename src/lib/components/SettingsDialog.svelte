@@ -84,7 +84,7 @@
   .overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.4);
+    background: rgba(0, 0, 0, 0.45);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -92,13 +92,14 @@
     padding: 1rem;
   }
   .modal {
-    background: light-dark(#fff, #1e1e1e);
-    color: inherit;
+    background: var(--mdv-surface-pop);
+    color: var(--mdv-text);
+    border: 1px solid var(--mdv-border);
     border-radius: 8px;
     padding: 1.25rem 1.5rem;
     max-width: 28em;
     width: 100%;
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+    box-shadow: 0 12px 40px var(--mdv-shadow);
   }
   h2 {
     margin: 0 0 1rem;
@@ -116,17 +117,17 @@
   }
   .row select {
     font: inherit;
-    padding: 0.25rem 0.5rem;
-    background: light-dark(#fff, #1a1a1a);
-    color: inherit;
-    border: 1px solid light-dark(#ccc, #444);
+    padding: 0.3rem 0.5rem;
+    background: var(--mdv-bg);
+    color: var(--mdv-text);
+    border: 1px solid var(--mdv-border);
     border-radius: 4px;
     min-width: 12em;
   }
   .hint {
     margin: 1rem 0 0;
     font-size: 0.8rem;
-    color: light-dark(#777, #888);
+    color: var(--mdv-text-mute);
   }
   .actions {
     display: flex;
@@ -136,27 +137,27 @@
   }
   .actions button {
     background: transparent;
-    border: 1px solid light-dark(#ccc, #555);
+    border: 1px solid var(--mdv-border);
     border-radius: 5px;
     padding: 0.4rem 1rem;
     font: inherit;
-    color: inherit;
+    color: var(--mdv-text);
     cursor: pointer;
   }
   .actions button:hover {
-    background: light-dark(#eee, #2a2a2a);
+    background: var(--mdv-surface-hi);
   }
   .actions button.primary {
-    background: light-dark(#16325c, #2b3a55);
+    background: var(--mdv-accent);
     color: #fff;
     border-color: transparent;
   }
   .actions button.primary:hover {
-    background: light-dark(#0d2440, #3a4a6b);
+    filter: brightness(0.92);
   }
   .actions button.link {
     border: 0;
-    color: light-dark(#0969da, #58a6ff);
+    color: var(--mdv-accent);
     padding: 0.4rem 0;
   }
   .actions button.link:hover {
