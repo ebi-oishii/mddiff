@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use mdv_core::diff::{DiffLine, HunkSummary};
-use mdv_core::git::{BaseOption, DEFAULT_BASE};
+use mdv_core::git::{BaseOption, SideBySidePayload, DEFAULT_BASE};
 
 fn resolve(base: Option<String>) -> String {
     base.filter(|s| !s.trim().is_empty())
@@ -39,4 +39,15 @@ pub async fn git_full_diff(
 ) -> Result<Vec<DiffLine>, String> {
     let base = resolve(base);
     mdv_core::git::full_diff_against_base(&path, &current_text, &base).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn git_side_by_side(
+    path: PathBuf,
+    current_text: String,
+    base: Option<String>,
+) -> Result<SideBySidePayload, String> {
+    let base = resolve(base);
+    mdv_core::git::side_by_side_against_base(&path, &current_text, &base)
+        .map_err(|e| e.to_string())
 }

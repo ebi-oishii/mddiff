@@ -1,15 +1,22 @@
 <script lang="ts">
   import { doc } from "$lib/stores/doc.svelte";
-  import { gitFullDiff, gitHunks, gitListBases } from "$lib/ipc/git";
+  import {
+    gitFullDiff,
+    gitHunks,
+    gitListBases,
+    gitSideBySide,
+  } from "$lib/ipc/git";
   import type {
     BaseKind,
     BaseOption,
     DiffLine,
     DiffSubmode,
     HunkSummary,
+    SideBySidePayload,
   } from "$lib/types";
   import HighlightView from "./diff/HighlightView.svelte";
   import FullDiffView from "./diff/FullDiffView.svelte";
+  import SideBySideView from "./diff/SideBySideView.svelte";
 
   const CUSTOM = "__custom__";
 
@@ -19,6 +26,7 @@
   let customBase = $state("HEAD");
   let hunks = $state<HunkSummary[]>([]);
   let lines = $state<DiffLine[]>([]);
+  let sbs = $state<SideBySidePayload | null>(null);
   let error = $state<string | null>(null);
   let loading = $state(false);
 
@@ -66,8 +74,10 @@
     try {
       if (submode === "highlight") {
         hunks = await gitHunks(doc.path, doc.text, base);
-      } else {
+      } else if (submode === "full") {
         lines = await gitFullDiff(doc.path, doc.text, base);
+      } else {
+        sbs = await gitSideBySide(doc.path, doc.text, base);
       }
     } catch (e) {
       error = String(e);
@@ -125,6 +135,14 @@
           onclick={() => (submode = "full")}
         >
           Full
+        </button>
+        <button
+          role="tab"
+          aria-selected={submode === "sidebyside"}
+          class:active={submode === "sidebyside"}
+          onclick={() => (submode = "sidebyside")}
+        >
+          Side-by-Side
         </button>
       </div>
       <label class="base-select">
@@ -194,8 +212,12 @@
     <div class="error">{error}</div>
   {:else if submode === "highlight"}
     <HighlightView text={doc.text} {hunks} />
-  {:else}
+  {:else if submode === "full"}
     <FullDiffView {lines} />
+  {:else if sbs}
+    <SideBySideView payload={sbs} baseLabel={base} />
+  {:else}
+    <div class="empty">Loading…</div>
   {/if}
 </div>
 

@@ -36,7 +36,13 @@ export type DiffLine =
   | { kind: "added"; new_no: number; text: string }
   | { kind: "removed"; old_no: number; text: string };
 
-export type DiffSubmode = "highlight" | "full";
+export type DiffSubmode = "highlight" | "full" | "sidebyside";
+
+export interface SideBySidePayload {
+  old_text: string;
+  new_text: string;
+  hunks: HunkSummary[];
+}
 
 export type BaseKind = "special" | "branch" | "tag" | "commit";
 

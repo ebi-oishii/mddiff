@@ -14,6 +14,7 @@ pub fn run() {
         commands::git::git_list_bases,
         commands::git::git_hunks,
         commands::git::git_full_diff,
+        commands::git::git_side_by_side,
     ]);
 
     #[cfg(any(target_os = "android", target_os = "ios"))]

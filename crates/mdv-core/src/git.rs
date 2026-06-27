@@ -89,6 +89,29 @@ pub fn full_diff_against_base(
     Ok(full_diff(&old, current))
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SideBySidePayload {
+    pub old_text: String,
+    pub new_text: String,
+    pub hunks: Vec<HunkSummary>,
+}
+
+/// Bundle of OLD blob + NEW buffer + hunks, for rendering a 2-pane Side-by-Side
+/// view in a single IPC round trip.
+pub fn side_by_side_against_base(
+    file: &Path,
+    current: &str,
+    base: &str,
+) -> Result<SideBySidePayload, GitError> {
+    let old = base_text_for(file, base)?;
+    let hunks = line_diff(&old, current);
+    Ok(SideBySidePayload {
+        old_text: old,
+        new_text: current.to_string(),
+        hunks,
+    })
+}
+
 fn base_text_for(file: &Path, base: &str) -> Result<String, GitError> {
     let file_abs = canonicalize_lossy(file);
     let repo = git2::Repository::discover(&file_abs).map_err(|_| GitError::NotARepo)?;
