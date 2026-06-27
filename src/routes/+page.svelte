@@ -169,13 +169,14 @@
     padding: 0.5rem 1rem;
     border-bottom: 1px solid light-dark(#ddd, #333);
     background: light-dark(#fafafa, #222);
+    flex-wrap: wrap;
   }
   .title {
     display: flex;
     align-items: baseline;
     gap: 0.4rem;
     min-width: 0;
-    flex: 1;
+    flex: 1 1 12ch;
   }
   .filename {
     font-weight: 500;
@@ -201,6 +202,29 @@
   }
   .actions button:hover {
     background: light-dark(#eee, #2a2a2a);
+  }
+  /* Mobile / narrow window: stack header rows, make tap targets larger. */
+  @media (max-width: 640px) {
+    header {
+      padding: 0.4rem 0.6rem;
+      gap: 0.5rem;
+    }
+    .title {
+      flex-basis: 100%;
+      order: 1;
+    }
+    :global(.mode-bar) {
+      order: 3;
+      flex: 1 1 100%;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    .actions {
+      order: 2;
+    }
+    .actions button {
+      padding: 0.5rem 0.9rem;
+    }
   }
   .error {
     padding: 0.5rem 1rem;

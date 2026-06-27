@@ -232,11 +232,12 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 1rem;
+    gap: 0.75rem;
     padding: 0.5rem 1rem;
     border-bottom: 1px solid light-dark(#ddd, #333);
     background: light-dark(#fafafa, #222);
     flex-shrink: 0;
+    flex-wrap: wrap;
     font-size: 0.85rem;
   }
   .left {
@@ -244,6 +245,15 @@
     align-items: center;
     gap: 0.75rem;
     flex-wrap: wrap;
+  }
+  @media (max-width: 640px) {
+    .submode-bar {
+      padding: 0.4rem 0.6rem;
+    }
+    .submode-toggle button,
+    .custom-form button {
+      padding: 0.4rem 0.7rem;
+    }
   }
   .submode-toggle {
     display: inline-flex;

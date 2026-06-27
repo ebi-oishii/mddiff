@@ -119,6 +119,20 @@
   .pane:last-child {
     border-right: 0;
   }
+  /* Narrow window / mobile: stack panes vertically so each gets full width. */
+  @media (max-width: 760px) {
+    .sbs {
+      grid-template-columns: 1fr;
+      grid-template-rows: 1fr 1fr;
+    }
+    .pane {
+      border-right: 0;
+      border-bottom: 1px solid light-dark(#ddd, #333);
+    }
+    .pane:last-child {
+      border-bottom: 0;
+    }
+  }
   .pane-header {
     flex-shrink: 0;
     display: flex;

@@ -6,8 +6,18 @@ import type {
   SideBySidePayload,
 } from "$lib/types";
 
+/**
+ * Returns whether `path` lives in a Git repository.
+ * On mobile builds the underlying Tauri command isn't compiled in, so we
+ * swallow the resulting "command not found" error and return false so the
+ * Diff tab degrades gracefully.
+ */
 export async function gitIsRepo(path: string): Promise<boolean> {
-  return await invoke<boolean>("git_is_repo", { path });
+  try {
+    return await invoke<boolean>("git_is_repo", { path });
+  } catch {
+    return false;
+  }
 }
 
 export async function gitListBases(
