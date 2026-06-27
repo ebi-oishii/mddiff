@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount, onDestroy } from "svelte";
   import { listen, type UnlistenFn } from "@tauri-apps/api/event";
+  import { getCurrentWindow } from "@tauri-apps/api/window";
   import { doc } from "$lib/stores/doc.svelte";
   import {
     pickAndReadFile,
@@ -124,6 +125,20 @@
     if (typeof document === "undefined") return;
     const px = FONT_SIZE_PX[settings.editorFontSize];
     document.documentElement.style.setProperty("--mdv-editor-font-size", `${px}px`);
+  });
+
+  // Push filename + dirty + mode into the OS window title bar (Mac top bar,
+  // Win/Linux window chrome). Quiet failure when not running under Tauri.
+  $effect(() => {
+    void doc.path;
+    void doc.dirty;
+    void mode;
+    const title = `${basename(doc.path)}${doc.dirty ? " ●" : ""} · ${modeLabel(mode)}`;
+    try {
+      getCurrentWindow().setTitle(title);
+    } catch {
+      // not in a Tauri window (browser / SSR); nothing to do
+    }
   });
 
   function handleNormalize(_orig: string, normalized: string) {
@@ -363,11 +378,10 @@
 
 <div class="app">
   <header>
-    <div class="title">
-      <span class="filename">{basename(doc.path)}</span>
-      {#if doc.dirty}<span class="dirty" title="Unsaved changes">●</span>{/if}
-      <span class="mode-name" title="Current mode (change via menu)">{modeLabel(mode)}</span>
-    </div>
+    <!-- Filename / dirty / current mode live in the OS window title bar
+         (see the setTitle effect). The in-app header is just chrome for
+         the menu trigger now. -->
+    <div class="header-spacer"></div>
     <div class="menu-wrap" class:open={menuOpen}>
       <button
         class="menu-trigger"
@@ -574,31 +588,8 @@
     background: var(--mdv-surface);
     flex-wrap: wrap;
   }
-  .title {
-    display: flex;
-    align-items: baseline;
-    gap: 0.4rem;
-    min-width: 0;
-    flex: 1 1 12ch;
-  }
-  .filename {
-    font-weight: 500;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .dirty {
-    color: var(--mdv-warn-fg);
-  }
-  .mode-name {
-    margin-left: 0.5rem;
-    padding: 0.05rem 0.55rem;
-    border-radius: 999px;
-    font-size: 0.74rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--mdv-accent-fg);
-    background: var(--mdv-accent-bg);
+  .header-spacer {
+    flex: 1;
   }
 
   /* ---------- Menu ---------- */
@@ -746,9 +737,6 @@
     }
     .menu-trigger {
       padding: 0.45rem 0.7rem;
-    }
-    .mode-name {
-      display: none; /* room is tight; menu shows it instead */
     }
   }
 
