@@ -100,7 +100,7 @@
     padding: 1rem 2rem 4rem;
   }
   :global(.live .cm-content) {
-    max-width: 80ch;
+    max-width: 92ch;
     margin: 0 auto;
   }
   :global(.live .cm-line) {

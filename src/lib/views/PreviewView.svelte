@@ -22,15 +22,18 @@
    * the basis for cross-mode scroll sync.
    */
   const html = $derived.by(() => {
-    const tokens = md.parse(text, {});
+    // parse and render MUST share the same `env` so plugins (notably
+    // markdown-it-task-lists) can hand state between phases. Passing a fresh
+    // {} to render dropped the task-list metadata and broke `[x]`/`[ ]`
+    // checkbox rendering.
+    const env: Record<string, unknown> = {};
+    const tokens = md.parse(text, env);
     for (const token of tokens) {
       if (token.map && token.type.endsWith("_open")) {
         token.attrJoin("data-mdv-line", String(token.map[0] + 1));
       }
     }
-    // DOMPurify 3 keeps `data-*` by default but be explicit; some installs run
-    // hardened configs that strip them.
-    return DOMPurify.sanitize(md.renderer.render(tokens, md.options, {}), {
+    return DOMPurify.sanitize(md.renderer.render(tokens, md.options, env), {
       ADD_ATTR: ["data-mdv-line"],
     });
   });

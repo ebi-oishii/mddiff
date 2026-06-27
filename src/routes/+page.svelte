@@ -15,7 +15,6 @@
     renderToHtml,
     renderToPlainText,
   } from "$lib/export";
-  import ModeBar from "$lib/components/ModeBar.svelte";
   import MdvExportDialog from "$lib/components/MdvExportDialog.svelte";
   import SettingsDialog from "$lib/components/SettingsDialog.svelte";
   import { settings, FONT_SIZE_PX } from "$lib/stores/settings.svelte";
@@ -197,6 +196,24 @@
     menuOpen = false;
   }
 
+  type ModeEntry = { id: Mode; label: string; key: string; requiresGit?: boolean };
+  const MODE_ENTRIES: ModeEntry[] = [
+    { id: "source", label: "Source", key: "1" },
+    { id: "live", label: "Live Preview", key: "2" },
+    { id: "wysiwyg", label: "WYSIWYG", key: "3" },
+    { id: "preview", label: "Preview", key: "4" },
+    { id: "diff", label: "Diff", key: "5", requiresGit: true },
+  ];
+
+  function modeLabel(m: Mode): string {
+    return MODE_ENTRIES.find((e) => e.id === m)?.label ?? m;
+  }
+
+  function setMode(m: Mode) {
+    closeMenu();
+    mode = m;
+  }
+
   function basename(p: string | null): string {
     if (!p) return "(untitled)";
     const parts = p.split(/[\\/]/);
@@ -282,8 +299,8 @@
     <div class="title">
       <span class="filename">{basename(doc.path)}</span>
       {#if doc.dirty}<span class="dirty" title="Unsaved changes">●</span>{/if}
+      <span class="mode-name" title="Current mode (change via menu)">{modeLabel(mode)}</span>
     </div>
-    <ModeBar bind:mode gitAvailable={doc.gitAvailable} />
     <div class="menu-wrap" class:open={menuOpen}>
       <button
         class="menu-trigger"
@@ -297,6 +314,25 @@
       </button>
       {#if menuOpen}
         <div role="menu" class="menu">
+          <div class="section">Mode</div>
+          {#each MODE_ENTRIES as m}
+            {@const disabled = m.requiresGit && !doc.gitAvailable}
+            <button
+              role="menuitem"
+              class="mode-item"
+              class:active={mode === m.id}
+              {disabled}
+              onclick={() => setMode(m.id)}
+              title={disabled ? "Requires a Git-managed file" : undefined}
+            >
+              <span>
+                <span class="check" aria-hidden="true">{mode === m.id ? "✓" : ""}</span>
+                {m.label}
+              </span>
+              <kbd>{MOD}{m.key}</kbd>
+            </button>
+          {/each}
+          <div class="sep"></div>
           <button role="menuitem" onclick={open}>
             <span>Open…</span><kbd>{MOD}O</kbd>
           </button>
@@ -404,6 +440,10 @@
     --mdv-surface:      light-dark(#f6f8fa, #161b22);
     --mdv-surface-hi:   light-dark(#eaeef2, #21262d);
     --mdv-surface-pop:  light-dark(#ffffff, #1c2128);
+    /* Editor surface — slightly lighter than canvas so the editor reads like
+       a terminal pane in dark mode instead of pure black. */
+    --mdv-editor-bg:    light-dark(#ffffff, #1e1e1e);
+    --mdv-editor-gutter:light-dark(#f6f8fa, #1a1a1a);
 
     /* Text */
     --mdv-text:         light-dark(#1f2328, #c9d1d9);
@@ -481,6 +521,16 @@
   .dirty {
     color: var(--mdv-warn-fg);
   }
+  .mode-name {
+    margin-left: 0.5rem;
+    padding: 0.05rem 0.55rem;
+    border-radius: 999px;
+    font-size: 0.74rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--mdv-accent-fg);
+    background: var(--mdv-accent-bg);
+  }
 
   /* ---------- Menu ---------- */
   .menu-wrap {
@@ -556,6 +606,15 @@
     color: var(--mdv-text-mute);
     font-size: 0.88em;
   }
+  .menu .mode-item .check {
+    display: inline-block;
+    width: 1em;
+    margin-right: 0.25em;
+    color: var(--mdv-accent);
+  }
+  .menu .mode-item.active {
+    color: var(--mdv-accent-fg);
+  }
   .menu kbd,
   .banner kbd {
     font: inherit;
@@ -616,22 +675,11 @@
       padding: 0.4rem 0.6rem;
       gap: 0.5rem;
     }
-    .title {
-      flex-basis: 100%;
-      order: 1;
-    }
-    :global(.mode-bar) {
-      order: 3;
-      flex: 1 1 100%;
-      overflow-x: auto;
-      -webkit-overflow-scrolling: touch;
-    }
-    .menu-wrap {
-      order: 2;
-      margin-left: auto;
-    }
     .menu-trigger {
       padding: 0.45rem 0.7rem;
+    }
+    .mode-name {
+      display: none; /* room is tight; menu shows it instead */
     }
   }
 

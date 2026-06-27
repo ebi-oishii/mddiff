@@ -82,7 +82,7 @@
     overflow: auto;
   }
   :global(.wys .milkdown) {
-    max-width: 80ch;
+    max-width: 92ch;
     margin: 0 auto;
     padding: 2rem 3rem 4rem;
     font-family:

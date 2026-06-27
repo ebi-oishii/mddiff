@@ -44,7 +44,9 @@
     hunks: HunkSummary[],
     side: Side,
   ): string {
-    const tokens = md.parse(text, {});
+    // share env across parse/render so plugins like task-lists keep state
+    const env: Record<string, unknown> = {};
+    const tokens = md.parse(text, env);
 
     for (const token of tokens) {
       if (!token.map || !token.type.endsWith("_open")) continue;
@@ -70,7 +72,7 @@
       }
     }
 
-    return DOMPurify.sanitize(md.renderer.render(tokens, md.options, {}));
+    return DOMPurify.sanitize(md.renderer.render(tokens, md.options, env));
   }
 
   const oldHtml = $derived(

@@ -90,17 +90,23 @@
     height: 100%;
     font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
     font-size: var(--mdv-editor-font-size, 14px);
-    background: var(--mdv-bg);
+    background: var(--mdv-editor-bg);
     color: var(--mdv-text);
   }
   :global(.cm-scroller) {
     overflow: auto;
   }
   /* CodeMirror 6 doesn't honor color-scheme on its own; pipe the design
-     tokens through so gutter / selection / cursor follow `data-theme`. */
+     tokens through so gutter / selection / cursor follow `data-theme`.
+     The `.cm-gutters .cm-gutterElement` selector is intentional — it has
+     higher specificity than CodeMirror's defaults so the line numbers
+     actually pick up our color in dark mode. */
   :global(.cm-gutters) {
-    background: var(--mdv-bg);
+    background: var(--mdv-editor-gutter);
     border-right: 1px solid var(--mdv-border-mute);
+    color: var(--mdv-text-subtle);
+  }
+  :global(.cm-gutters .cm-gutterElement) {
     color: var(--mdv-text-subtle);
   }
   :global(.cm-activeLine) {
