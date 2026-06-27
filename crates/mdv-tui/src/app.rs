@@ -189,7 +189,7 @@ impl App {
 
     fn open_picker(&mut self) {
         if let Some(path) = &self.path {
-            self.picker = Some(BasePicker::open(path));
+            self.picker = Some(BasePicker::open(path, &self.source.text()));
         }
     }
 

@@ -23,15 +23,26 @@
   let loading = $state(false);
 
   let diffTimer: ReturnType<typeof setTimeout> | null = null;
+  let basesTimer: ReturnType<typeof setTimeout> | null = null;
 
   const isCustom = $derived(selected === CUSTOM);
   const base = $derived(isCustom ? customBase.trim() || "HEAD" : selected);
 
   $effect(() => {
+    void doc.path;
+    void doc.text;
     if (!doc.path || !doc.gitAvailable) return;
-    gitListBases(doc.path).then((b) => {
-      bases = b;
-    });
+    if (basesTimer) clearTimeout(basesTimer);
+    const path = doc.path;
+    const text = doc.text;
+    basesTimer = setTimeout(() => {
+      gitListBases(path, text).then((b) => {
+        bases = b;
+      });
+    }, 400);
+    return () => {
+      if (basesTimer) clearTimeout(basesTimer);
+    };
   });
 
   $effect(() => {
@@ -67,6 +78,11 @@
 
   function byKind(kind: BaseKind): BaseOption[] {
     return bases.filter((b) => b.kind === kind);
+  }
+
+  function optionLabel(b: BaseOption): string {
+    const marker = b.differs === true ? "● " : b.differs === false ? "○ " : "  ";
+    return marker + b.label;
   }
 
   function applyCustom(e: SubmitEvent) {
@@ -107,30 +123,34 @@
       </div>
       <label class="base-select">
         <span class="prefix">vs</span>
-        <select bind:value={selected} aria-label="Compare base revision">
+        <select
+          bind:value={selected}
+          aria-label="Compare base revision"
+          title="● = differs from current buffer · ○ = identical"
+        >
           <optgroup label="Special">
             {#each byKind("special") as b}
-              <option value={b.revspec} title={b.detail ?? undefined}>{b.label}</option>
+              <option value={b.revspec} title={b.detail ?? undefined}>{optionLabel(b)}</option>
             {/each}
           </optgroup>
           {#if byKind("branch").length > 0}
             <optgroup label="Branches">
               {#each byKind("branch") as b}
-                <option value={b.revspec}>{b.label}</option>
+                <option value={b.revspec}>{optionLabel(b)}</option>
               {/each}
             </optgroup>
           {/if}
           {#if byKind("tag").length > 0}
             <optgroup label="Tags">
               {#each byKind("tag") as b}
-                <option value={b.revspec}>{b.label}</option>
+                <option value={b.revspec}>{optionLabel(b)}</option>
               {/each}
             </optgroup>
           {/if}
           {#if byKind("commit").length > 0}
             <optgroup label="Recent commits">
               {#each byKind("commit") as b}
-                <option value={b.revspec}>{b.label}</option>
+                <option value={b.revspec}>{optionLabel(b)}</option>
               {/each}
             </optgroup>
           {/if}

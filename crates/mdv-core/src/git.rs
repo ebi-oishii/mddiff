@@ -25,6 +25,10 @@ pub struct BaseOption {
     pub kind: BaseKind,
     /// Optional supplementary info (commit summary, etc.).
     pub detail: Option<String>,
+    /// Whether the file at this revision differs from `current`:
+    /// `Some(true)` = differs (has changes), `Some(false)` = identical,
+    /// `None` = couldn't determine (e.g. unknown revspec).
+    pub differs: Option<bool>,
 }
 
 #[derive(Debug, Error)]
@@ -105,53 +109,69 @@ fn canonicalize_lossy(p: &Path) -> PathBuf {
     p.canonicalize().unwrap_or_else(|_| p.to_path_buf())
 }
 
-pub fn list_bases(file: &Path) -> Result<Vec<BaseOption>, GitError> {
+/// Enumerate possible diff bases for `file`. If `current` is provided, each
+/// option's `differs` field is populated by comparing the file's blob OID
+/// at that revision against the blob hash of `current`.
+pub fn list_bases(file: &Path, current: Option<&str>) -> Result<Vec<BaseOption>, GitError> {
     let file_abs = canonicalize_lossy(file);
     let repo = git2::Repository::discover(&file_abs).map_err(|_| GitError::NotARepo)?;
+    let workdir = repo.workdir().ok_or(GitError::NotARepo)?;
+    let workdir_abs = canonicalize_lossy(workdir);
+    let rel = file_abs
+        .strip_prefix(&workdir_abs)
+        .map_err(|_| GitError::OutsideRepo)?
+        .to_path_buf();
+
+    let current_oid = current
+        .and_then(|c| git2::Oid::hash_object(git2::ObjectType::Blob, c.as_bytes()).ok());
+
+    let mk = |revspec: String, label: String, kind: BaseKind, detail: Option<String>| {
+        let differs = current_oid.map(|cur| match blob_oid_at(&repo, &rel, &revspec) {
+            Some(base_oid) => base_oid != cur,
+            None => true, // file absent at base counts as differing
+        });
+        BaseOption {
+            revspec,
+            label,
+            kind,
+            detail,
+            differs,
+        }
+    };
 
     let mut out = vec![
-        BaseOption {
-            revspec: "HEAD".into(),
-            label: "HEAD".into(),
-            kind: BaseKind::Special,
-            detail: Some("current commit".into()),
-        },
-        BaseOption {
-            revspec: "HEAD~1".into(),
-            label: "HEAD~1".into(),
-            kind: BaseKind::Special,
-            detail: Some("one commit before HEAD".into()),
-        },
-        BaseOption {
-            revspec: "HEAD~5".into(),
-            label: "HEAD~5".into(),
-            kind: BaseKind::Special,
-            detail: Some("five commits before HEAD".into()),
-        },
+        mk(
+            "HEAD".into(),
+            "HEAD".into(),
+            BaseKind::Special,
+            Some("current commit".into()),
+        ),
+        mk(
+            "HEAD~1".into(),
+            "HEAD~1".into(),
+            BaseKind::Special,
+            Some("one commit before HEAD".into()),
+        ),
+        mk(
+            "HEAD~5".into(),
+            "HEAD~5".into(),
+            BaseKind::Special,
+            Some("five commits before HEAD".into()),
+        ),
     ];
 
     if let Ok(branches) = repo.branches(Some(git2::BranchType::Local)) {
         for entry in branches.flatten() {
             let (branch, _) = entry;
             if let Ok(Some(name)) = branch.name() {
-                out.push(BaseOption {
-                    revspec: name.to_string(),
-                    label: name.to_string(),
-                    kind: BaseKind::Branch,
-                    detail: None,
-                });
+                out.push(mk(name.to_string(), name.to_string(), BaseKind::Branch, None));
             }
         }
     }
 
     if let Ok(tags) = repo.tag_names(None) {
         for tag in tags.iter().flatten() {
-            out.push(BaseOption {
-                revspec: tag.to_string(),
-                label: tag.to_string(),
-                kind: BaseKind::Tag,
-                detail: None,
-            });
+            out.push(mk(tag.to_string(), tag.to_string(), BaseKind::Tag, None));
         }
     }
 
@@ -167,14 +187,20 @@ pub fn list_bases(file: &Path) -> Result<Vec<BaseOption>, GitError> {
                 .chars()
                 .take(70)
                 .collect();
-            out.push(BaseOption {
-                revspec: short.clone(),
-                label: format!("{}  {}", short, summary),
-                kind: BaseKind::Commit,
-                detail: None,
-            });
+            out.push(mk(
+                short.clone(),
+                format!("{}  {}", short, summary),
+                BaseKind::Commit,
+                None,
+            ));
         }
     }
 
     Ok(out)
+}
+
+fn blob_oid_at(repo: &git2::Repository, rel: &Path, revspec: &str) -> Option<git2::Oid> {
+    let obj = repo.revparse_single(revspec).ok()?;
+    let tree = obj.peel_to_tree().ok()?;
+    tree.get_path(rel).ok().map(|entry| entry.id())
 }

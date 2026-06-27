@@ -13,8 +13,8 @@ pub struct BasePicker {
 }
 
 impl BasePicker {
-    pub fn open(file: &Path) -> Self {
-        let options = list_bases(file).unwrap_or_default();
+    pub fn open(file: &Path, current: &str) -> Self {
+        let options = list_bases(file, Some(current)).unwrap_or_default();
         let mut state = ListState::default();
         if !options.is_empty() {
             state.select(Some(0));
@@ -58,7 +58,17 @@ impl BasePicker {
                     BaseKind::Tag => (" tag     ", Color::Magenta),
                     BaseKind::Commit => (" commit  ", Color::Yellow),
                 };
+                let marker = match opt.differs {
+                    Some(true) => {
+                        Span::styled("● ", Style::default().fg(Color::Yellow))
+                    }
+                    Some(false) => {
+                        Span::styled("○ ", Style::default().fg(Color::DarkGray))
+                    }
+                    None => Span::raw("  "),
+                };
                 let mut spans = vec![
+                    marker,
                     Span::styled(
                         format!("[{}]", tag),
                         Style::default().fg(tag_color).add_modifier(Modifier::BOLD),

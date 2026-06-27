@@ -23,4 +23,9 @@ export interface BaseOption {
   label: string;
   kind: BaseKind;
   detail: string | null;
+  /**
+   * Whether the file at this revision differs from the current buffer.
+   * `true` = has changes, `false` = identical, `null` = couldn't determine.
+   */
+  differs: boolean | null;
 }

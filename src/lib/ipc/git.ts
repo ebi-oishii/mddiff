@@ -5,8 +5,11 @@ export async function gitIsRepo(path: string): Promise<boolean> {
   return await invoke<boolean>("git_is_repo", { path });
 }
 
-export async function gitListBases(path: string): Promise<BaseOption[]> {
-  return await invoke<BaseOption[]>("git_list_bases", { path });
+export async function gitListBases(
+  path: string,
+  currentText?: string,
+): Promise<BaseOption[]> {
+  return await invoke<BaseOption[]>("git_list_bases", { path, currentText });
 }
 
 export async function gitHunks(

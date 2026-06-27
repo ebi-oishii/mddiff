@@ -14,8 +14,11 @@ pub async fn git_is_repo(path: PathBuf) -> Result<bool, String> {
 }
 
 #[tauri::command]
-pub async fn git_list_bases(path: PathBuf) -> Result<Vec<BaseOption>, String> {
-    mdv_core::git::list_bases(&path).map_err(|e| e.to_string())
+pub async fn git_list_bases(
+    path: PathBuf,
+    current_text: Option<String>,
+) -> Result<Vec<BaseOption>, String> {
+    mdv_core::git::list_bases(&path, current_text.as_deref()).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
