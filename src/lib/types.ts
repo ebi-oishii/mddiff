@@ -1,4 +1,4 @@
-export type Mode = "source" | "live" | "preview" | "diff";
+export type Mode = "source" | "live" | "wysiwyg" | "preview" | "diff";
 
 export type HunkKind = "added" | "modified" | "removed";
 

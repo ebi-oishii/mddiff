@@ -1,0 +1,176 @@
+<script lang="ts">
+  import { onMount, onDestroy } from "svelte";
+  import { Editor, defaultValueCtx, rootCtx } from "@milkdown/kit/core";
+  import { commonmark } from "@milkdown/kit/preset/commonmark";
+  import { gfm } from "@milkdown/kit/preset/gfm";
+  import { listener, listenerCtx } from "@milkdown/kit/plugin/listener";
+  import { getMarkdown, replaceAll } from "@milkdown/kit/utils";
+
+  let {
+    text,
+    onchange,
+    onnormalize,
+  }: {
+    text: string;
+    onchange: (t: string) => void;
+    onnormalize?: (orig: string, normalized: string) => void;
+  } = $props();
+
+  let container: HTMLDivElement;
+  let editor: Editor | null = null;
+  let lastEmitted = "";
+  let ready = $state(false);
+
+  onMount(async () => {
+    const initial = text;
+    editor = await Editor.make()
+      .config((ctx) => {
+        ctx.set(rootCtx, container);
+        ctx.set(defaultValueCtx, initial);
+        ctx.get(listenerCtx).markdownUpdated((_ctx, markdown) => {
+          if (markdown !== lastEmitted) {
+            lastEmitted = markdown;
+            onchange(markdown);
+          }
+        });
+      })
+      .use(commonmark)
+      .use(gfm)
+      .use(listener)
+      .create();
+
+    // After load, query Milkdown's own serialization of the doc to detect
+    // round-trip normalization (e.g. `*foo*` <-> `_foo_`, link reference
+    // expansion, trailing newline adjustment). If different from what we
+    // loaded, surface it so the parent can warn the user.
+    try {
+      const serialized = editor.action(getMarkdown());
+      lastEmitted = serialized;
+      if (serialized.trim() !== initial.trim()) {
+        onnormalize?.(initial, serialized);
+        // Push the normalized form upstream so DocStore reflects what
+        // WYSIWYG is actually editing.
+        onchange(serialized);
+      }
+    } catch {
+      // getMarkdown not available in this build; skip detection silently.
+    }
+
+    ready = true;
+  });
+
+  onDestroy(() => {
+    editor?.destroy();
+    editor = null;
+  });
+
+  $effect(() => {
+    if (editor && ready && text !== lastEmitted) {
+      lastEmitted = text;
+      editor.action(replaceAll(text));
+    }
+  });
+</script>
+
+<div bind:this={container} class="wys"></div>
+
+<style>
+  .wys {
+    height: 100%;
+    overflow: auto;
+  }
+  :global(.wys .milkdown) {
+    max-width: 80ch;
+    margin: 0 auto;
+    padding: 2rem 3rem 4rem;
+    font-family:
+      system-ui,
+      -apple-system,
+      "Segoe UI",
+      Roboto,
+      "Hiragino Sans",
+      "Yu Gothic",
+      sans-serif;
+    font-size: 16px;
+    line-height: 1.7;
+    color: light-dark(#222, #ddd);
+  }
+  :global(.wys .ProseMirror) {
+    outline: none;
+    min-height: 100%;
+  }
+  :global(.wys h1) {
+    font-size: 2rem;
+    font-weight: 700;
+    margin: 1.5em 0 0.5em;
+    border-bottom: 1px solid light-dark(#eee, #333);
+    padding-bottom: 0.3em;
+  }
+  :global(.wys h2) {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin: 1.5em 0 0.5em;
+    border-bottom: 1px solid light-dark(#eee, #333);
+    padding-bottom: 0.3em;
+  }
+  :global(.wys h3) {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin: 1.25em 0 0.5em;
+  }
+  :global(.wys p) {
+    margin: 0.75em 0;
+  }
+  :global(.wys code) {
+    background: light-dark(#f3f3f3, #2a2a2a);
+    padding: 0.15em 0.4em;
+    border-radius: 3px;
+    font-size: 0.9em;
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  :global(.wys pre) {
+    background: light-dark(#f5f5f5, #1f1f1f);
+    padding: 1em;
+    border-radius: 6px;
+    overflow: auto;
+    margin: 1em 0;
+  }
+  :global(.wys pre code) {
+    background: transparent;
+    padding: 0;
+  }
+  :global(.wys blockquote) {
+    margin: 1em 0;
+    padding: 0 1em;
+    border-left: 4px solid light-dark(#ddd, #444);
+    color: light-dark(#666, #aaa);
+  }
+  :global(.wys a) {
+    color: light-dark(#0969da, #58a6ff);
+  }
+  :global(.wys ul),
+  :global(.wys ol) {
+    padding-left: 1.5em;
+    margin: 0.75em 0;
+  }
+  :global(.wys li) {
+    margin: 0.2em 0;
+  }
+  :global(.wys table) {
+    border-collapse: collapse;
+    margin: 1em 0;
+  }
+  :global(.wys th),
+  :global(.wys td) {
+    border: 1px solid light-dark(#ddd, #444);
+    padding: 0.5em 0.8em;
+  }
+  :global(.wys img) {
+    max-width: 100%;
+  }
+  :global(.wys hr) {
+    border: 0;
+    border-top: 1px solid light-dark(#ddd, #444);
+    margin: 1.5em 0;
+  }
+</style>

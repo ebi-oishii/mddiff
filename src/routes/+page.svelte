@@ -5,12 +5,19 @@
   import ModeBar from "$lib/components/ModeBar.svelte";
   import SourceView from "$lib/views/SourceView.svelte";
   import LivePreviewView from "$lib/views/LivePreviewView.svelte";
+  import WysiwygView from "$lib/views/WysiwygView.svelte";
   import PreviewView from "$lib/views/PreviewView.svelte";
   import DiffView from "$lib/views/DiffView.svelte";
   import type { Mode } from "$lib/types";
 
   let mode = $state<Mode>("source");
   let error = $state<string | null>(null);
+  let normalization = $state<string | null>(null);
+
+  function handleNormalize(_orig: string, _normalized: string) {
+    normalization =
+      "WYSIWYG により表記が正規化されました（例: `*foo*` / `_foo_` の統一、リンクの展開、改行整理など）。Source モードで内容を確認できます。";
+  }
 
   async function open() {
     error = null;
@@ -53,6 +60,13 @@
     }
   });
 
+  // Clear the WYSIWYG normalization banner whenever we leave WYSIWYG, or
+  // when a new file is loaded.
+  $effect(() => {
+    void doc.path;
+    if (mode !== "wysiwyg") normalization = null;
+  });
+
   $effect(() => {
     function onKey(e: KeyboardEvent) {
       const mod = e.metaKey || e.ctrlKey;
@@ -71,8 +85,11 @@
         mode = "live";
       } else if (e.key === "3") {
         e.preventDefault();
+        mode = "wysiwyg";
+      } else if (e.key === "4") {
+        e.preventDefault();
         mode = "preview";
-      } else if (e.key === "4" && doc.gitAvailable) {
+      } else if (e.key === "5" && doc.gitAvailable) {
         e.preventDefault();
         mode = "diff";
       }
@@ -102,12 +119,24 @@
   {#if error}
     <div class="error">{error}</div>
   {/if}
+  {#if normalization && mode === "wysiwyg"}
+    <div class="warn">
+      {normalization}
+      <button class="dismiss" onclick={() => (normalization = null)}>×</button>
+    </div>
+  {/if}
 
   <main>
     {#if mode === "source"}
       <SourceView text={doc.text} onchange={(t) => doc.setText(t)} />
     {:else if mode === "live"}
       <LivePreviewView text={doc.text} onchange={(t) => doc.setText(t)} />
+    {:else if mode === "wysiwyg"}
+      <WysiwygView
+        text={doc.text}
+        onchange={(t) => doc.setText(t)}
+        onnormalize={handleNormalize}
+      />
     {:else if mode === "preview"}
       <PreviewView text={doc.text} />
     {:else}
@@ -179,6 +208,26 @@
     color: light-dark(#a33, #ffb4b4);
     border-bottom: 1px solid light-dark(#fcc, #663);
     font-size: 0.85rem;
+  }
+  .warn {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: light-dark(#fff8e5, #3a3220);
+    color: light-dark(#7a5a00, #e8c97a);
+    border-bottom: 1px solid light-dark(#f0d68c, #5a4a20);
+    font-size: 0.85rem;
+  }
+  .warn .dismiss {
+    margin-left: auto;
+    background: transparent;
+    border: 0;
+    font-size: 1.1rem;
+    line-height: 1;
+    color: inherit;
+    cursor: pointer;
+    padding: 0 0.3em;
   }
   main {
     flex: 1;

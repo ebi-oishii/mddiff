@@ -9,6 +9,7 @@
   const modes: { id: Mode; label: string; requiresGit?: boolean }[] = [
     { id: "source", label: "Source" },
     { id: "live", label: "Live Preview" },
+    { id: "wysiwyg", label: "WYSIWYG" },
     { id: "preview", label: "Preview" },
     { id: "diff", label: "Diff", requiresGit: true },
   ];
