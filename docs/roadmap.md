@@ -36,32 +36,28 @@
 - [x] TUI DiffView（同上、ratatui で色付け）
 - [x] ModeBar に Diff タブ、Git 配下でないと disabled
 
-## Phase 2.5 — Side-by-Side Diff（追加）
-GUI / TUI に第 3 サブモードを追加。設計は [docs/design.md §3](design.md) と
-[ADR-011〜013](decisions.md) を参照。
+## Phase 2.5 — Side-by-Side Diff ✓ 完了
 
-### 共通基盤
-- [ ] `HunkSummary` を `{ kind, new_start, new_end, old_start, old_end }` に拡張
-- [ ] 既存 Highlight Only / Full の派生計算を新フィールド経由に置換
-- [ ] テスト追加（Added/Modified/Removed の両側行範囲を検証）
+### 共通基盤 ✓
+- [x] `HunkSummary` を `{ kind, new_start, new_end, old_start, old_end }` に拡張
+- [x] 既存 Highlight Only / Full の派生計算を新フィールド経由に置換
+- [x] removed_count() / added_count() ヘルパ追加
+- [x] テスト追加（Added/Modified/Removed の両側行範囲、複数行置換を検証）
 
-### GUI Side-by-Side
-- [ ] `mdv-core::git` に「OLD ブロブを取得して返す」関数を追加
-- [ ] Tauri command `git_side_by_side(path, current_text)` で
-  `{ old_text, new_text, hunks }` を返す
-- [ ] markdown-it の token.map をフックして `class="mdv-changed-{kind}"` を注入
-- [ ] `views/diff/SideBySideView.svelte`：2 ペイン、独立スクロール、
-  PreviewView と同じスタイル + 変更ブロック背景色
-- [ ] DiffView サブトグルに「Side-by-Side」追加
+### GUI Side-by-Side ✓
+- [x] `mdv-core::git::side_by_side_against_base` で 1 IPC ラウンドにまとめ
+- [x] Tauri command `git_side_by_side`
+- [x] markdown-it の token.map をフックして `mdv-changed-{kind}` クラスを注入
+- [x] `views/diff/SideBySideView.svelte`：2 ペイン、独立スクロール、
+  PreviewView と統一感のあるスタイル + 変更ブロック背景色
+- [x] DiffView サブトグルに「Side-by-Side」追加
 
-### TUI Side-by-Side（簡易版）
-- [ ] `views/diff.rs` に `Submode::SideBySide` を追加
-- [ ] 横幅 < 100 桁では巡回時にスキップ
-- [ ] 左ペイン = OLD Source、右ペイン = NEW Source、各々で色付け
-- [ ] スクロールは独立
-
-**DoD**: GUI でレビュー的に「変わった箇所がレンダリングで見比べられる」、TUI でも
-80〜200 桁の端末で並列表示が機能する。
+### TUI Side-by-Side（簡易版） ✓
+- [x] `views/diff.rs` に `Submode::SideBySide` を追加
+- [x] 横幅 < 100 桁ではメッセージ表示にフォールバック
+- [x] 左ペイン = OLD Source（Removed 赤帯 / Modified 黄帯 / 「N lines added」マーカー）
+- [x] 右ペイン = NEW Source（Added 緑帯 / Modified 黄帯 / 「N lines removed」マーカー）
+- [x] スクロールは両ペイン共通（MVP）。独立スクロールは Phase 5
 
 ## Phase 3 — Live Preview + WYSIWYG（GUI）
 Live Preview と WYSIWYG は両方入れる。ただし役割を分ける。
@@ -102,5 +98,6 @@ Live Preview と WYSIWYG は両方入れる。ただし役割を分ける。
 - [ ] 大容量ファイルガード
 - [ ] エラー時の挙動（ファイル消失、Git なしリポジトリなど）
 - [ ] 先送り項目: GUI スクロール同期、TUI コマンドモード、TUI Diff キャッシュ、
-  Side-by-Side の文字単位 inline diff、ペイン間スクロール同期
+  Side-by-Side の文字単位 inline diff、ペイン間スクロール同期、
+  TUI Side-by-Side の左右独立スクロール
 - [ ] パッケージ署名と配布（GUI: dmg/msi/AppImage、TUI: cargo install / Homebrew formula）

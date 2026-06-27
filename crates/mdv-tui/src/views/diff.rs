@@ -1,14 +1,18 @@
 use mdv_core::diff::{DiffLine, HunkKind, HunkSummary};
-use ratatui::layout::Rect;
+use mdv_core::git::SideBySidePayload;
+use ratatui::layout::{Constraint, Direction, Layout, Rect};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, Paragraph};
 use ratatui::Frame;
 
+pub const SBS_MIN_WIDTH: u16 = 100;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Submode {
     Highlight,
     Full,
+    SideBySide,
 }
 
 impl Submode {
@@ -16,13 +20,15 @@ impl Submode {
         match self {
             Submode::Highlight => "Highlight Only",
             Submode::Full => "Full",
+            Submode::SideBySide => "Side-by-Side",
         }
     }
 
     pub fn toggled(self) -> Self {
         match self {
             Submode::Highlight => Submode::Full,
-            Submode::Full => Submode::Highlight,
+            Submode::Full => Submode::SideBySide,
+            Submode::SideBySide => Submode::Highlight,
         }
     }
 }
@@ -60,7 +66,7 @@ impl DiffView {
         text: &str,
         hunks: &[HunkSummary],
     ) {
-        let lines = highlight_lines(text, hunks);
+        let lines = highlight_lines_new(text, hunks);
         let title = format!(" Diff · {} ", self.submode.label());
         let para = Paragraph::new(lines)
             .scroll((self.scroll, 0))
@@ -85,9 +91,52 @@ impl DiffView {
         );
         frame.render_widget(para, area);
     }
+
+    pub fn render_sidebyside(
+        &self,
+        frame: &mut Frame<'_>,
+        area: Rect,
+        payload: &SideBySidePayload,
+        base_label: &str,
+    ) {
+        if area.width < SBS_MIN_WIDTH {
+            self.render_message(
+                frame,
+                area,
+                &format!(
+                    "Terminal too narrow for Side-by-Side\n(need ≥{} cols, got {}).\n\nUse Tab / Ctrl+D to switch back to Highlight Only or Full.",
+                    SBS_MIN_WIDTH, area.width
+                ),
+            );
+            return;
+        }
+
+        let halves = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
+            .split(area);
+
+        let old_para = Paragraph::new(highlight_lines_old(&payload.old_text, &payload.hunks))
+            .scroll((self.scroll, 0))
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .title(format!(" OLD · {} ", base_label)),
+            );
+        frame.render_widget(old_para, halves[0]);
+
+        let new_para = Paragraph::new(highlight_lines_new(&payload.new_text, &payload.hunks))
+            .scroll((self.scroll, 0))
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .title(" NEW · current buffer "),
+            );
+        frame.render_widget(new_para, halves[1]);
+    }
 }
 
-fn highlight_lines<'a>(text: &'a str, hunks: &[HunkSummary]) -> Vec<Line<'a>> {
+fn highlight_lines_new<'a>(text: &'a str, hunks: &[HunkSummary]) -> Vec<Line<'a>> {
     let mut out = Vec::new();
 
     let removed_at = |line: usize| -> usize {
@@ -147,6 +196,70 @@ fn removal_marker<'a>(n: usize) -> Line<'a> {
         s,
         Style::default()
             .fg(Color::Red)
+            .add_modifier(Modifier::DIM),
+    ))
+}
+
+fn highlight_lines_old<'a>(text: &'a str, hunks: &[HunkSummary]) -> Vec<Line<'a>> {
+    let mut out = Vec::new();
+
+    let added_at = |line: usize| -> usize {
+        hunks
+            .iter()
+            .filter(|h| h.kind == HunkKind::Added && h.old_start == line)
+            .map(|h| h.added_count())
+            .sum()
+    };
+
+    let n = added_at(0);
+    if n > 0 {
+        out.push(addition_marker(n));
+    }
+
+    for (i, l) in text.lines().enumerate() {
+        let no = i + 1;
+        let kind = hunks
+            .iter()
+            .find(|h| h.kind != HunkKind::Added && no >= h.old_start && no <= h.old_end)
+            .map(|h| h.kind);
+
+        let (mark, mark_style) = match kind {
+            Some(HunkKind::Removed) => ("▎", Style::default().fg(Color::Red)),
+            Some(HunkKind::Modified) => ("▎", Style::default().fg(Color::Yellow)),
+            _ => (" ", Style::default()),
+        };
+
+        let text_style = match kind {
+            Some(HunkKind::Removed) => Style::default().fg(Color::LightRed),
+            Some(HunkKind::Modified) => Style::default().fg(Color::LightYellow),
+            _ => Style::default(),
+        };
+
+        out.push(Line::from(vec![
+            Span::styled(mark.to_string(), mark_style),
+            Span::styled(format!(" {:>4} ", no), Style::default().fg(Color::DarkGray)),
+            Span::styled(l.to_string(), text_style),
+        ]));
+
+        let n = added_at(no);
+        if n > 0 {
+            out.push(addition_marker(n));
+        }
+    }
+
+    out
+}
+
+fn addition_marker<'a>(n: usize) -> Line<'a> {
+    let s = format!(
+        "        ─── {} line{} added ───",
+        n,
+        if n == 1 { "" } else { "s" }
+    );
+    Line::from(Span::styled(
+        s,
+        Style::default()
+            .fg(Color::Green)
             .add_modifier(Modifier::DIM),
     ))
 }

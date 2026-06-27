@@ -261,6 +261,15 @@ impl App {
                     Err(e) => self.diff.render_message(frame, area, &e.to_string()),
                 }
             }
+            Submode::SideBySide => {
+                match mdv_core::git::side_by_side_against_base(path, &text, &self.diff_base) {
+                    Ok(payload) => {
+                        self.diff
+                            .render_sidebyside(frame, area, &payload, &self.diff_base)
+                    }
+                    Err(e) => self.diff.render_message(frame, area, &e.to_string()),
+                }
+            }
         }
     }
 
