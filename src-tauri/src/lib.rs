@@ -1,6 +1,6 @@
 mod commands;
 
-use commands::fs::{read_text_file, write_text_file};
+use commands::fs::{read_text_file, write_binary_file, write_text_file};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -10,6 +10,7 @@ pub fn run() {
     let builder = builder.invoke_handler(tauri::generate_handler![
         read_text_file,
         write_text_file,
+        write_binary_file,
         commands::git::git_is_repo,
         commands::git::git_list_bases,
         commands::git::git_hunks,

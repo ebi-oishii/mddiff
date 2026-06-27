@@ -4,10 +4,16 @@
     pickAndReadFile,
     pickAndWriteFile,
     pickSavePath,
+    writeBinaryFile,
     writeFile,
   } from "$lib/ipc/fs";
   import { gitIsRepo } from "$lib/ipc/git";
-  import { printAsPdf, renderToHtml, renderToPlainText } from "$lib/export";
+  import {
+    printAsPdf,
+    renderToDocx,
+    renderToHtml,
+    renderToPlainText,
+  } from "$lib/export";
   import ModeBar from "$lib/components/ModeBar.svelte";
   import SourceView from "$lib/views/SourceView.svelte";
   import LivePreviewView from "$lib/views/LivePreviewView.svelte";
@@ -79,6 +85,19 @@
       const path = await pickSavePath("txt", "Plain text", doc.path);
       if (!path) return;
       await writeFile(path, renderToPlainText(doc.text));
+    } catch (e) {
+      error = String(e);
+    }
+  }
+
+  async function exportDocx() {
+    exportOpen = false;
+    error = null;
+    try {
+      const path = await pickSavePath("docx", "Word document", doc.path);
+      if (!path) return;
+      const bytes = await renderToDocx(doc.text, exportTitle());
+      await writeBinaryFile(path, bytes);
     } catch (e) {
       error = String(e);
     }
@@ -194,6 +213,7 @@
             <button role="menuitem" onclick={exportHtml}>HTML</button>
             <button role="menuitem" onclick={exportPdf}>PDF (via print)</button>
             <button role="menuitem" onclick={exportPlainText}>Plain text</button>
+            <button role="menuitem" onclick={exportDocx}>DOCX</button>
           </div>
         {/if}
       </div>

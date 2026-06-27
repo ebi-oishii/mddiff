@@ -1973,6 +1973,7 @@ dependencies = [
 name = "mdv"
 version = "0.1.0"
 dependencies = [
+ "base64 0.22.1",
  "mdv-core",
  "serde",
  "serde_json",

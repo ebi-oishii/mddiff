@@ -226,3 +226,27 @@ export async function printAsPdf(text: string, title: string): Promise<void> {
   iwin.addEventListener("afterprint", cleanup, { once: true });
   setTimeout(cleanup, 60_000);
 }
+
+/**
+ * Render to a DOCX byte stream via `@turbodocx/html-to-docx`. The library is
+ * heavy (~700KB minified including JSZip) so it's loaded lazily — users who
+ * never click DOCX never pay the bundle cost.
+ */
+export async function renderToDocx(text: string, title: string): Promise<Uint8Array> {
+  const html = renderToHtml(text, title);
+  const mod = await import("@turbodocx/html-to-docx");
+  const HTMLtoDOCX = (mod as { default: typeof import("@turbodocx/html-to-docx") }).default ?? mod;
+  const result = await (HTMLtoDOCX as unknown as (
+    htmlString: string,
+    headerHTMLstring?: string | null,
+    documentOptions?: { title?: string },
+  ) => Promise<ArrayBuffer | Blob | Uint8Array>)(html, null, { title });
+
+  if (result instanceof Blob) {
+    return new Uint8Array(await result.arrayBuffer());
+  }
+  if (result instanceof Uint8Array) {
+    return result;
+  }
+  return new Uint8Array(result as ArrayBuffer);
+}

@@ -26,6 +26,26 @@ export async function writeFile(path: string, text: string): Promise<void> {
 }
 
 /**
+ * Chunked Uint8Array → base64 so we don't blow the call stack on large arrays
+ * (String.fromCharCode(...arr) is bounded by argument count limits).
+ */
+function uint8ToBase64(bytes: Uint8Array): string {
+  let binary = "";
+  const chunk = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+  }
+  return btoa(binary);
+}
+
+export async function writeBinaryFile(
+  path: string,
+  bytes: Uint8Array,
+): Promise<void> {
+  await invoke("write_binary_file", { path, base64: uint8ToBase64(bytes) });
+}
+
+/**
  * Open a Save As dialog for an arbitrary extension. Suggests `defaultPath`
  * derived from the currently open file (or "untitled") with the extension
  * swapped, so users can typically just hit Enter.
