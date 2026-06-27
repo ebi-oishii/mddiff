@@ -1,7 +1,10 @@
+use std::hash::{DefaultHasher, Hash, Hasher};
 use std::path::PathBuf;
 
 use anyhow::Result;
 use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
+use mdv_core::diff::DiffLine;
+use mdv_core::git::SideBySidePayload;
 use ratatui::layout::{Constraint, Direction, Layout};
 use ratatui::style::{Color, Style};
 use ratatui::widgets::Paragraph;
@@ -11,6 +14,34 @@ use crate::picker::BasePicker;
 use crate::views::diff::DiffView;
 use crate::views::preview::PreviewView;
 use crate::views::source::SourceView;
+
+/// Per-(text, base) memoization of the Diff backends. Without this the
+/// terminal redraws every keystroke would re-run git2 + similar on every
+/// frame; for non-trivial docs that adds visible lag.
+#[derive(Default)]
+struct DiffCache {
+    text_hash: u64,
+    base: String,
+    sbs: Option<Result<SideBySidePayload, String>>,
+    full: Option<Result<Vec<DiffLine>, String>>,
+}
+
+impl DiffCache {
+    fn invalidate_if_stale(&mut self, text_hash: u64, base: &str) {
+        if self.text_hash != text_hash || self.base != base {
+            self.text_hash = text_hash;
+            self.base = base.to_string();
+            self.sbs = None;
+            self.full = None;
+        }
+    }
+}
+
+fn hash_str(s: &str) -> u64 {
+    let mut h = DefaultHasher::new();
+    s.hash(&mut h);
+    h.finish()
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Mode {
@@ -55,6 +86,10 @@ pub struct App {
     pub saved_text: String,
     pub status: Option<String>,
     pub picker: Option<BasePicker>,
+    diff_cache: DiffCache,
+    /// `Some(buf)` while the user is typing a `:command`. `buf` doesn't
+    /// include the leading colon.
+    pub command: Option<String>,
 }
 
 impl App {
@@ -82,6 +117,8 @@ impl App {
             saved_text: initial_text,
             status: None,
             picker: None,
+            diff_cache: DiffCache::default(),
+            command: None,
         }
     }
 
@@ -129,6 +166,19 @@ impl App {
                 }
                 _ => {}
             }
+            return Ok(false);
+        }
+
+        // Command mode (`:w` / `:q` / `:wq` / `:q!`) captures all input while open.
+        if self.command.is_some() {
+            return self.handle_command_key(key);
+        }
+
+        // Esc enters command mode from any view (Source/Preview/Diff). tui-textarea
+        // ignores Esc by default, so this doesn't conflict with editing.
+        if key.code == KeyCode::Esc && !key.modifiers.contains(KeyModifiers::SHIFT) {
+            self.command = Some(String::new());
+            self.status = None;
             return Ok(false);
         }
 
@@ -193,6 +243,58 @@ impl App {
         }
     }
 
+    fn handle_command_key(&mut self, key: KeyEvent) -> Result<bool> {
+        let buf = self.command.as_mut().expect("command mode active");
+        match key.code {
+            KeyCode::Esc => {
+                self.command = None;
+            }
+            KeyCode::Enter => {
+                let cmd = std::mem::take(buf);
+                self.command = None;
+                return Ok(self.execute_command(&cmd));
+            }
+            KeyCode::Backspace => {
+                buf.pop();
+            }
+            KeyCode::Char(c) if !key.modifiers.contains(KeyModifiers::CONTROL) => {
+                buf.push(c);
+            }
+            _ => {}
+        }
+        Ok(false)
+    }
+
+    /// Returns true if the app should exit.
+    fn execute_command(&mut self, raw: &str) -> bool {
+        match raw.trim() {
+            "" => false,
+            "w" => {
+                self.save();
+                false
+            }
+            "q" => {
+                if self.dirty() {
+                    self.status = Some(
+                        "no write since last change (use :wq to save or :q! to discard)".into(),
+                    );
+                    false
+                } else {
+                    true
+                }
+            }
+            "wq" | "x" => {
+                self.save();
+                true
+            }
+            "q!" => true,
+            other => {
+                self.status = Some(format!("unknown command: :{}", other));
+                false
+            }
+        }
+    }
+
     fn save(&mut self) {
         if self.read_only {
             self.status = Some("read-only".into());
@@ -236,9 +338,9 @@ impl App {
         }
     }
 
-    fn render_diff(&self, frame: &mut ratatui::Frame<'_>, area: ratatui::layout::Rect) {
+    fn render_diff(&mut self, frame: &mut ratatui::Frame<'_>, area: ratatui::layout::Rect) {
         use crate::views::diff::Submode;
-        let Some(path) = &self.path else {
+        let Some(path) = self.path.clone() else {
             self.diff.render_message(frame, area, "No file open.");
             return;
         };
@@ -248,26 +350,39 @@ impl App {
             return;
         }
         let text = self.source.text();
+        self.diff_cache
+            .invalidate_if_stale(hash_str(&text), &self.diff_base);
+
         match self.diff.submode {
-            Submode::Highlight => {
-                match mdv_core::git::diff_text_against_base(path, &text, &self.diff_base) {
-                    Ok(hunks) => self.diff.render_highlight(frame, area, &text, &hunks),
-                    Err(e) => self.diff.render_message(frame, area, &e.to_string()),
+            // Highlight and SideBySide share the SBS payload (old_text + hunks).
+            Submode::Highlight | Submode::SideBySide => {
+                if self.diff_cache.sbs.is_none() {
+                    self.diff_cache.sbs = Some(
+                        mdv_core::git::side_by_side_against_base(&path, &text, &self.diff_base)
+                            .map_err(|e| e.to_string()),
+                    );
+                }
+                match (self.diff.submode, self.diff_cache.sbs.as_ref().unwrap()) {
+                    (Submode::Highlight, Ok(sbs)) => {
+                        self.diff.render_highlight(frame, area, &text, &sbs.hunks)
+                    }
+                    (Submode::SideBySide, Ok(sbs)) => {
+                        self.diff.render_sidebyside(frame, area, sbs, &self.diff_base)
+                    }
+                    (_, Err(e)) => self.diff.render_message(frame, area, e),
+                    _ => unreachable!(),
                 }
             }
             Submode::Full => {
-                match mdv_core::git::full_diff_against_base(path, &text, &self.diff_base) {
-                    Ok(lines) => self.diff.render_full(frame, area, &lines),
-                    Err(e) => self.diff.render_message(frame, area, &e.to_string()),
+                if self.diff_cache.full.is_none() {
+                    self.diff_cache.full = Some(
+                        mdv_core::git::full_diff_against_base(&path, &text, &self.diff_base)
+                            .map_err(|e| e.to_string()),
+                    );
                 }
-            }
-            Submode::SideBySide => {
-                match mdv_core::git::side_by_side_against_base(path, &text, &self.diff_base) {
-                    Ok(payload) => {
-                        self.diff
-                            .render_sidebyside(frame, area, &payload, &self.diff_base)
-                    }
-                    Err(e) => self.diff.render_message(frame, area, &e.to_string()),
+                match self.diff_cache.full.as_ref().unwrap() {
+                    Ok(lines) => self.diff.render_full(frame, area, lines),
+                    Err(e) => self.diff.render_message(frame, area, e),
                 }
             }
         }
@@ -287,21 +402,35 @@ impl App {
     }
 
     fn draw_footer(&self, frame: &mut ratatui::Frame<'_>, area: ratatui::layout::Rect) {
+        // Command mode takes over the footer line with a `:` prompt.
+        if let Some(buf) = &self.command {
+            let prompt = format!(":{}", buf);
+            frame.render_widget(
+                Paragraph::new(prompt.clone()).style(Style::default().fg(Color::Yellow)),
+                area,
+            );
+            // Position the terminal cursor right after the typed text so the
+            // user can see where they are.
+            let x = area.x + 1 + buf.chars().count() as u16;
+            frame.set_cursor_position((x.min(area.x + area.width.saturating_sub(1)), area.y));
+            return;
+        }
+
         let (row, col) = self.source.cursor();
         let status_str = match (&self.status, self.mode) {
             (Some(s), _) => s.clone(),
             (None, Mode::Source) => format!(
-                " [{}] Ln {}, Col {}   ^S save  ^E mode  ^Q quit",
+                " [{}] Ln {}, Col {}   ^S save  ^E mode  ^Q quit  Esc :cmd",
                 self.mode.label(),
                 row,
                 col,
             ),
             (None, Mode::Preview) => format!(
-                " [{}]   j/k scroll  s save  Tab mode  b base  q quit",
+                " [{}]   j/k scroll  s save  Tab mode  b base  q quit  Esc :cmd",
                 self.mode.label(),
             ),
             (None, Mode::Diff) => format!(
-                " [Diff · {}]  vs {}   j/k scroll  Tab/^D submode  b base  ^E mode  q quit",
+                " [Diff · {}]  vs {}   j/k scroll  Tab/^D submode  b base  q quit  Esc :cmd",
                 self.diff.submode.label(),
                 self.diff_base,
             ),
