@@ -4,6 +4,7 @@
   import { gitIsRepo } from "$lib/ipc/git";
   import ModeBar from "$lib/components/ModeBar.svelte";
   import SourceView from "$lib/views/SourceView.svelte";
+  import LivePreviewView from "$lib/views/LivePreviewView.svelte";
   import PreviewView from "$lib/views/PreviewView.svelte";
   import DiffView from "$lib/views/DiffView.svelte";
   import type { Mode } from "$lib/types";
@@ -67,8 +68,11 @@
         mode = "source";
       } else if (e.key === "2") {
         e.preventDefault();
+        mode = "live";
+      } else if (e.key === "3") {
+        e.preventDefault();
         mode = "preview";
-      } else if (e.key === "3" && doc.gitAvailable) {
+      } else if (e.key === "4" && doc.gitAvailable) {
         e.preventDefault();
         mode = "diff";
       }
@@ -102,6 +106,8 @@
   <main>
     {#if mode === "source"}
       <SourceView text={doc.text} onchange={(t) => doc.setText(t)} />
+    {:else if mode === "live"}
+      <LivePreviewView text={doc.text} onchange={(t) => doc.setText(t)} />
     {:else if mode === "preview"}
       <PreviewView text={doc.text} />
     {:else}
