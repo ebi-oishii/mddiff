@@ -7,7 +7,38 @@
   let {
     payload,
     baseLabel,
-  }: { payload: SideBySidePayload; baseLabel: string } = $props();
+    syncedScroll = true,
+  }: {
+    payload: SideBySidePayload;
+    baseLabel: string;
+    syncedScroll?: boolean;
+  } = $props();
+
+  let oldScroller: HTMLDivElement;
+  let newScroller: HTMLDivElement;
+  // Guard so programmatic scrollTop assignments don't echo back through the
+  // sibling pane's scroll handler and cause a feedback loop.
+  let suppressSync = false;
+
+  function ratioSync(src: HTMLDivElement, dst: HTMLDivElement) {
+    if (!syncedScroll || suppressSync) return;
+    const srcRange = Math.max(1, src.scrollHeight - src.clientHeight);
+    const dstRange = Math.max(0, dst.scrollHeight - dst.clientHeight);
+    if (dstRange === 0) return;
+    suppressSync = true;
+    dst.scrollTop = (src.scrollTop / srcRange) * dstRange;
+    // Release after the destination's `scroll` event has fired.
+    setTimeout(() => {
+      suppressSync = false;
+    }, 0);
+  }
+
+  function onOldScroll() {
+    if (oldScroller && newScroller) ratioSync(oldScroller, newScroller);
+  }
+  function onNewScroll() {
+    if (newScroller && oldScroller) ratioSync(newScroller, oldScroller);
+  }
 
   const md = new MarkdownIt({
     html: true,
@@ -89,7 +120,7 @@
       <span class="side-label">old</span>
       <span class="base-label">{baseLabel}</span>
     </div>
-    <div class="pane-scroller">
+    <div class="pane-scroller" bind:this={oldScroller} onscroll={onOldScroll}>
       <article class="preview">{@html oldHtml}</article>
     </div>
   </div>
@@ -98,7 +129,7 @@
       <span class="side-label">new</span>
       <span class="base-label">current buffer</span>
     </div>
-    <div class="pane-scroller">
+    <div class="pane-scroller" bind:this={newScroller} onscroll={onNewScroll}>
       <article class="preview">{@html newHtml}</article>
     </div>
   </div>
