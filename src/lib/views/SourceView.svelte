@@ -96,20 +96,28 @@
     font-size: var(--mdv-editor-font-size, 14px);
   }
   /* Reserve a right strip so long lines don't slide under the floating ☰
-     button (top-right, ~46px wide including its right offset). Live /
-     Preview / WYSIWYG already have intrinsic right padding via their
-     content boxes; only Source extended edge-to-edge. */
-  :global(.source .cm-content) {
+     button (top-right, ~46px wide). Padding goes on cm-scroller (not
+     cm-content): cm-scroller is the actual flex container that holds the
+     gutters + content, so shrinking its content-box also shrinks the
+     wrap width that the browser uses for cm-content. Padding on
+     cm-content alone didn't take effect — CM's flex layout was treating
+     cm-content as flex-grow with content-box padding that didn't bind
+     the line wrap.
+     Skipped in fullscreen: there's already a 2.5rem top padding pushing
+     content below the title overlay, and the ☰ menu sits next to that
+     overlay in the OS-title-bar-free area, not on top of text. */
+  :global(:root:not([data-fullscreen]) .source .cm-scroller) {
     padding-right: 3rem;
+    box-sizing: border-box;
   }
   /* The active-line decoration is a `<div class="cm-activeLine">` whose
-     box is bounded by .cm-content's content-area, so without help it
-     stops 3rem short of the editor's right edge, leaving a dead strip
-     where the highlight is missing. A negative right margin pushes its
-     box into .cm-content's padding area (still inside the border), so
+     box is bounded by cm-content's content-area, so by default it stops
+     3rem short of the editor's right edge, leaving a dead strip where
+     the highlight is missing. A negative right margin pushes its box
+     into the padding area on the right (still inside cm-scroller), so
      the background color reaches the visual edge while the line's text
      and caret stay in the original content rectangle. */
-  :global(.source .cm-activeLine) {
+  :global(:root:not([data-fullscreen]) .source .cm-activeLine) {
     margin-right: -3rem;
   }
 </style>
