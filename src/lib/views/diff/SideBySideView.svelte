@@ -35,25 +35,52 @@
   let pendingSrc: "old" | "new" | null = null;
   let rafToken: number | null = null;
 
-  /** Find the source line at the top of the viewport (per `data-mdv-line`). */
-  function topVisibleLine(scroller: HTMLDivElement): number | null {
-    const top = scroller.getBoundingClientRect().top;
+  /**
+   * Sub-block-precision: returns the source line of the block that contains
+   * the viewport top, plus how far the viewport top is into that block
+   * (0 = block top is at viewport top, 1 = block bottom is at viewport top).
+   * Block-only mapping (returning just `line`) caused round-trip drift
+   * because each sync snapped the dst to the start of a block, losing the
+   * "I'm halfway through this paragraph" information.
+   */
+  function topVisiblePos(
+    scroller: HTMLDivElement,
+  ): { line: number; fraction: number } | null {
+    const topY = scroller.getBoundingClientRect().top;
     const blocks = scroller.querySelectorAll<HTMLElement>("[data-mdv-line]");
-    let last: number | null = null;
+    let active: HTMLElement | null = null;
     for (const block of blocks) {
       const rect = block.getBoundingClientRect();
-      if (rect.top >= top - 2) {
-        const n = Number(block.dataset.mdvLine);
-        return Number.isFinite(n) ? n : last;
+      // Pick the first block whose bottom is still below the viewport top —
+      // that's the block currently containing (or at) the top edge.
+      if (rect.bottom > topY + 1) {
+        active = block;
+        break;
       }
-      const n = Number(block.dataset.mdvLine);
-      if (Number.isFinite(n)) last = n;
+      active = block;
     }
-    return last;
+    if (!active) return null;
+    const rect = active.getBoundingClientRect();
+    const line = Number(active.dataset.mdvLine);
+    if (!Number.isFinite(line)) return null;
+    const fraction =
+      rect.height > 0
+        ? Math.max(0, Math.min(1, (topY - rect.top) / rect.height))
+        : 0;
+    return { line, fraction };
   }
 
-  /** Scroll the pane so that the block for `line` is at the top. */
-  function scrollToLine(scroller: HTMLDivElement, line: number) {
+  /**
+   * Scroll so that `line`'s block is at the viewport top, then nudge by
+   * `fraction * blockHeight` so the same "% into block" position is shown.
+   * Uses getBoundingClientRect rather than offsetTop because offsetTop is
+   * relative to offsetParent (which may not be the scroller).
+   */
+  function scrollToLinePos(
+    scroller: HTMLDivElement,
+    line: number,
+    fraction: number,
+  ) {
     const blocks = Array.from(
       scroller.querySelectorAll<HTMLElement>("[data-mdv-line]"),
     );
@@ -64,7 +91,11 @@
       if (Number.isFinite(n) && n <= line) target = block;
       else break;
     }
-    scroller.scrollTop = target.offsetTop;
+    const scrollerRect = scroller.getBoundingClientRect();
+    const targetRect = target.getBoundingClientRect();
+    const offsetInsideScroller =
+      scroller.scrollTop + (targetRect.top - scrollerRect.top);
+    scroller.scrollTop = offsetInsideScroller + fraction * targetRect.height;
   }
 
   /** Drive `dst` from `src` via the line mapping and record what we wrote. */
@@ -88,13 +119,13 @@
     } else if (src.scrollTop >= srcMax - 1) {
       dst.scrollTop = dstMax;
     } else {
-      const srcLine = topVisibleLine(src);
-      if (srcLine == null) return;
+      const srcPos = topVisiblePos(src);
+      if (!srcPos) return;
       const dstLine =
         srcSide === "old"
-          ? mapOldToNew(srcLine, payload.hunks)
-          : mapNewToOld(srcLine, payload.hunks);
-      scrollToLine(dst, dstLine);
+          ? mapOldToNew(srcPos.line, payload.hunks)
+          : mapNewToOld(srcPos.line, payload.hunks);
+      scrollToLinePos(dst, dstLine, srcPos.fraction);
     }
 
     if (dst.scrollTop !== before) {
