@@ -57,6 +57,6 @@ jobs:
       # (missing advapi32 / secur32 / Crypt32 imports — known issue with
       # newer MSVC toolchains until libgit2-sys updates its #[link] list).
       # The same tests run on macOS + Linux so we still get coverage.
-      - name: Cargo test (mdv-core)
+      - name: Cargo test (mddiff-core)
         if: matrix.os != 'windows-latest'
-        run: cargo test -p mdv-core --target ${{ matrix.target }}
+        run: cargo test -p mddiff-core --target ${{ matrix.target }}
