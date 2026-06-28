@@ -109,7 +109,7 @@
      below the title overlay, and the ☰ menu sits next to the overlay
      in the OS-title-bar-free area, not on top of text. */
   :global(:root:not([data-fullscreen])) .source {
-    padding-right: 4rem;
+    padding-right: 3rem;
     box-sizing: border-box;
   }
 </style>
