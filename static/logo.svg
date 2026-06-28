@@ -1,0 +1,52 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <!--
+    mddiff logo (v0.3).
+    Apple/macOS HIG 風: 1024 canvas に対して inset ~92px (≈10%) で
+    rounded square を描き、他の Mac アプリと並んだとき大きさが揃う。
+    縦方向の gradient + 上端の subtle highlight で立体感を出す。
+    Drop shadow は macOS が自動で付けるので入れない。
+  -->
+  <defs>
+    <!-- 背景: 上明〜下暗 (slate-800 → near-black navy) -->
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1e293b"/>
+      <stop offset="100%" stop-color="#070b16"/>
+    </linearGradient>
+    <!-- 上端のハイライト (光が当たっている感) -->
+    <linearGradient id="hi" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.18"/>
+      <stop offset="35%" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <!-- 下端の subtle reflection -->
+    <linearGradient id="lo" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="65%" stop-color="#000000" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0.15"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Rounded square (inset 92px, radius ≈22% of inner width) -->
+  <g>
+    <rect x="92" y="92" width="840" height="840" rx="188" ry="188" fill="url(#bg)"/>
+    <rect x="92" y="92" width="840" height="840" rx="188" ry="188" fill="url(#hi)"/>
+    <rect x="92" y="92" width="840" height="840" rx="188" ry="188" fill="url(#lo)"/>
+    <!-- 1px の inner stroke で edge を引き締める -->
+    <rect x="92.5" y="92.5" width="839" height="839" rx="188" ry="188"
+          fill="none" stroke="#ffffff" stroke-opacity="0.08" stroke-width="1"/>
+  </g>
+
+  <!-- MD letters -->
+  <text
+    x="512"
+    y="620"
+    font-family="ui-monospace, 'SF Mono', Menlo, Consolas, monospace"
+    font-weight="900"
+    font-size="420"
+    text-anchor="middle"
+    fill="#f8fafc"
+    letter-spacing="-6"
+  >MD</text>
+
+  <!-- Diff bars (scaled to fit inset) -->
+  <rect x="358" y="745" width="140" height="28" rx="6" fill="#22c55e"/>
+  <rect x="526" y="745" width="140" height="28" rx="6" fill="#ef4444"/>
+</svg>
