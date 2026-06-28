@@ -36,7 +36,7 @@
 | # | 内容 | 優先 |
 |---|---|---|
 | F1 | WYSIWYG タスクリストのクリック toggle（NodeView 実装） | ★★ |
-| F2 | Settings に項目追加：Soft wrap、行番号 on/off、タブ幅、Diff debounce、Side-by-Side default | ★★ |
+| ~~F2~~ | ~~Settings に項目追加：Soft wrap、行番号 on/off、タブ幅、Diff debounce、Side-by-Side default~~ ✓ 完了（5 項目すべて + CM Compartment で hot-reload） | ★★ |
 | F3 | エディタ配色テーマ（GitHub Light/Dark, Solarized, Dracula 等） | ★ |
 | F4 | TUI コマンドモード拡張：`:e <path>`、`:w <path>`、`:export <fmt> <path>` | ★★ |
 | F5 | TUI 検索（`/`, `n`, `N`） | ★★ |

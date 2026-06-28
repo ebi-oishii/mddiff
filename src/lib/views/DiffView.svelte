@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { doc } from "$lib/stores/doc.svelte";
+  import { settings } from "$lib/stores/settings.svelte";
   import {
     diffTextFull,
     diffTextHunks,
@@ -28,7 +29,9 @@
   // computation through diff_text_* instead of git_*.
   const DISK = "__disk__";
 
-  let submode = $state<DiffSubmode>("sidebyside");
+  // Initial sub-mode comes from settings; once the view is mounted the user
+  // can switch freely with the tabs without affecting the stored default.
+  let submode = $state<DiffSubmode>(settings.diffDefaultSubmode);
   let bases = $state<BaseOption[]>([]);
   let selected = $state<string>("HEAD");
   let customBase = $state("HEAD");
@@ -80,7 +83,7 @@
     if (!doc.path) return;
     if (!isDisk && !doc.gitAvailable) return;
     if (diffTimer) clearTimeout(diffTimer);
-    diffTimer = setTimeout(load, 250);
+    diffTimer = setTimeout(load, settings.diffDebounceMs);
     return () => {
       if (diffTimer) clearTimeout(diffTimer);
     };
