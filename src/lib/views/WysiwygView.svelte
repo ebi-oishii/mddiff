@@ -45,6 +45,22 @@
     }
   }
 
+  // Tracks code / pre nodes inside .ProseMirror so we can stamp
+  // spellcheck="false" on them as Milkdown re-renders. Nested
+  // spellcheck="false" overrides the editor-level spellcheck="true",
+  // so identifiers in code stay un-underlined while prose is checked.
+  let spellMaskMo: MutationObserver | null = null;
+  function maskCodeSpellcheck() {
+    if (!container) return;
+    container
+      .querySelectorAll(".ProseMirror code, .ProseMirror pre")
+      .forEach((el) => {
+        if (el.getAttribute("spellcheck") !== "false") {
+          el.setAttribute("spellcheck", "false");
+        }
+      });
+  }
+
   // Milkdown doesn't expose source-line positions on its rendered nodes, so we
   // reconstruct a top-level-block → source-line mapping by parsing the same
   // markdown with markdown-it. ProseMirror renders top-level doc nodes 1:1 as
@@ -249,6 +265,12 @@
 
     ready = true;
 
+    // Stamp once after initial render, then keep masked as Milkdown
+    // updates the DOM (typing in code, inserting code blocks, etc.).
+    maskCodeSpellcheck();
+    spellMaskMo = new MutationObserver(() => maskCodeSpellcheck());
+    spellMaskMo.observe(container, { childList: true, subtree: true });
+
     // Restore scroll position last so Milkdown's render has been committed
     // and lastEmitted (post-normalization) is set for an accurate line map.
     const restore = doc.currentLine;
@@ -277,6 +299,8 @@
       // DOM might already be torn down; skip silently.
     }
     scrollTracker?.detach();
+    spellMaskMo?.disconnect();
+    spellMaskMo = null;
     editor?.destroy();
     editor = null;
   });

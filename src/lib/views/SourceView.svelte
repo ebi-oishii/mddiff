@@ -9,6 +9,7 @@
   import { settings } from "$lib/stores/settings.svelte";
   import { mddiffCmTheme } from "./cm-theme";
   import { mddiffSyntaxHighlighting } from "./cm-syntax";
+  import { markdownSpellcheckMask } from "./cm-spellcheck-mask";
   import FindBar from "$lib/components/FindBar.svelte";
   import { findExtension } from "./find-cm.svelte";
   import { useCmFind } from "./use-find.svelte";
@@ -127,6 +128,7 @@
         wrapComp.of(settings.softWrap ? EditorView.lineWrapping : []),
         tabSizeComp.of(EditorState.tabSize.of(settings.tabWidth)),
         spellcheckComp.of(spellcheckExt(settings.spellcheck)),
+        markdownSpellcheckMask,
         mddiffCmTheme,
         EditorView.updateListener.of((u) => {
           if (u.docChanged) {
