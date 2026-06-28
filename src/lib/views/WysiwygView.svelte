@@ -5,6 +5,8 @@
   import { gfm } from "@milkdown/kit/preset/gfm";
   import { listener, listenerCtx } from "@milkdown/kit/plugin/listener";
   import { getMarkdown, replaceAll } from "@milkdown/kit/utils";
+  import FindBar from "$lib/components/FindBar.svelte";
+  import { FindState } from "./find.svelte";
 
   let {
     text,
@@ -21,7 +23,17 @@
   let lastEmitted = "";
   let ready = $state(false);
 
+  // DOM-based find — same pattern as Preview / Diff. The scope is `.wys`
+  // (the bound container) which wraps `.ProseMirror`, so matches in the
+  // rendered Markdown are highlighted in place. Editing in WYSIWYG
+  // re-renders nodes (wiping the marks), so the $effect re-applies on
+  // every text update.
+  const find = new FindState();
+
   onMount(async () => {
+    find.bind(container);
+    window.addEventListener("keydown", find.onKeydown);
+
     const initial = text;
     editor = await Editor.make()
       .config((ctx) => {
@@ -62,6 +74,8 @@
   });
 
   onDestroy(() => {
+    window.removeEventListener("keydown", find.onKeydown);
+    find.destroy();
     editor?.destroy();
     editor = null;
   });
@@ -72,9 +86,27 @@
       editor.action(replaceAll(text));
     }
   });
+
+  $effect(() => {
+    void text;
+    void find.query;
+    void find.open;
+    find.refresh();
+  });
 </script>
 
 <div bind:this={container} class="wys"></div>
+{#if find.open}
+  <FindBar
+    bind:query={find.query}
+    matchCount={find.matchCount}
+    currentIndex={find.currentIndex}
+    focusVersion={find.focusVersion}
+    onnext={find.next}
+    onprev={find.prev}
+    onclose={find.close}
+  />
+{/if}
 
 <style>
   .wys {

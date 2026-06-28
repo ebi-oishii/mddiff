@@ -43,6 +43,12 @@
     view = new EditorView({ state, parent: container });
     lastEmitted = text;
 
+    // Move focus into the editor so the caret is visible immediately on mode
+    // switch, and so the CodeMirror searchKeymap (⌘F) reaches its handler.
+    // Without this, the user sees no caret and ⌘F is a no-op until they
+    // click into the editor first.
+    view.focus();
+
     // Restore scroll position from DocStore so mode switches stay in place.
     // Defer one frame so CodeMirror has measured the layout.
     const restore = doc.currentLine;

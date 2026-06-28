@@ -42,6 +42,11 @@
     view = new EditorView({ state, parent: container });
     lastEmitted = text;
 
+    // Focus on mount: makes the caret visible immediately, and lets ⌘F
+    // reach @codemirror/search's keymap (it only fires while the editor
+    // owns focus).
+    view.focus();
+
     const restore = doc.currentLine;
     requestAnimationFrame(() => {
       if (!view) return;
