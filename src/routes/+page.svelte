@@ -142,57 +142,30 @@
     void stopWatch().catch(() => {});
   });
 
+  // Native OS menu events (from menu.rs) and the in-app ☰ button share this
+  // dispatch. Mode events are recognised by the `mode_` prefix and routed
+  // through `setMode`, which enforces the Diff availability rule. Everything
+  // else is a thin handler lookup.
+  const menuDispatch: Record<string, () => void> = {
+    open: () => open(),
+    save: () => save(),
+    save_as: () => saveAs(),
+    reload: () => reloadFromDisk(),
+    sample: () => loadSample(),
+    export_html: () => exportHtml(),
+    export_pdf: () => exportPdf(),
+    export_text: () => exportPlainText(),
+    export_docx: () => exportDocx(),
+    export_mdv: () => openMdvDialog(),
+    preferences: () => openSettings(),
+  };
+
   function handleMenuEvent(id: string) {
-    switch (id) {
-      case "open":
-        open();
-        break;
-      case "save":
-        save();
-        break;
-      case "save_as":
-        saveAs();
-        break;
-      case "reload":
-        reloadFromDisk();
-        break;
-      case "sample":
-        loadSample();
-        break;
-      case "export_html":
-        exportHtml();
-        break;
-      case "export_pdf":
-        exportPdf();
-        break;
-      case "export_text":
-        exportPlainText();
-        break;
-      case "export_docx":
-        exportDocx();
-        break;
-      case "export_mdv":
-        openMdvDialog();
-        break;
-      case "preferences":
-        openSettings();
-        break;
-      case "mode_source":
-        mode = "source";
-        break;
-      case "mode_live":
-        mode = "live";
-        break;
-      case "mode_wysiwyg":
-        mode = "wysiwyg";
-        break;
-      case "mode_preview":
-        mode = "preview";
-        break;
-      case "mode_diff":
-        if (doc.gitAvailable) mode = "diff";
-        break;
+    if (id.startsWith("mode_")) {
+      setMode(id.slice(5) as Mode);
+      return;
     }
+    menuDispatch[id]?.();
   }
 
   $effect(() => {
@@ -287,7 +260,7 @@
     // this component when present (passed via the doc store, see below).
     if (externalChange?.kind !== "modified") return;
     doc.pendingDiskCompare = externalChange.diskText;
-    mode = "diff";
+    setMode("diff");
   }
 
   // Surface fullscreen state to CSS so view-specific rules (e.g. SourceView's
@@ -431,7 +404,7 @@
     error = null;
     normalization = null;
     doc.load(null, SAMPLE_MD, false);
-    mode = "preview";
+    setMode("preview");
   }
 
   function exportTitle(): string {
@@ -529,9 +502,18 @@
     return MODE_ENTRIES.find((e) => e.id === m)?.label ?? m;
   }
 
-  function setMode(m: Mode) {
+  function setMode(target: Mode) {
     closeMenu();
-    mode = m;
+    // Refuse Diff when neither Git nor a "Compare with disk" payload is
+    // available — the view would have nothing to compare against.
+    if (
+      target === "diff" &&
+      !doc.gitAvailable &&
+      doc.pendingDiskCompare == null
+    ) {
+      return;
+    }
+    mode = target;
   }
 
   function setRightMode(m: Mode) {
@@ -588,25 +570,20 @@
     function onKey(e: KeyboardEvent) {
       const mod = e.metaKey || e.ctrlKey;
       if (!mod) return;
-      // Mode shortcuts
-      if (e.key === "1") {
-        e.preventDefault();
-        mode = "source";
-      } else if (e.key === "2") {
-        e.preventDefault();
-        mode = "live";
-      } else if (e.key === "3") {
-        e.preventDefault();
-        mode = "wysiwyg";
-      } else if (e.key === "4") {
-        e.preventDefault();
-        mode = "preview";
-      } else if (e.key === "5" && doc.gitAvailable) {
-        e.preventDefault();
-        mode = "diff";
+
+      // Mode shortcuts (⌘1 .. ⌘5) — driven by MODE_ENTRIES so adding a
+      // mode adds its shortcut here automatically. setMode enforces the
+      // Diff availability rule.
+      for (const m of MODE_ENTRIES) {
+        if (e.key === m.key) {
+          e.preventDefault();
+          setMode(m.id);
+          return;
+        }
       }
+
       // File ops
-      else if (e.key === "o") {
+      if (e.key === "o") {
         e.preventDefault();
         open();
       } else if (e.key === "s" && e.shiftKey) {
