@@ -28,6 +28,13 @@
         ctx.set(rootCtx, container);
         ctx.set(defaultValueCtx, initial);
         ctx.get(listenerCtx).markdownUpdated((_ctx, markdown) => {
+          // Milkdown fires markdownUpdated during initial doc construction.
+          // If we let it through, `onchange` ships the normalized form into
+          // the doc store BEFORE `onnormalize` (and `adoptNormalized`) get a
+          // chance to update savedText alongside, so the doc looks dirty
+          // even though the user didn't edit anything. Gate on `ready` so
+          // genuine user edits are the only thing that emits.
+          if (!ready) return;
           if (markdown !== lastEmitted) {
             lastEmitted = markdown;
             onchange(markdown);
