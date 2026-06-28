@@ -5,16 +5,21 @@
   import { confirm } from "@tauri-apps/plugin-dialog";
   import { doc } from "$lib/stores/doc.svelte";
   import {
-    pickAndReadFile,
+    pickFile,
     pickAndWriteFile,
     pickSavePath,
+    readFile,
     readText,
+    getFileSize,
     startWatch,
     stopWatch,
     writeBinaryFile,
     writeFile,
+    LARGE_FILE_BYTES,
+    HARD_CAP_BYTES,
     type ExternalChange,
   } from "$lib/ipc/fs";
+  import LargeFileWarning from "$lib/components/LargeFileWarning.svelte";
   import { gitIsRepo } from "$lib/ipc/git";
   import {
     printAsPdf,
@@ -40,6 +45,9 @@
   let menuOpen = $state(false);
   let mdvDialogOpen = $state(false);
   let mdvStatus = $state<string | null>(null);
+  // Active when the user picks a file that exceeds the soft size threshold
+  // but stays under the hard cap. Cleared on confirm or cancel.
+  let largeFilePending = $state<{ path: string; size: number } | null>(null);
 
   // External-change banner state. `diskText` is read once when the change is
   // detected so Revert / Compare don't race with a follow-up write.
@@ -308,11 +316,44 @@
     closeMenu();
     error = null;
     try {
-      const loaded = await pickAndReadFile();
-      if (loaded) doc.load(loaded.path, loaded.text, loaded.gitAvailable);
+      const path = await pickFile();
+      if (!path) return;
+      await openPath(path, false);
     } catch (e) {
       error = String(e);
     }
+  }
+
+  /** Size-checked read path. If the file exceeds the soft threshold and the
+   * user hasn't confirmed yet, surface the warning modal and return. The
+   * modal's "Open anyway" handler re-enters with `force=true`. */
+  async function openPath(path: string, force: boolean) {
+    error = null;
+    const size = await getFileSize(path);
+    if (size > HARD_CAP_BYTES) {
+      const mb = (size / 1024 / 1024).toFixed(1);
+      error = `File is ${mb} MB, exceeds the 100 MB hard limit. Refusing to open.`;
+      return;
+    }
+    if (size > LARGE_FILE_BYTES && !force) {
+      largeFilePending = { path, size };
+      return;
+    }
+    const loaded = await readFile(path, force);
+    doc.load(loaded.path, loaded.text, loaded.gitAvailable);
+  }
+
+  function confirmLargeFile() {
+    if (!largeFilePending) return;
+    const { path } = largeFilePending;
+    largeFilePending = null;
+    void openPath(path, true).catch((e) => {
+      error = String(e);
+    });
+  }
+
+  function cancelLargeFile() {
+    largeFilePending = null;
   }
 
   async function save() {
@@ -743,6 +784,14 @@
   {/if}
   {#if settingsOpen}
     <SettingsDialog onClose={() => (settingsOpen = false)} />
+  {/if}
+  {#if largeFilePending}
+    <LargeFileWarning
+      path={largeFilePending.path}
+      sizeBytes={largeFilePending.size}
+      onConfirm={confirmLargeFile}
+      onCancel={cancelLargeFile}
+    />
   {/if}
 </div>
 
