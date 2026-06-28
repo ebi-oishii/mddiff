@@ -96,28 +96,20 @@
     font-size: var(--mdv-editor-font-size, 14px);
   }
   /* Reserve a right strip so long lines don't slide under the floating ☰
-     button (top-right, 34px wide + 12px right inset + ~8px shadow).
-     Padding goes on cm-scroller (not cm-content): cm-scroller is the
-     actual flex container that holds the gutters + content, so shrinking
-     its content-box also shrinks the wrap width that the browser uses
-     for cm-content.
-     4rem (= 64px) leaves a visible gap between the wrap edge and the
-     button — 3rem only gave ~2px which read as "still touching".
-     Skipped in fullscreen: there's already a 2.5rem top padding pushing
-     content below the title overlay, and the ☰ menu sits next to that
-     overlay in the OS-title-bar-free area, not on top of text. */
-  :global(:root:not([data-fullscreen]) .source .cm-scroller) {
+     button (top-right, 34px + 12px inset + shadow ≈ 54px).
+     Padding goes on `.source` (the outer host), NOT on cm-scroller.
+     CodeMirror computes line-wrap width from `cm-scroller.clientWidth`,
+     and clientWidth *includes* padding — so padding on cm-scroller
+     shrinks the visible box but leaves the wrap point unchanged, with
+     cm-line happily rendering past cm-content's right edge. Putting the
+     padding on `.source` makes cm-scroller itself narrower (its parent
+     now reserves space), so clientWidth is the correct (shrunken) value
+     and wrap actually fires earlier.
+     Skipped in fullscreen: the 2.5rem top padding already moves content
+     below the title overlay, and the ☰ menu sits next to the overlay
+     in the OS-title-bar-free area, not on top of text. */
+  :global(:root:not([data-fullscreen])) .source {
     padding-right: 4rem;
     box-sizing: border-box;
-  }
-  /* The active-line decoration is a `<div class="cm-activeLine">` whose
-     box is bounded by cm-content's content-area, so by default it stops
-     short of the editor's right edge, leaving a dead strip where the
-     highlight is missing. A negative right margin pushes its box into
-     the padding area on the right (still inside cm-scroller), so the
-     background color reaches the visual edge while the line's text and
-     caret stay in the original content rectangle. */
-  :global(:root:not([data-fullscreen]) .source .cm-activeLine) {
-    margin-right: -4rem;
   }
 </style>
