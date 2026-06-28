@@ -61,11 +61,18 @@
     overflow: hidden;
     font-size: 0.85rem;
   }
+  /* Vertical span matches the floating ☰ button (top: 0.45rem + 34px),
+     so the button sits centered inside the dark band instead of poking out
+     past its bottom edge. The right padding reserves space so the ×
+     close-button doesn't slide under the ☰ button. */
   header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0.55rem 0.75rem;
+    padding: 0.5rem 0.75rem;
+    padding-right: 3.5rem;
+    min-height: 3rem;
+    box-sizing: border-box;
     border-bottom: 1px solid var(--mddiff-border-mute);
     background: var(--mddiff-surface-hi);
   }
