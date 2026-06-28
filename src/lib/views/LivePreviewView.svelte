@@ -4,6 +4,7 @@
   import { EditorView, keymap, highlightActiveLine } from "@codemirror/view";
   import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
   import { markdown } from "@codemirror/lang-markdown";
+  import { search, searchKeymap } from "@codemirror/search";
   import { livePreviewExtension } from "./livepreview";
   import { doc } from "$lib/stores/doc.svelte";
   import { mdvCmTheme } from "./cm-theme";
@@ -23,7 +24,8 @@
       extensions: [
         history(),
         highlightActiveLine(),
-        keymap.of([...defaultKeymap, ...historyKeymap]),
+        search({ top: true }),
+        keymap.of([...defaultKeymap, ...historyKeymap, ...searchKeymap]),
         markdown(),
         EditorView.lineWrapping,
         mdvCmTheme,

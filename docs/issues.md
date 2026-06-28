@@ -26,9 +26,9 @@
 | P3 | TUI Side-by-Side の左右ペイン独立スクロール | ★★ |
 | P4 | エラーハンドリング詳細化（ファイル消失検知、再読込ボタン） | ★★ |
 | P5 | 大容量ファイル制限を「警告 + override」に変更（現在 5MB 超は問答無用で拒否） | ★ |
-| P6 | Preview / Live Preview / Diff にも検索（⌘F） | ★★ |
+| ~~P6~~ | ~~Preview / Live Preview / Diff にも検索（⌘F）~~ ✓ 完了（Source/Live は CodeMirror search、Preview/Diff は DOM find） | ★★ |
 | P7 | モバイル：ボトムタブ UI、左右スワイプでモード切替 | ★★ |
-| P8 | unsaved 状態でアプリ / ウィンドウを閉じようとしたら確認 | ★★ |
+| ~~P8~~ | ~~unsaved 状態でアプリ / ウィンドウを閉じようとしたら確認~~ ✓ 完了（OS の close 要求すべてに発火） | ★★ |
 | P9 | 外部エディタで開いてるファイルが変更されたら検知して再読込を提案 | ★ |
 
 ## 機能追加

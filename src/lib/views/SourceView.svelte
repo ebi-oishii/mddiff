@@ -5,6 +5,7 @@
   import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
   import { markdown } from "@codemirror/lang-markdown";
   import { syntaxHighlighting, defaultHighlightStyle } from "@codemirror/language";
+  import { search, searchKeymap } from "@codemirror/search";
   import { doc } from "$lib/stores/doc.svelte";
   import { mdvCmTheme } from "./cm-theme";
 
@@ -25,7 +26,8 @@
         lineNumbers(),
         highlightActiveLine(),
         syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
-        keymap.of([...defaultKeymap, ...historyKeymap]),
+        search({ top: true }),
+        keymap.of([...defaultKeymap, ...historyKeymap, ...searchKeymap]),
         markdown(),
         EditorView.lineWrapping,
         mdvCmTheme,
