@@ -1,9 +1,9 @@
 <script lang="ts">
-  import { onDestroy, onMount } from "svelte";
+  import { onMount } from "svelte";
   import type { HunkKind, HunkSummary } from "$lib/types";
   import { removedCount } from "$lib/types";
   import FindBar from "$lib/components/FindBar.svelte";
-  import { FindState } from "../find.svelte";
+  import { useFind } from "../use-find.svelte";
 
   let { text, hunks }: { text: string; hunks: HunkSummary[] } = $props();
 
@@ -26,24 +26,15 @@
   }
 
   let scroller: HTMLDivElement;
-  const find = new FindState();
-
-  onMount(() => {
-    find.bind(scroller);
-    window.addEventListener("keydown", find.onKeydown);
-  });
-
-  onDestroy(() => {
-    window.removeEventListener("keydown", find.onKeydown);
-    find.destroy();
-  });
-
-  $effect(() => {
+  const find = useFind(() => {
     void text;
     void hunks;
     void find.query;
     void find.open;
-    find.refresh();
+  });
+
+  onMount(() => {
+    find.bind(scroller);
   });
 </script>
 

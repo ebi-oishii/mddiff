@@ -10,7 +10,8 @@
   import { mdvCmTheme } from "./cm-theme";
   import { mdvSyntaxHighlighting } from "./cm-syntax";
   import FindBar from "$lib/components/FindBar.svelte";
-  import { CmFindState, findExtension } from "./find-cm.svelte";
+  import { findExtension } from "./find-cm.svelte";
+  import { useCmFind } from "./use-find.svelte";
 
   let {
     text,
@@ -39,7 +40,11 @@
     scrollTimer = setTimeout(captureTopLine, 80);
   }
 
-  const find = new CmFindState();
+  const find = useCmFind(() => {
+    void text;
+    void find.query;
+    void find.open;
+  });
 
   // Active-line extension overlay: paints `--mdv-active-line-bg` across the
   // full .source width at the current line's y. The right 3rem padding
@@ -121,7 +126,6 @@
     lastEmitted = text;
 
     find.bind(view);
-    window.addEventListener("keydown", find.onKeydown);
 
     // Move focus into the editor so the caret is visible immediately on mode
     // switch. Without this the user sees no caret on entry to the view.
@@ -152,8 +156,6 @@
   });
 
   onDestroy(() => {
-    window.removeEventListener("keydown", find.onKeydown);
-    find.destroy();
     if (scrollTimer) clearTimeout(scrollTimer);
     // Last-chance capture in case a scroll event happened in the final ~80ms
     // and the debounce hasn't fired yet. Best-effort; guarded inside.
@@ -197,11 +199,6 @@
     });
   });
 
-  $effect(() => {
-    void find.query;
-    void find.open;
-    find.refresh();
-  });
 </script>
 
 <div bind:this={container} class="source"></div>

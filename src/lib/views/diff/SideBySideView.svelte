@@ -1,12 +1,12 @@
 <script lang="ts">
-  import { onDestroy, onMount } from "svelte";
+  import { onMount } from "svelte";
   import MarkdownIt from "markdown-it";
   import DOMPurify from "dompurify";
   import taskLists from "markdown-it-task-lists";
   import type { HunkSummary, SideBySidePayload } from "$lib/types";
   import { mapNewToOld, mapOldToNew } from "./line-map";
   import FindBar from "$lib/components/FindBar.svelte";
-  import { FindState } from "../find.svelte";
+  import { useFind } from "../use-find.svelte";
 
   let {
     payload,
@@ -21,23 +21,14 @@
   // Find scopes both panes — the outer .sbs wrapper contains both. A match
   // in either pane is reachable; scrollIntoView walks the parent chain and
   // scrolls the right .pane-scroller into position.
-  const find = new FindState();
-
-  onMount(() => {
-    find.bind(sbsWrap);
-    window.addEventListener("keydown", find.onKeydown);
-  });
-
-  onDestroy(() => {
-    window.removeEventListener("keydown", find.onKeydown);
-    find.destroy();
-  });
-
-  $effect(() => {
+  const find = useFind(() => {
     void payload;
     void find.query;
     void find.open;
-    find.refresh();
+  });
+
+  onMount(() => {
+    find.bind(sbsWrap);
   });
 
   /**

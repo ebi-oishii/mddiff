@@ -7,7 +7,7 @@
   import { listener, listenerCtx } from "@milkdown/kit/plugin/listener";
   import { getMarkdown, replaceAll } from "@milkdown/kit/utils";
   import FindBar from "$lib/components/FindBar.svelte";
-  import { FindState } from "./find.svelte";
+  import { useFind } from "./use-find.svelte";
   import { doc } from "$lib/stores/doc.svelte";
 
   let {
@@ -108,7 +108,11 @@
   // rendered Markdown are highlighted in place. Editing in WYSIWYG
   // re-renders nodes (wiping the marks), so the $effect re-applies on
   // every text update.
-  const find = new FindState();
+  const find = useFind(() => {
+    void text;
+    void find.query;
+    void find.open;
+  });
 
   // Click anywhere on the rendered `☐` / `☑` glyph (drawn via .cm-line's
   // ::before, so the click target is the `<li>` itself within ~24px from
@@ -153,7 +157,6 @@
 
   onMount(async () => {
     find.bind(container);
-    window.addEventListener("keydown", find.onKeydown);
 
     const initial = text;
     editor = await Editor.make()
@@ -217,8 +220,6 @@
 
   onDestroy(() => {
     container?.removeEventListener("click", handleTaskClick);
-    window.removeEventListener("keydown", find.onKeydown);
-    find.destroy();
     if (scrollTimer) clearTimeout(scrollTimer);
     try {
       captureTopLine();
@@ -237,12 +238,6 @@
     }
   });
 
-  $effect(() => {
-    void text;
-    void find.query;
-    void find.open;
-    find.refresh();
-  });
 </script>
 
 <div bind:this={container} class="wys"></div>
