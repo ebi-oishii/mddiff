@@ -28,8 +28,9 @@ pub enum DiffMarker {
     /// above in the list; the newer entry is the canonical comparison
     /// point, so this one is suppressed.
     Redundant,
-    /// Couldn't determine (current buffer not provided, or revspec doesn't
-    /// resolve at all).
+    /// Current buffer was not provided, so we can't compare against it.
+    /// Note: a revspec that doesn't resolve at all is marked `Differs`, not
+    /// `Unknown` — see the match in `list_base_options_for_file`.
     Unknown,
 }
 
