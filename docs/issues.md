@@ -11,7 +11,7 @@
 
 | # | 内容 | 優先 |
 |---|---|---|
-| B1 | WYSIWYG のタスクリストはチェックボックスを CSS のみで描画しており、クリックで toggle できない | ★★ |
+| ~~B1~~ | ~~WYSIWYG のタスクリストはチェックボックスを CSS のみで描画しており、クリックで toggle できない~~ ✓ 完了（F1 で実装、クリックで checked attr を toggle） | ★★ |
 | B2 | Side-by-Side のハイライト粒度はブロック単位（段落内 1 字違いも段落全体が塗られる） | ★★ |
 | B3 | WYSIWYG 正規化で `savedText` が disk の実バイト列と一時的にずれる（既知のトレードオフ）| ★ |
 | B4 | Android 実機 / エミュレータ起動後のレイアウトが崩れている | ★★ |
@@ -35,7 +35,7 @@
 
 | # | 内容 | 優先 |
 |---|---|---|
-| F1 | WYSIWYG タスクリストのクリック toggle（NodeView 実装） | ★★ |
+| ~~F1~~ | ~~WYSIWYG タスクリストのクリック toggle~~ ✓ 完了（NodeView ではなく container 経由の click handler + ProseMirror setNodeMarkup） | ★★ |
 | F2 | Settings に項目追加：Soft wrap、行番号 on/off、タブ幅、Diff debounce、Side-by-Side default | ★★ |
 | F3 | エディタ配色テーマ（GitHub Light/Dark, Solarized, Dracula 等） | ★ |
 | F4 | TUI コマンドモード拡張：`:e <path>`、`:w <path>`、`:export <fmt> <path>` | ★★ |

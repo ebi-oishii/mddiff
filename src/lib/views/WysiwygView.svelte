@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount, onDestroy } from "svelte";
-  import { Editor, defaultValueCtx, rootCtx } from "@milkdown/kit/core";
+  import { Editor, defaultValueCtx, editorViewCtx, rootCtx } from "@milkdown/kit/core";
   import { commonmark } from "@milkdown/kit/preset/commonmark";
   import { gfm } from "@milkdown/kit/preset/gfm";
   import { listener, listenerCtx } from "@milkdown/kit/plugin/listener";
@@ -21,6 +21,49 @@
   let lastEmitted = "";
   let ready = $state(false);
 
+  // Click anywhere on the rendered `☐` / `☑` glyph (drawn via .cm-line's
+  // ::before, so the click target is the `<li>` itself within ~24px from
+  // its left edge) toggles the task's checked state on the underlying
+  // ProseMirror node. The markdown-updated listener propagates the change
+  // to doc.text and the dirty flag.
+  function handleTaskClick(e: MouseEvent) {
+    if (!editor) return;
+    const target = e.target as HTMLElement;
+    const li = target.closest<HTMLElement>('li[data-item-type="task"]');
+    if (!li) return;
+    // Limit to the left ~24px (matches the ::before width) so clicks on
+    // task body text still place the caret as usual.
+    const rect = li.getBoundingClientRect();
+    if (e.clientX - rect.left > 24) return;
+    e.preventDefault();
+    editor.action((ctx) => {
+      const view = ctx.get(editorViewCtx);
+      const pos = view.posAtDOM(li, 0);
+      if (pos < 0) return;
+      const resolved = view.state.doc.resolve(pos);
+      // Walk up from the click target's position until we hit the task
+      // list item node. Milkdown's GFM preset names it either
+      // `task_list_item` (Lezer-style) or `taskListItem` (camelCase
+      // depending on version) — accept both.
+      for (let d = resolved.depth; d >= 0; d--) {
+        const node = resolved.node(d);
+        if (
+          node.type.name === "task_list_item" ||
+          node.type.name === "taskListItem"
+        ) {
+          const nodePos = resolved.before(d);
+          view.dispatch(
+            view.state.tr.setNodeMarkup(nodePos, null, {
+              ...node.attrs,
+              checked: !node.attrs.checked,
+            }),
+          );
+          return;
+        }
+      }
+    });
+  }
+
   onMount(async () => {
     const initial = text;
     editor = await Editor.make()
@@ -38,6 +81,8 @@
       .use(gfm)
       .use(listener)
       .create();
+
+    container.addEventListener("click", handleTaskClick);
 
     // After load, query Milkdown's own serialization of the doc to detect
     // round-trip normalization (e.g. `*foo*` <-> `_foo_`, link reference
@@ -62,6 +107,7 @@
   });
 
   onDestroy(() => {
+    container?.removeEventListener("click", handleTaskClick);
     editor?.destroy();
     editor = null;
   });
@@ -174,6 +220,7 @@
     color: light-dark(#888, #888);
     font-size: 1.05em;
     vertical-align: -1px;
+    cursor: pointer;
   }
   :global(.wys li[data-item-type="task"][data-checked="true"]::before) {
     content: "☑ ";
