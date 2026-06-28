@@ -36,6 +36,11 @@
   let mdvDialogOpen = $state(false);
   let mdvStatus = $state<string | null>(null);
 
+  // Split view: render the same document side-by-side with two independent
+  // modes. Common case: Source on the left, Preview on the right.
+  let splitMode = $state(false);
+  let rightMode = $state<Mode>("preview");
+
   // Detect Mac at runtime for shortcut hint glyphs. Non-Mac users see "Ctrl+"
   // instead of ⌘ so the menu hint actually matches the key they need to press.
   const isMac =
@@ -315,6 +320,16 @@
     mode = m;
   }
 
+  function setRightMode(m: Mode) {
+    if (m === "diff" && !doc.gitAvailable) return;
+    rightMode = m;
+  }
+
+  function toggleSplit() {
+    splitMode = !splitMode;
+    closeMenu();
+  }
+
   function basename(p: string | null): string {
     if (!p) return "(untitled)";
     const parts = p.split(/[\\/]/);
@@ -324,6 +339,9 @@
   $effect(() => {
     if (mode === "diff" && !doc.gitAvailable) {
       mode = "source";
+    }
+    if (rightMode === "diff" && !doc.gitAvailable) {
+      rightMode = "preview";
     }
   });
 
@@ -384,6 +402,9 @@
       } else if (e.key === ",") {
         e.preventDefault();
         openSettings();
+      } else if (e.key === "\\") {
+        e.preventDefault();
+        toggleSplit();
       }
     }
     window.addEventListener("keydown", onKey);
@@ -441,6 +462,11 @@
             </button>
           {/each}
           <div class="sep"></div>
+          <button role="menuitem" onclick={toggleSplit}>
+            <span>{splitMode ? "Close split" : "Split right"}</span>
+            <kbd>{MOD}\</kbd>
+          </button>
+          <div class="sep"></div>
           <button role="menuitem" onclick={open}>
             <span>Open…</span><kbd>{MOD}O</kbd>
           </button>
@@ -493,21 +519,57 @@
       <button class="dismiss" aria-label="Dismiss" onclick={() => (normalization = null)}>×</button>
     </div>
   {/if}
-  <main>
-    {#if mode === "source"}
+  {#snippet renderView(m: Mode, withNormalizeBanner: boolean)}
+    {#if m === "source"}
       <SourceView text={doc.text} onchange={(t) => doc.setText(t)} />
-    {:else if mode === "live"}
+    {:else if m === "live"}
       <LivePreviewView text={doc.text} onchange={(t) => doc.setText(t)} />
-    {:else if mode === "wysiwyg"}
+    {:else if m === "wysiwyg"}
       <WysiwygView
         text={doc.text}
         onchange={(t) => doc.setText(t)}
-        onnormalize={handleNormalize}
+        onnormalize={withNormalizeBanner ? handleNormalize : () => {}}
       />
-    {:else if mode === "preview"}
+    {:else if m === "preview"}
       <PreviewView text={doc.text} />
     {:else}
       <DiffView />
+    {/if}
+  {/snippet}
+
+  <main class:split={splitMode}>
+    <section class="pane">
+      {@render renderView(mode, true)}
+    </section>
+    {#if splitMode}
+      <section class="pane right">
+        <div class="pane-mode-bar" role="tablist" aria-label="Right pane mode">
+          {#each MODE_ENTRIES as m}
+            {@const disabled = m.requiresGit && !doc.gitAvailable}
+            <button
+              role="tab"
+              aria-selected={rightMode === m.id}
+              class:active={rightMode === m.id}
+              {disabled}
+              onclick={() => setRightMode(m.id)}
+              title={disabled ? "Requires a Git-managed file" : m.label}
+            >
+              {m.label}
+            </button>
+          {/each}
+          <button
+            class="close-split"
+            onclick={toggleSplit}
+            aria-label="Close split"
+            title="Close split"
+          >
+            ×
+          </button>
+        </div>
+        <div class="pane-view">
+          {@render renderView(rightMode, false)}
+        </div>
+      </section>
     {/if}
   </main>
 
@@ -792,5 +854,68 @@
        but use the same token, so they read as one continuous surface. */
     background: var(--mdv-bg);
     color: var(--mdv-text);
+    display: flex;
+    flex-direction: column;
+  }
+  main.split {
+    flex-direction: row;
+  }
+  main > .pane {
+    flex: 1 1 100%;
+    min-width: 0;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  main.split > .pane {
+    flex-basis: 50%;
+  }
+  main.split > .pane + .pane {
+    border-left: 1px solid var(--mdv-border);
+  }
+  .pane-mode-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.3rem 0.5rem;
+    border-bottom: 1px solid var(--mdv-border);
+    background: var(--mdv-surface);
+    font-size: 0.78rem;
+    flex-shrink: 0;
+  }
+  .pane-mode-bar button {
+    background: transparent;
+    border: 0;
+    color: var(--mdv-text-mute);
+    padding: 0.22rem 0.55rem;
+    border-radius: 3px;
+    font: inherit;
+    cursor: pointer;
+  }
+  .pane-mode-bar button:hover:not(:disabled) {
+    background: var(--mdv-surface-hi);
+    color: var(--mdv-text);
+  }
+  .pane-mode-bar button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+  .pane-mode-bar button.active {
+    background: var(--mdv-accent-bg);
+    color: var(--mdv-accent-fg);
+  }
+  .pane-mode-bar .close-split {
+    margin-left: auto;
+    font-size: 1rem;
+    line-height: 1;
+    padding: 0.1rem 0.45rem;
+  }
+  .pane-view {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
   }
 </style>
