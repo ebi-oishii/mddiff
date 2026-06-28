@@ -803,39 +803,57 @@
       <button class="dismiss" aria-label={i18n.t("banner.dismiss")} onclick={() => (normalization = null)}>×</button>
     </div>
   {/if}
-  {#snippet renderView(m: Mode, withNormalizeBanner: boolean)}
-    {#if m === "source"}
-      <SourceView
-        text={doc.text}
-        onchange={(t) => doc.setText(t)}
-        onerror={(msg) => (error = msg)}
-      />
-    {:else if m === "live"}
-      <LivePreviewView
-        text={doc.text}
-        onchange={(t) => doc.setText(t)}
-        onerror={(msg) => (error = msg)}
-      />
-    {:else if m === "wysiwyg"}
-      <WysiwygView
-        text={doc.text}
-        onchange={(t) => doc.setText(t)}
-        onnormalize={withNormalizeBanner ? handleNormalize : () => {}}
-      />
-    {:else if m === "preview"}
-      <PreviewView text={doc.text} />
-    {:else}
-      <DiffView />
-    {/if}
-  {/snippet}
-
   <main class:split={splitMode}>
     <section class="pane">
-      {@render renderView(mode, true)}
+      {#if mode === "source"}
+        <SourceView
+          text={doc.text}
+          onchange={(t) => doc.setText(t)}
+          onerror={(msg) => (error = msg)}
+        />
+      {:else if mode === "live"}
+        <LivePreviewView
+          text={doc.text}
+          onchange={(t) => doc.setText(t)}
+          onerror={(msg) => (error = msg)}
+        />
+      {:else if mode === "wysiwyg"}
+        <WysiwygView
+          text={doc.text}
+          onchange={(t) => doc.setText(t)}
+          onnormalize={handleNormalize}
+        />
+      {:else if mode === "preview"}
+        <PreviewView text={doc.text} />
+      {:else}
+        <DiffView />
+      {/if}
     </section>
     {#if splitMode}
       <section class="pane right">
-        {@render renderView(rightMode, false)}
+        {#if rightMode === "source"}
+          <SourceView
+            text={doc.text}
+            onchange={(t) => doc.setText(t)}
+            onerror={(msg) => (error = msg)}
+          />
+        {:else if rightMode === "live"}
+          <LivePreviewView
+            text={doc.text}
+            onchange={(t) => doc.setText(t)}
+            onerror={(msg) => (error = msg)}
+          />
+        {:else if rightMode === "wysiwyg"}
+          <WysiwygView
+            text={doc.text}
+            onchange={(t) => doc.setText(t)}
+            onnormalize={() => {}}
+          />
+        {:else if rightMode === "preview"}
+          <PreviewView text={doc.text} />
+        {:else}
+          <DiffView />
+        {/if}
       </section>
     {/if}
   </main>
