@@ -648,14 +648,18 @@
 <div class="app">
   <!-- Filename / dirty / current mode normally live in the OS window title
        bar. Mac fullscreen (green button) hides that bar, so when we detect
-       fullscreen we float the same info on top-left. -->
-  {#if isFullscreen}
-    <div class="title-overlay">
-      <span class="filename">{basename(doc.path)}</span>
-      {#if doc.dirty}<span class="dirty" title="Unsaved changes">●</span>{/if}
-      <span class="mode-name">{titleModeLabel()}</span>
-    </div>
-  {/if}
+       fullscreen we float the same info on top-left of each pane. The
+       per-pane overlay (rather than one global) means in split mode each
+       side shows its own current mode. -->
+  {#snippet titlePill(modeForPane: Mode)}
+    {#if isFullscreen}
+      <div class="title-overlay">
+        <span class="filename">{basename(doc.path)}</span>
+        {#if doc.dirty}<span class="dirty" title="Unsaved changes">●</span>{/if}
+        <span class="mode-name">{modeLabel(modeForPane)}</span>
+      </div>
+    {/if}
+  {/snippet}
 
   <!-- ☰ menu floats over the content top-right; the old dedicated header
        strip was just wasting vertical space. -->
@@ -805,6 +809,7 @@
   {/if}
   <main class:split={splitMode}>
     <section class="pane">
+      {@render titlePill(mode)}
       {#if mode === "source"}
         <SourceView
           text={doc.text}
@@ -831,6 +836,7 @@
     </section>
     {#if splitMode}
       <section class="pane right">
+        {@render titlePill(rightMode)}
         {#if rightMode === "source"}
           <SourceView
             text={doc.text}
@@ -999,10 +1005,12 @@
     height: 100vh;
   }
   /* ---------- Floating overlays (no header strip) ---------- */
-  /* Title is only shown in fullscreen (OS title bar gone). Top-left floating
-     pill matches the menu's resting position on the right. */
+  /* Title is only shown in fullscreen (OS title bar gone). Pinned to the
+     top-left of its own pane via position: absolute so in split mode each
+     side shows its own pill. The single-pane case looks the same as before
+     since the pane fills the viewport. */
   .title-overlay {
-    position: fixed;
+    position: absolute;
     top: 0.45rem;
     left: 0.75rem;
     z-index: 25;
@@ -1220,6 +1228,8 @@
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    /* Anchors the per-pane fullscreen title pill (absolute) to this pane. */
+    position: relative;
   }
   main.split > .pane {
     flex-basis: 50%;
