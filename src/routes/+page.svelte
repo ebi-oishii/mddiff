@@ -849,6 +849,11 @@
 
     --mdv-shadow:       light-dark(rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.5));
 
+    /* Single source of truth for the Source view's active-line tint.
+       Used by mdvCmTheme (inside cm-editor) AND .source::before (the
+       extension strip that reaches into the right padding). */
+    --mdv-active-line-bg: color-mix(in srgb, var(--mdv-accent) 6%, transparent);
+
     --mdv-editor-font-size: 14px;
 
     background: var(--mdv-bg);
