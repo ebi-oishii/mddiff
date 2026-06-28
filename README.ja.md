@@ -1,63 +1,105 @@
 # mddiff
 
-軽量・クロスプラットフォームの Markdown ビューア兼エディタ。
-GUI（Desktop / Mobile）と TUI を 1 つの core 実装で動かす。
+> **Alpha · v0.1.0-alpha** — v1 までに API / ファイル形式 / 設定が変わる可能性があります。フィードバックは issue で歓迎します。
+
+軽量・クロスプラットフォームの Markdown エディタ。**diff を一級機能として持つ**のが特徴。Rust の単一 core を、Tauri 2 + Svelte 5 の GUI と ratatui の TUI バイナリで共有します。
+
+🇺🇸 English: [README.md](README.md)
 
 ## 何ができる
 
-- **5 つのモード**: Source / Live Preview / WYSIWYG / Preview / Diff を切替
-  - Source: CodeMirror 6
-  - Live Preview: 現在行は raw、他は inline 装飾（Typora 風）
-  - WYSIWYG: Milkdown ベースの rich editing
-  - Preview: 読み取り専用レンダリング
-  - Diff: Git 管理下なら任意 revision との差分
-- **Diff モードに 3 サブモード**:
-  - Highlight Only — 編集中の文脈を崩さず変更箇所だけ色帯で表示
-  - Full — GitHub 風の +/− 統合表示
-  - Side-by-Side — 旧/新を左右で並べてブロック単位ハイライト
-- **比較対象を選べる**: HEAD / HEAD~N / ブランチ / タグ / 直近コミットから選択、
-  変更がある base には ● マーカー（同 blob 連続区間は最古だけに集約）
-- **TUI も同等機能**: Source / Preview / Diff（Highlight / Full / Side-by-Side 簡易版）+
-  ratatui の popup で base ピッカー + vim 風 `:w` `:q` `:wq` `:q!`
-- **Export to HTML / PDF / Plain text / DOCX**: GUI の Export ▾ ボタンから。
-  PDF は OS のプリントダイアログ経由（追加依存なし）
-- **`.mddiff` パッケージ入出力**: Git 配下のファイルを履歴ごと 1 ファイルに
-  bundle（zstd+base64 を HTML コメント内）。受信側は Git なしで本文を
-  読める。仕様は [docs/mddiff-protocol.md](docs/mddiff-protocol.md)
-- **配布形態**:
-  - GUI = Tauri 2（Mac / Windows / Linux / iOS / Android）
-  - TUI = 単独バイナリ（リリースビルドで 2.3MB）
+- **5 つの編集モード**:
+  - **Source** — CodeMirror 6 ベース。markdown シンタックスハイライト、行番号、ソフトラップ、タブ幅設定
+  - **Live Preview** — Typora 風。編集行は raw、それ以外はインライン装飾
+  - **WYSIWYG** — Milkdown / ProseMirror。タスクリストはクリックで toggle
+  - **Preview** — 読み取り専用の HTML レンダリング
+  - **Diff** — 任意の Git revision、またはディスク版との差分
+- **Diff は plugin ではなく一級機能**:
+  - 3 サブモード (Highlight Only / Full / Side-by-Side、スクロール同期付き)
+  - base picker はファイルを実際に変更したコミットだけにフィルタ
+  - 外部変更検知 banner からその場で Diff モードに飛べる
+- **GUI + TUI で機能対称** — どちらも同じ `mddiff-core` crate。TUI は ~2.3 MB の単一バイナリ、vim 風 `:w :q :wq` + 同じ Diff サブモード対応
+- **`.mddiff` ポータブルバンドル** — Git 履歴を zstd 圧縮で HTML コメントに埋め込み、1 ファイルで配布可能。受信側は Git なしで本文を素の Markdown として読め、mddiff なら履歴も再生可能
+- **軽量** — Tauri 2 ベースで Chromium / Node は同梱しない。macOS で idle RAM ≈ 80 MB、cold start ≈ 0.5 秒。Electron 系競合の 1.5〜3 倍軽量
+
+## インストール
+
+### 配布バイナリ（推奨）
+
+[Releases ページ](https://github.com/ebi-oishii/mddiff/releases) からダウンロード:
+
+| プラットフォーム | ファイル |
+|---|---|
+| macOS (Apple Silicon) | `mddiff_0.1.0_aarch64.dmg` |
+| macOS (Intel) | `mddiff_0.1.0_x64.dmg` |
+| Windows | `mddiff_0.1.0_x64-setup.msi` |
+| Linux | `mddiff_0.1.0_amd64.AppImage` |
+| TUI (任意の OS) | `mddiff-tui_0.1.0_<target>` |
+
+### ソースから build
+
+必要: Rust 1.75+、Node 22+、Tauri 用 platform 依存 ([Tauri prerequisites](https://tauri.app/start/prerequisites/))
+
+```sh
+git clone https://github.com/ebi-oishii/mddiff
+cd mddiff
+npm install
+npm run tauri build              # dmg / msi / AppImage が target/release/bundle/ に生成
+cargo build --release -p mddiff-tui   # TUI 単一バイナリ
+```
+
+## ステータスと roadmap
+
+**Alpha**: 日常使用に耐える程度には完成していますが、v1 までに format や設定が変わる可能性があります。
+
+**既知の制限**:
+- `.mddiff` フォーマットは v1 までに非互換に変更されうる
+- Settings localStorage スキーマはバージョン間でリセットされうる
+- iOS / Android はまだ scaffold 状態（バグあり前提）
+- Diff base picker は英語ラベルのみ（他の UI は日英対応済み）
+
+**近期ロードマップ**（詳細は [docs/issues.md](docs/issues.md)）:
+- 画像クリップボード貼付 / D&D → `.assets/` 自動保存
+- TOC / アウトラインサイドバー
+- Mermaid 図のレンダリング
+- KaTeX 数式
+- スペルチェック
+- Find & Replace の regex / case-sensitivity トグル
+- git blame ガター
 
 ## アーキテクチャ
 
-Cargo ワークスペースで 3 crate に分割：
+Cargo ワークスペース、3 crate 構成:
 
 ```
 mddiff/
-├── crates/mddiff-core/   # UI 非依存の純粋ロジック（diff, git, fs, doc state）
-├── crates/mddiff-tui/    # ratatui ベースの端末 UI
-└── src-tauri/         # Tauri 2 シェル + Svelte 5 + CodeMirror / Milkdown
+├── crates/mddiff-core/   # UI 非依存のロジック (diff / git / fs / pack)
+├── crates/mddiff-tui/    # ratatui ベース端末 UI
+└── src-tauri/            # Tauri 2 シェル + Svelte 5 + CodeMirror / Milkdown
 ```
+
+詳細は [docs/design.md](docs/design.md)、技術選定の理由は [docs/decisions.md](docs/decisions.md)、ポジショニングの分析は [docs/competitive-analysis.md](docs/competitive-analysis.md) を参照。
 
 ## 開発
 
-### GUI（Tauri）
+### GUI (Tauri)
+
 ```sh
 npm install
-npm run tauri dev                   # Desktop
-npm run tauri android dev           # Android（要 Android Studio + NDK + JAVA_HOME）
-npm run tauri ios dev               # iOS（要 Xcode + cocoapods + iOS targets）
+npm run tauri dev                  # Desktop 開発モード
+npm run tauri android dev          # Android (Android Studio + NDK + JAVA_HOME)
+npm run tauri ios dev              # iOS (Xcode + cocoapods)
 ```
 
-初回モバイル用には `npm run tauri ios init` / `npm run tauri android init`。
-iOS は `brew install cocoapods` も必要。
+モバイル初回: `npm run tauri ios init` / `android init`。iOS はさらに `brew install cocoapods` が必要。
 
 ### TUI
+
 ```sh
-cargo run -p mddiff-tui                       # ファイル指定なし
-cargo run -p mddiff-tui -- README.md          # ファイル指定
-cargo run -p mddiff-tui -- --diff-base HEAD~3 README.md  # 任意 revision と比較
-cargo run -p mddiff-tui -- --read-only README.md         # 読み取り専用
+cargo run -p mddiff-tui                              # ファイル指定なし
+cargo run -p mddiff-tui -- README.md                 # ファイル指定
+cargo run -p mddiff-tui -- --diff-base HEAD~3 README.md  # 任意 revision との差分
+cargo run -p mddiff-tui -- --read-only README.md          # 読み取り専用
 ```
 
 ### 品質チェック
@@ -75,8 +117,9 @@ MIT — [LICENSE](LICENSE) 参照。
 ## ドキュメント
 
 - [docs/design.md](docs/design.md) — アーキテクチャと各モードの設計
-- [docs/decisions.md](docs/decisions.md) — 技術選定 (14 ADRs)
+- [docs/decisions.md](docs/decisions.md) — 技術選定 ADRs
 - [docs/roadmap.md](docs/roadmap.md) — フェーズと進捗
-- [docs/tooling-research.md](docs/tooling-research.md) — 既存ツールから取り入れる使用感
+- [docs/competitive-analysis.md](docs/competitive-analysis.md) — 競合分析とポジショニング
+- [docs/refactor-audit.md](docs/refactor-audit.md) — コード品質 audit
 - [docs/mddiff-protocol.md](docs/mddiff-protocol.md) — `.mddiff` portable package format v1
-- [docs/issues.md](docs/issues.md) — 取り組み候補リスト（バグ・ポリッシュ・機能候補）
+- [docs/issues.md](docs/issues.md) — 取り組み候補リスト
