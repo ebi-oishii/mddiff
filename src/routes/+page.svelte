@@ -2,6 +2,7 @@
   import { onMount, onDestroy } from "svelte";
   import { listen, type UnlistenFn } from "@tauri-apps/api/event";
   import { getCurrentWindow } from "@tauri-apps/api/window";
+  import { confirm } from "@tauri-apps/plugin-dialog";
   import { doc } from "$lib/stores/doc.svelte";
   import {
     pickAndReadFile,
@@ -50,6 +51,7 @@
 
   let menuUnlisten: UnlistenFn | null = null;
   let resizeUnlisten: UnlistenFn | null = null;
+  let closeUnlisten: UnlistenFn | null = null;
   let isFullscreen = $state(false);
 
   onMount(async () => {
@@ -80,6 +82,18 @@
           isFullscreen = await win.isFullscreen();
         } catch {}
       });
+      // Confirm before discarding unsaved edits on window close (red ×, ⌘Q,
+      // taskbar close, etc.). preventDefault keeps the window alive until the
+      // user makes a choice; destroy() bypasses the listener on confirm.
+      closeUnlisten = await win.onCloseRequested(async (event) => {
+        if (!doc.dirty) return;
+        event.preventDefault();
+        const ok = await confirm(
+          "There are unsaved changes. Close without saving?",
+          { title: "Unsaved changes", kind: "warning", okLabel: "Discard & close", cancelLabel: "Cancel" },
+        );
+        if (ok) await win.destroy();
+      });
     } catch {
       // not in Tauri
     }
@@ -88,6 +102,7 @@
   onDestroy(() => {
     menuUnlisten?.();
     resizeUnlisten?.();
+    closeUnlisten?.();
   });
 
   function handleMenuEvent(id: string) {
