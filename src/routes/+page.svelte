@@ -32,6 +32,8 @@
   } from "$lib/export";
   import MddiffExportDialog from "$lib/components/MddiffExportDialog.svelte";
   import SettingsDialog from "$lib/components/SettingsDialog.svelte";
+  import OutlineSidebar from "$lib/components/OutlineSidebar.svelte";
+  import { extractHeadings, activeHeadingIndex } from "$lib/views/outline";
   import { settings, FONT_SIZE_PX } from "$lib/stores/settings.svelte";
   import SourceView from "$lib/views/SourceView.svelte";
   import LivePreviewView from "$lib/views/LivePreviewView.svelte";
@@ -64,6 +66,13 @@
   // modes. Common case: Source on the left, Preview on the right.
   let splitMode = $state(false);
   let rightMode = $state<Mode>("preview");
+
+  // Outline sidebar: re-extract headings on every doc.text change. Cheap
+  // because extractHeadings only parses (no rendering / sanitization).
+  const outlineHeadings = $derived(extractHeadings(doc.text));
+  const outlineActiveIdx = $derived(
+    activeHeadingIndex(outlineHeadings, doc.currentLine),
+  );
 
   // Detect Mac at runtime for shortcut hint glyphs. Non-Mac users see "Ctrl+"
   // instead of ⌘ so the menu hint actually matches the key they need to press.
@@ -634,6 +643,13 @@
       } else if (e.key === "\\") {
         e.preventDefault();
         toggleSplit();
+      } else if (e.key === "O" && e.shiftKey) {
+        // ⌘⇧O — toggle the outline sidebar. Mirrors VS Code's
+        // "Show Outline" shortcut. Note key is uppercase "O" because
+        // shiftKey is also set.
+        e.preventDefault();
+        settings.outlineOpen = !settings.outlineOpen;
+        settings.persist();
       }
     }
     window.addEventListener("keydown", onKey);
@@ -719,6 +735,17 @@
               </button>
             {/each}
           {/if}
+          <button
+            role="menuitem"
+            onclick={() => {
+              settings.outlineOpen = !settings.outlineOpen;
+              settings.persist();
+              closeMenu();
+            }}
+          >
+            <span>{i18n.t("outline.toggle")}</span>
+            <kbd>{MOD}{SHIFT}O</kbd>
+          </button>
           <div class="sep"></div>
           <button role="menuitem" onclick={open}>
             <span>{i18n.t("menu.open")}</span><kbd>{MOD}O</kbd>
@@ -861,6 +888,17 @@
           <DiffView />
         {/if}
       </section>
+    {/if}
+    {#if settings.outlineOpen}
+      <OutlineSidebar
+        headings={outlineHeadings}
+        activeIndex={outlineActiveIdx}
+        onJump={(line) => doc.jumpToLine(line)}
+        onClose={() => {
+          settings.outlineOpen = false;
+          settings.persist();
+        }}
+      />
     {/if}
   </main>
 

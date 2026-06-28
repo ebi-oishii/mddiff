@@ -133,6 +133,12 @@ export const ja: Dictionary = {
     save: ".mddiff を保存",
     cancel: "キャンセル",
   },
+  outline: {
+    title: "アウトライン",
+    empty: "（見出しなし）",
+    close: "アウトラインを閉じる",
+    toggle: "アウトラインの表示切替",
+  },
   diff: {
     loading: "差分を計算中…",
     base: "比較対象",
