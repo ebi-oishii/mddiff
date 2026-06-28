@@ -1032,26 +1032,6 @@
       {:else}
         <section class="pane">
           {@render titlePill(mode)}
-          {#if !isFullscreen && currentGroup !== "diff"}
-            {@const main = GROUP_MAIN[currentGroup]}
-            {@const sub = GROUP_SUB[currentGroup]}
-            {#if sub}
-              <div class="pane-submode-bar" role="tablist" aria-label="View sub-mode">
-                <button
-                  role="tab"
-                  aria-selected={mode === main}
-                  class:active={mode === main}
-                  onclick={() => setMode(main)}
-                >{modeLabel(main)}</button>
-                <button
-                  role="tab"
-                  aria-selected={mode === sub}
-                  class:active={mode === sub}
-                  onclick={() => setMode(sub)}
-                >{modeLabel(sub)}</button>
-              </div>
-            {/if}
-          {/if}
           {#if mode === "source"}
             <SourceView
               text={doc.text}
@@ -1571,49 +1551,6 @@
   :global(:root.mddiff-modifier-down) :global(.mddiff-lp-link),
   :global(:root.mddiff-modifier-down) :global(.mddiff-cm-link) {
     cursor: pointer;
-  }
-
-  /* Sub-mode toggle bar at the top of the primary pane. Thin strip; sits
-     above the view content so it never overlaps the first line. Matches
-     the Diff view's submode-bar pattern for visual consistency. */
-  .pane-submode-bar {
-    display: flex;
-    align-items: center;
-    gap: 0;
-    padding: 0.3rem 0.5rem;
-    /* Right padding leaves room for the floating ☰ menu (right: 0.75rem,
-       width: 34px → ~46px right reserve) so the buttons don't slide under
-       it on narrow widths. */
-    padding-right: 3.5rem;
-    border-bottom: 1px solid var(--mddiff-border-mute);
-    background: var(--mddiff-surface);
-    font-size: 0.78rem;
-    flex-shrink: 0;
-  }
-  .pane-submode-bar button {
-    background: transparent;
-    border: 1px solid var(--mddiff-border-mute);
-    padding: 0.2rem 0.85rem;
-    font: inherit;
-    color: var(--mddiff-text-mute);
-    cursor: pointer;
-    line-height: 1.2;
-  }
-  .pane-submode-bar button:first-child {
-    border-radius: 999px 0 0 999px;
-  }
-  .pane-submode-bar button:last-child {
-    border-radius: 0 999px 999px 0;
-    border-left: 0;
-  }
-  .pane-submode-bar button:hover:not(.active) {
-    color: var(--mddiff-text);
-    background: var(--mddiff-surface-hi);
-  }
-  .pane-submode-bar button.active {
-    background: var(--mddiff-accent-bg);
-    color: var(--mddiff-accent-fg);
-    border-color: var(--mddiff-accent);
   }
 
   .pane-mode-bar {
