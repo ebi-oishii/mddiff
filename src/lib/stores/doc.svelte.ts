@@ -4,6 +4,11 @@ class DocStore {
   savedText = $state("");
   gitAvailable = $state(false);
 
+  /** Captured disk text for the "Compare with disk" action triggered from
+   * the external-change banner. DiffView reads this when the user picks the
+   * disk base option. */
+  pendingDiskCompare = $state<string | null>(null);
+
   /**
    * Topmost visible source line (1-based). Views write to this on unmount and
    * read from it on mount so switching modes keeps the user at the same place.
@@ -29,6 +34,7 @@ class DocStore {
     this.savedText = text;
     this.gitAvailable = gitAvailable;
     this.currentLine = 1;
+    this.pendingDiskCompare = null;
   }
 
   markSaved() {

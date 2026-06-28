@@ -7,6 +7,10 @@ export interface Settings {
   theme: Theme;
   editorFontSize: FontSize;
   defaultMode: Mode;
+  /** When the open file changes externally and the buffer is clean, swap to
+   * the disk content silently. With this off, every external change shows
+   * the same banner that dirty changes get, so the user always confirms. */
+  autoReload: boolean;
 }
 
 const STORAGE_KEY = "mdv-settings-v1";
@@ -15,6 +19,7 @@ const DEFAULTS: Settings = {
   theme: "auto",
   editorFontSize: "medium",
   defaultMode: "source",
+  autoReload: true,
 };
 
 function load(): Settings {
@@ -33,6 +38,7 @@ class SettingsStore {
   theme = $state<Theme>(DEFAULTS.theme);
   editorFontSize = $state<FontSize>(DEFAULTS.editorFontSize);
   defaultMode = $state<Mode>(DEFAULTS.defaultMode);
+  autoReload = $state<boolean>(DEFAULTS.autoReload);
 
   /** Hydrate from localStorage. Call once at app mount on the client. */
   hydrate() {
@@ -40,6 +46,7 @@ class SettingsStore {
     this.theme = s.theme;
     this.editorFontSize = s.editorFontSize;
     this.defaultMode = s.defaultMode;
+    this.autoReload = s.autoReload;
   }
 
   persist() {
@@ -48,6 +55,7 @@ class SettingsStore {
       theme: this.theme,
       editorFontSize: this.editorFontSize,
       defaultMode: this.defaultMode,
+      autoReload: this.autoReload,
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot));
   }
@@ -56,6 +64,7 @@ class SettingsStore {
     this.theme = DEFAULTS.theme;
     this.editorFontSize = DEFAULTS.editorFontSize;
     this.defaultMode = DEFAULTS.defaultMode;
+    this.autoReload = DEFAULTS.autoReload;
     this.persist();
   }
 }

@@ -69,6 +69,23 @@
       </select>
     </div>
 
+    <div class="row">
+      <label for="autoreload">Auto-reload on external change</label>
+      <input
+        id="autoreload"
+        type="checkbox"
+        checked={settings.autoReload}
+        onchange={(e) => {
+          settings.autoReload = (e.currentTarget as HTMLInputElement).checked;
+          settings.persist();
+        }}
+      />
+    </div>
+    <p class="row-hint">
+      When the file changes on disk and you have no unsaved edits, swap in the
+      disk content silently. Off = always confirm via banner.
+    </p>
+
     <p class="hint">
       Settings are saved instantly to local storage. Restoring defaults clears them.
     </p>
@@ -128,6 +145,17 @@
     margin: 1rem 0 0;
     font-size: 0.8rem;
     color: var(--mdv-text-mute);
+  }
+  .row-hint {
+    margin: -0.3rem 0 0.6rem;
+    font-size: 0.78rem;
+    color: var(--mdv-text-mute);
+    line-height: 1.4;
+  }
+  .row input[type="checkbox"] {
+    width: 1rem;
+    height: 1rem;
+    margin: 0;
   }
   .actions {
     display: flex;

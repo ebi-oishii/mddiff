@@ -54,3 +54,31 @@ export async function gitSideBySide(
     base,
   });
 }
+
+/**
+ * Pure text-vs-text diffs. Used by the "Compare with disk" path which
+ * doesn't go through Git.
+ */
+export async function diffTextHunks(
+  oldText: string,
+  newText: string,
+): Promise<HunkSummary[]> {
+  return await invoke<HunkSummary[]>("diff_text_hunks", { oldText, newText });
+}
+
+export async function diffTextFull(
+  oldText: string,
+  newText: string,
+): Promise<DiffLine[]> {
+  return await invoke<DiffLine[]>("diff_text_full", { oldText, newText });
+}
+
+export async function diffTextSideBySide(
+  oldText: string,
+  newText: string,
+): Promise<SideBySidePayload> {
+  return await invoke<SideBySidePayload>("diff_text_side_by_side", {
+    oldText,
+    newText,
+  });
+}
