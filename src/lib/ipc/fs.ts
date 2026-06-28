@@ -34,6 +34,31 @@ export async function writeFile(path: string, text: string): Promise<void> {
 }
 
 /**
+ * Read a file's text content without going through the open-dialog flow.
+ * Used to reload from disk when the file changed externally.
+ */
+export async function readText(path: string): Promise<string> {
+  return invoke<string>("read_text_file", { path });
+}
+
+/**
+ * Start watching `path` for external changes. Replaces any previous watcher.
+ * The Rust side emits a `file-external-change` event when changes are seen.
+ */
+export async function startWatch(path: string): Promise<void> {
+  await invoke("start_watch", { path });
+}
+
+export async function stopWatch(): Promise<void> {
+  await invoke("stop_watch");
+}
+
+export type ExternalChange = {
+  path: string;
+  kind: "modified" | "removed";
+};
+
+/**
  * Chunked Uint8Array → base64 so we don't blow the call stack on large arrays
  * (String.fromCharCode(...arr) is bounded by argument count limits).
  */

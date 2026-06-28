@@ -7,8 +7,12 @@
     pickAndReadFile,
     pickAndWriteFile,
     pickSavePath,
+    readText,
+    startWatch,
+    stopWatch,
     writeBinaryFile,
     writeFile,
+    type ExternalChange,
   } from "$lib/ipc/fs";
   import { gitIsRepo } from "$lib/ipc/git";
   import {
@@ -36,6 +40,14 @@
   let mdvDialogOpen = $state(false);
   let mdvStatus = $state<string | null>(null);
 
+  // External-change banner state. `diskText` is read once when the change is
+  // detected so Revert / Compare don't race with a follow-up write.
+  type ExternalChangeState =
+    | { kind: "modified"; diskText: string }
+    | { kind: "removed" };
+  let externalChange = $state<ExternalChangeState | null>(null);
+  let reloadFlash = $state<string | null>(null);
+
   // Detect Mac at runtime for shortcut hint glyphs. Non-Mac users see "Ctrl+"
   // instead of ⌘ so the menu hint actually matches the key they need to press.
   const isMac =
@@ -45,6 +57,7 @@
 
   let menuUnlisten: UnlistenFn | null = null;
   let resizeUnlisten: UnlistenFn | null = null;
+  let externalChangeUnlisten: UnlistenFn | null = null;
   let isFullscreen = $state(false);
 
   onMount(async () => {
@@ -61,6 +74,16 @@
       );
     } catch {
       // listen unavailable (e.g. browser / SSR) — fall back to in-app menu only
+    }
+
+    // External file change events from the Rust watcher.
+    try {
+      externalChangeUnlisten = await listen<ExternalChange>(
+        "file-external-change",
+        (e) => handleExternalChange(e.payload),
+      );
+    } catch {
+      // listen unavailable
     }
 
     // Track fullscreen state so we can show filename/mode in-app exactly when
@@ -83,6 +106,10 @@
   onDestroy(() => {
     menuUnlisten?.();
     resizeUnlisten?.();
+    externalChangeUnlisten?.();
+    // Best-effort stop; if Tauri's tear-down already killed the watcher this
+    // will just be a no-op.
+    void stopWatch().catch(() => {});
   });
 
   function handleMenuEvent(id: string) {
@@ -145,6 +172,85 @@
     const px = FONT_SIZE_PX[settings.editorFontSize];
     document.documentElement.style.setProperty("--mdv-editor-font-size", `${px}px`);
   });
+
+  // (Re)attach the file watcher whenever the open path changes. Clearing the
+  // path (back to the untitled buffer) stops the watcher so we're not holding
+  // an fd or directory subscription for a file that's not actually open.
+  $effect(() => {
+    const p = doc.path;
+    // Any prior banner refers to the old file — drop it on file swap.
+    externalChange = null;
+    if (!p) {
+      void stopWatch().catch(() => {});
+      return;
+    }
+    void startWatch(p).catch((e) => {
+      console.error("[mdv] startWatch failed", e);
+    });
+  });
+
+  // Pull from disk and decide whether to silent-reload or surface a banner.
+  // Triggered by the `file-external-change` Tauri event.
+  async function handleExternalChange(payload: ExternalChange) {
+    if (!doc.path || payload.path !== doc.path) return;
+
+    if (payload.kind === "removed") {
+      externalChange = { kind: "removed" };
+      return;
+    }
+
+    let diskText: string;
+    try {
+      diskText = await readText(doc.path);
+    } catch (e) {
+      // Disk read failed — likely a transient state (mid-rename). Drop the
+      // event; if there's a real change, the next debounce window will fire.
+      console.error("[mdv] external-change read failed", e);
+      return;
+    }
+
+    // Filter out no-op events (notify can fire on mtime touches even when
+    // bytes are identical, or our self-write suppression missed an event).
+    if (diskText === doc.text) return;
+
+    if (!doc.dirty && settings.autoReload) {
+      doc.text = diskText;
+      doc.savedText = diskText;
+      reloadFlash = "File reloaded from disk";
+      setTimeout(() => {
+        if (reloadFlash === "File reloaded from disk") reloadFlash = null;
+      }, 4000);
+      return;
+    }
+    externalChange = { kind: "modified", diskText };
+  }
+
+  function applyDiskReload() {
+    if (externalChange?.kind !== "modified") return;
+    const txt = externalChange.diskText;
+    doc.text = txt;
+    doc.savedText = txt;
+    externalChange = null;
+  }
+
+  function dismissExternalChange() {
+    externalChange = null;
+  }
+
+  async function saveDeleted() {
+    // save() recreates the file at doc.path via writeFile, restoring it with
+    // the current buffer contents.
+    externalChange = null;
+    await save();
+  }
+
+  function compareWithDisk() {
+    // The "disk" base option in DiffView reads externalChange.diskText off
+    // this component when present (passed via the doc store, see below).
+    if (externalChange?.kind !== "modified") return;
+    doc.pendingDiskCompare = externalChange.diskText;
+    mode = "diff";
+  }
 
   // Push filename + dirty + mode into the OS window title bar (Mac top bar,
   // Win/Linux window chrome). Quiet failure when not running under Tauri.
@@ -322,7 +428,9 @@
   }
 
   $effect(() => {
-    if (mode === "diff" && !doc.gitAvailable) {
+    // Diff mode normally requires Git, but the "Compare with disk" path
+    // doesn't — let that case stay in Diff even on non-Git files.
+    if (mode === "diff" && !doc.gitAvailable && doc.pendingDiskCompare == null) {
       mode = "source";
     }
   });
@@ -485,6 +593,31 @@
     <div class="banner info">
       <span>{mdvStatus}</span>
       <button class="dismiss" aria-label="Dismiss" onclick={() => (mdvStatus = null)}>×</button>
+    </div>
+  {/if}
+  {#if externalChange?.kind === "modified"}
+    <div class="banner warn">
+      <span>This file has been modified on disk.</span>
+      <div class="actions">
+        <button class="action" onclick={applyDiskReload}>Revert to disk</button>
+        <button class="action" onclick={compareWithDisk}>Compare</button>
+        <button class="action" onclick={dismissExternalChange}>Dismiss</button>
+      </div>
+    </div>
+  {/if}
+  {#if externalChange?.kind === "removed"}
+    <div class="banner error">
+      <span>This file was deleted externally.</span>
+      <div class="actions">
+        <button class="action" onclick={saveDeleted}>Save (recreate)</button>
+        <button class="action" onclick={dismissExternalChange}>Dismiss</button>
+      </div>
+    </div>
+  {/if}
+  {#if reloadFlash}
+    <div class="banner info">
+      <span>{reloadFlash}</span>
+      <button class="dismiss" aria-label="Dismiss" onclick={() => (reloadFlash = null)}>×</button>
     </div>
   {/if}
   {#if normalization && mode === "wysiwyg"}
@@ -773,6 +906,26 @@
     color: inherit;
     cursor: pointer;
     padding: 0 0.3em;
+  }
+  .banner .actions {
+    margin-left: auto;
+    display: inline-flex;
+    gap: 0.4rem;
+    align-items: center;
+  }
+  .banner .action {
+    background: transparent;
+    border: 1px solid currentColor;
+    border-radius: 4px;
+    padding: 0.15rem 0.55rem;
+    font: inherit;
+    font-size: 0.82rem;
+    color: inherit;
+    cursor: pointer;
+    opacity: 0.85;
+  }
+  .banner .action:hover {
+    opacity: 1;
   }
 
   /* ---------- Mobile ---------- */

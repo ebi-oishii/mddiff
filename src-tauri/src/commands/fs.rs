@@ -8,7 +8,18 @@ pub async fn read_text_file(path: PathBuf) -> Result<String, String> {
 }
 
 #[tauri::command]
-pub async fn write_text_file(path: PathBuf, content: String) -> Result<(), String> {
+pub async fn write_text_file(
+    path: PathBuf,
+    content: String,
+    #[cfg(not(any(target_os = "android", target_os = "ios")))] watcher: tauri::State<
+        '_,
+        crate::commands::watcher::WatcherState,
+    >,
+) -> Result<(), String> {
+    // Suppress the file watcher for the next 500ms so our own write doesn't
+    // bounce back as an "external change".
+    #[cfg(not(any(target_os = "android", target_os = "ios")))]
+    crate::commands::watcher::mark_self_write(&watcher, &path);
     mdv_core::fs::write_text_file(&path, &content).map_err(|e| e.to_string())
 }
 
