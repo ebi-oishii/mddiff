@@ -7,6 +7,7 @@
     Theme,
   } from "$lib/stores/settings.svelte";
   import type { DiffSubmode, Mode } from "$lib/types";
+  import { i18n, type Locale } from "$lib/i18n/index.svelte";
 
   let { onClose }: { onClose: () => void } = $props();
 
@@ -27,26 +28,26 @@
     onclick={(e) => e.stopPropagation()}
     onkeydown={(e) => e.key === "Escape" && onClose()}
   >
-    <h2 id="settings-title">Settings</h2>
+    <h2 id="settings-title">{i18n.t("settings.title")}</h2>
 
-    <div class="section-title">Appearance</div>
+    <div class="section-title">{i18n.t("settings.sectionAppearance")}</div>
 
     <div class="row">
-      <label for="theme">Theme</label>
+      <label for="theme">{i18n.t("settings.theme")}</label>
       <select
         id="theme"
         value={settings.theme}
         onchange={(e) =>
           persistChange("theme", (e.currentTarget as HTMLSelectElement).value as Theme)}
       >
-        <option value="auto">Auto (follow OS)</option>
-        <option value="light">Light</option>
-        <option value="dark">Dark</option>
+        <option value="auto">{i18n.t("settings.themeAuto")}</option>
+        <option value="light">{i18n.t("settings.themeLight")}</option>
+        <option value="dark">{i18n.t("settings.themeDark")}</option>
       </select>
     </div>
 
     <div class="row">
-      <label for="fontsize">Editor font size</label>
+      <label for="fontsize">{i18n.t("settings.fontSize")}</label>
       <select
         id="fontsize"
         value={settings.editorFontSize}
@@ -56,30 +57,30 @@
             (e.currentTarget as HTMLSelectElement).value as FontSize,
           )}
       >
-        <option value="small">Small (12 px)</option>
-        <option value="medium">Medium (14 px)</option>
-        <option value="large">Large (17 px)</option>
+        <option value="small">{i18n.t("settings.fontSizeSmall")}</option>
+        <option value="medium">{i18n.t("settings.fontSizeMedium")}</option>
+        <option value="large">{i18n.t("settings.fontSizeLarge")}</option>
       </select>
     </div>
 
     <div class="row">
-      <label for="defmode">Default mode on open</label>
+      <label for="defmode">{i18n.t("settings.defaultMode")}</label>
       <select
         id="defmode"
         value={settings.defaultMode}
         onchange={(e) =>
           persistChange("defaultMode", (e.currentTarget as HTMLSelectElement).value as Mode)}
       >
-        <option value="source">Source</option>
-        <option value="live">Live Preview</option>
-        <option value="wysiwyg">WYSIWYG</option>
-        <option value="preview">Preview</option>
-        <option value="diff">Diff (when Git available)</option>
+        <option value="source">{i18n.t("mode.source")}</option>
+        <option value="live">{i18n.t("mode.live")}</option>
+        <option value="wysiwyg">{i18n.t("mode.wysiwyg")}</option>
+        <option value="preview">{i18n.t("mode.preview")}</option>
+        <option value="diff">{i18n.t("mode.diff")}</option>
       </select>
     </div>
 
     <div class="row">
-      <label for="editortheme">Editor syntax theme</label>
+      <label for="editortheme">{i18n.t("settings.editorTheme")}</label>
       <select
         id="editortheme"
         value={settings.editorTheme}
@@ -89,16 +90,32 @@
             (e.currentTarget as HTMLSelectElement).value as EditorTheme,
           )}
       >
-        <option value="github">GitHub</option>
-        <option value="solarized">Solarized</option>
-        <option value="dracula">Dracula</option>
+        <option value="github">{i18n.t("settings.editorThemeGithub")}</option>
+        <option value="solarized">{i18n.t("settings.editorThemeSolarized")}</option>
+        <option value="dracula">{i18n.t("settings.editorThemeDracula")}</option>
       </select>
     </div>
 
-    <div class="section-title">File</div>
+    <div class="section-title">{i18n.t("settings.sectionLanguage")}</div>
 
     <div class="row">
-      <label for="autoreload">Auto-reload on external change</label>
+      <label for="language">{i18n.t("settings.language")}</label>
+      <select
+        id="language"
+        value={i18n.preference}
+        onchange={(e) =>
+          i18n.set((e.currentTarget as HTMLSelectElement).value as Locale)}
+      >
+        <option value="auto">{i18n.t("settings.languageAuto")}</option>
+        <option value="en">{i18n.t("settings.languageEn")}</option>
+        <option value="ja">{i18n.t("settings.languageJa")}</option>
+      </select>
+    </div>
+
+    <div class="section-title">{i18n.t("settings.sectionFile")}</div>
+
+    <div class="row">
+      <label for="autoreload">{i18n.t("settings.autoReload")}</label>
       <input
         id="autoreload"
         type="checkbox"
@@ -107,15 +124,12 @@
           persistChange("autoReload", (e.currentTarget as HTMLInputElement).checked)}
       />
     </div>
-    <p class="row-hint">
-      When the file changes on disk and you have no unsaved edits, swap in the
-      disk content silently. Off = always confirm via banner.
-    </p>
+    <p class="row-hint">{i18n.t("settings.autoReloadHint")}</p>
 
-    <div class="section-title">Source view</div>
+    <div class="section-title">{i18n.t("settings.sectionSource")}</div>
 
     <div class="row">
-      <label for="softwrap">Soft wrap</label>
+      <label for="softwrap">{i18n.t("settings.softWrap")}</label>
       <input
         id="softwrap"
         type="checkbox"
@@ -126,7 +140,7 @@
     </div>
 
     <div class="row">
-      <label for="linenumbers">Line numbers</label>
+      <label for="linenumbers">{i18n.t("settings.lineNumbers")}</label>
       <input
         id="linenumbers"
         type="checkbox"
@@ -137,7 +151,7 @@
     </div>
 
     <div class="row">
-      <label for="tabwidth">Tab width</label>
+      <label for="tabwidth">{i18n.t("settings.tabWidth")}</label>
       <select
         id="tabwidth"
         value={String(settings.tabWidth)}
@@ -147,16 +161,16 @@
             Number((e.currentTarget as HTMLSelectElement).value) as TabWidth,
           )}
       >
-        <option value="2">2 spaces</option>
-        <option value="4">4 spaces</option>
-        <option value="8">8 spaces</option>
+        <option value="2">{i18n.t("settings.tab2")}</option>
+        <option value="4">{i18n.t("settings.tab4")}</option>
+        <option value="8">{i18n.t("settings.tab8")}</option>
       </select>
     </div>
 
-    <div class="section-title">Diff view</div>
+    <div class="section-title">{i18n.t("settings.sectionDiff")}</div>
 
     <div class="row">
-      <label for="diffsubmode">Default sub-mode</label>
+      <label for="diffsubmode">{i18n.t("settings.diffSubmode")}</label>
       <select
         id="diffsubmode"
         value={settings.diffDefaultSubmode}
@@ -166,14 +180,14 @@
             (e.currentTarget as HTMLSelectElement).value as DiffSubmode,
           )}
       >
-        <option value="highlight">Highlight Only</option>
-        <option value="full">Full</option>
-        <option value="sidebyside">Side-by-Side</option>
+        <option value="highlight">{i18n.t("settings.diffSubmodeHighlight")}</option>
+        <option value="full">{i18n.t("settings.diffSubmodeFull")}</option>
+        <option value="sidebyside">{i18n.t("settings.diffSubmodeSbs")}</option>
       </select>
     </div>
 
     <div class="row">
-      <label for="diffdebounce">Recompute delay</label>
+      <label for="diffdebounce">{i18n.t("settings.diffDebounce")}</label>
       <select
         id="diffdebounce"
         value={String(settings.diffDebounceMs)}
@@ -183,20 +197,20 @@
             Number((e.currentTarget as HTMLSelectElement).value),
           )}
       >
-        <option value="100">100 ms (snappy)</option>
-        <option value="250">250 ms (default)</option>
-        <option value="500">500 ms (light CPU)</option>
-        <option value="1000">1000 ms (large files)</option>
+        <option value="100">{i18n.t("settings.diffDebounce100")}</option>
+        <option value="250">{i18n.t("settings.diffDebounce250")}</option>
+        <option value="500">{i18n.t("settings.diffDebounce500")}</option>
+        <option value="1000">{i18n.t("settings.diffDebounce1000")}</option>
       </select>
     </div>
 
-    <p class="hint">
-      Settings are saved instantly to local storage. Restoring defaults clears them.
-    </p>
+    <p class="hint">{i18n.t("settings.hint")}</p>
 
     <div class="actions">
-      <button type="button" class="link" onclick={() => settings.reset()}>Restore defaults</button>
-      <button type="button" class="primary" onclick={onClose}>Done</button>
+      <button type="button" class="link" onclick={() => settings.reset()}
+        >{i18n.t("settings.restore")}</button
+      >
+      <button type="button" class="primary" onclick={onClose}>{i18n.t("settings.done")}</button>
     </div>
   </div>
 </div>

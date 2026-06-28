@@ -3,6 +3,7 @@
   import { mddiffPack } from "$lib/ipc/mddiff";
   import { pickSavePath, writeFile } from "$lib/ipc/fs";
   import { humanizeError } from "$lib/errors";
+  import { i18n } from "$lib/i18n/index.svelte";
   import type { BaseKind, BaseOption } from "$lib/types";
 
   let {
@@ -78,37 +79,32 @@
     onclick={(e) => e.stopPropagation()}
     onkeydown={(e) => e.key === "Escape" && onCancel()}
   >
-    <h2 id="mddiff-export-title">Export .mddiff with history</h2>
-    <p class="help">
-      Bundle the file's history from the chosen base up to the current buffer into a
-      self-contained <code>.mddiff</code>. The receiver can read it as plain Markdown,
-      and your local Git stays untouched.
-    </p>
+    <h2 id="mddiff-export-title">{i18n.t("mddiffExport.title")}</h2>
 
     <label class="row">
-      <span>Include history since:</span>
+      <span>{i18n.t("mddiffExport.baseLabel")}</span>
       <select bind:value={selected} disabled={loading}>
-        <optgroup label="Special">
+        <optgroup label={i18n.t("mddiffExport.groupSpecial")}>
           {#each byKind("special") as b}
             <option value={b.revspec}>{label(b)}</option>
           {/each}
         </optgroup>
         {#if byKind("branch").length > 0}
-          <optgroup label="Branches">
+          <optgroup label={i18n.t("mddiffExport.groupBranches")}>
             {#each byKind("branch") as b}
               <option value={b.revspec}>{label(b)}</option>
             {/each}
           </optgroup>
         {/if}
         {#if byKind("tag").length > 0}
-          <optgroup label="Tags">
+          <optgroup label={i18n.t("mddiffExport.groupTags")}>
             {#each byKind("tag") as b}
               <option value={b.revspec}>{label(b)}</option>
             {/each}
           </optgroup>
         {/if}
         {#if byKind("commit").length > 0}
-          <optgroup label="Recent commits">
+          <optgroup label={i18n.t("mddiffExport.groupRecent")}>
             {#each byKind("commit") as b}
               <option value={b.revspec}>{label(b)}</option>
             {/each}
@@ -122,9 +118,9 @@
     {/if}
 
     <div class="actions">
-      <button type="button" onclick={onCancel} disabled={loading}>Cancel</button>
+      <button type="button" onclick={onCancel} disabled={loading}>{i18n.t("mddiffExport.cancel")}</button>
       <button type="button" class="primary" onclick={save} disabled={loading}>
-        {loading ? "Packing…" : "Save .mddiff"}
+        {loading ? i18n.t("mddiffExport.saving") : i18n.t("mddiffExport.save")}
       </button>
     </div>
   </div>
@@ -154,19 +150,6 @@
   h2 {
     margin: 0 0 0.5rem;
     font-size: 1.1rem;
-  }
-  .help {
-    margin: 0 0 1rem;
-    font-size: 0.88rem;
-    color: var(--mddiff-text-mute);
-    line-height: 1.5;
-  }
-  .help code {
-    font-family: ui-monospace, "SF Mono", Menlo, monospace;
-    font-size: 0.92em;
-    padding: 0 0.25em;
-    background: var(--mddiff-surface-hi);
-    border-radius: 3px;
   }
   .row {
     display: flex;

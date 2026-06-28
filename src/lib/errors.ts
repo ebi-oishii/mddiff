@@ -1,54 +1,58 @@
+import { i18n } from "$lib/i18n/index.svelte";
+
 /**
  * Turn a raw error (typically a stringified Rust error coming back through a
- * Tauri command) into a sentence the user can act on. The Rust side just does
- * `e.to_string()`, so we see things like `Os { code: 13, kind:
- * PermissionDenied, message: "Permission denied" }` — that's not something
- * to put in a banner.
+ * Tauri command) into a sentence the user can act on, in their selected
+ * locale. The Rust side just does `e.to_string()`, so we see things like
+ * `Os { code: 13, kind: PermissionDenied, message: "Permission denied" }` —
+ * that's not something to put in a banner.
  *
  * Pass `op` to bias the wording for the operation that was running so
- * "Permission denied" can become "Cannot write" or "Cannot read" depending
- * on context.
+ * "Permission denied" can become "can't read" or "can't write" depending on
+ * context.
  */
 export type Op = "read" | "write" | "other";
 
 export function humanizeError(e: unknown, op: Op = "other"): string {
   const raw = String(e);
 
-  // mddiff-core large-file errors are already human-friendly, just pass through.
+  // mddiff-core large-file errors are already human-friendly (English) —
+  // pass through verbatim. Localizing these requires translating the
+  // strings at the Rust source.
   if (raw.includes("exceeds the") && raw.includes("warning threshold")) {
     return raw;
   }
   if (raw.includes("exceeds the") && raw.includes("hard limit")) {
-    return "This file is too large to open (over 100 MB).";
+    return i18n.t("errors.tooLarge");
   }
 
   // Rust std::io::Error kinds — match by name so we work across formatting
   // variants ("kind: PermissionDenied" or just "PermissionDenied" in
   // anyhow output).
   if (/PermissionDenied|Permission denied/.test(raw)) {
-    return op === "write"
-      ? "Permission denied — the file can't be written. Check that you can write to this location."
-      : "Permission denied — the file can't be read.";
+    return i18n.t(
+      op === "write" ? "errors.permissionWrite" : "errors.permissionRead",
+    );
   }
   if (/NotFound|No such file/.test(raw)) {
-    return op === "write"
-      ? "The destination directory doesn't exist."
-      : "File not found. It may have been moved or deleted.";
+    return i18n.t(
+      op === "write" ? "errors.fileNotFoundWrite" : "errors.fileNotFoundRead",
+    );
   }
   if (/AlreadyExists|File exists/.test(raw)) {
-    return "A file with that name already exists at the destination.";
+    return i18n.t("errors.alreadyExists");
   }
   if (/NoSpace|No space|No room left/.test(raw)) {
-    return "The disk is full.";
+    return i18n.t("errors.diskFull");
   }
   if (/ReadOnlyFilesystem|Read-only file system/.test(raw)) {
-    return "The destination is on a read-only file system.";
+    return i18n.t("errors.readOnly");
   }
   if (/InvalidData|stream did not contain valid UTF-8/.test(raw)) {
-    return "This file isn't valid UTF-8 text. mddiff only supports text files.";
+    return i18n.t("errors.notUtf8");
   }
   if (/Interrupted/.test(raw)) {
-    return "The operation was interrupted. Try again.";
+    return i18n.t("errors.interrupted");
   }
 
   // Last resort: extract the embedded OS `message: "…"` if present.

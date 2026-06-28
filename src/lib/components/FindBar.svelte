@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount, tick } from "svelte";
+  import { i18n } from "$lib/i18n/index.svelte";
 
   /**
    * Floating Find / Find-and-Replace bar. Style follows VSCode's editor
@@ -135,9 +136,9 @@
       <button
         type="button"
         class="chevron"
-        aria-label={replaceVisible ? "Hide replace" : "Show replace"}
+        aria-label={replaceVisible ? i18n.t("find.hideReplace") : i18n.t("find.showReplace")}
         aria-expanded={replaceVisible}
-        title={replaceVisible ? "Hide replace (⌘H)" : "Show replace (⌘H)"}
+        title={replaceVisible ? `${i18n.t("find.hideReplace")} (⌘H)` : `${i18n.t("find.showReplace")} (⌘H)`}
         onclick={() => (replaceVisible = !replaceVisible)}
       >
         {replaceVisible ? "▼" : "▶"}
@@ -150,15 +151,15 @@
       type="text"
       spellcheck="false"
       autocomplete="off"
-      placeholder="Find"
-      aria-label="Find"
+      placeholder={i18n.t("find.find")}
+      aria-label={i18n.t("find.find")}
     />
     <span class="count" aria-live="polite">{countLabel}</span>
     <button
       type="button"
       class="nav"
-      aria-label="Previous match"
-      title="Previous (Shift+Enter / ⇧⌘G)"
+      aria-label={i18n.t("find.previous")}
+      title={`${i18n.t("find.previous")} (Shift+Enter / ⇧⌘G)`}
       disabled={noMatches}
       onclick={onprev}
     >
@@ -167,8 +168,8 @@
     <button
       type="button"
       class="nav"
-      aria-label="Next match"
-      title="Next (Enter / ⌘G)"
+      aria-label={i18n.t("find.next")}
+      title={`${i18n.t("find.next")} (Enter / ⌘G)`}
       disabled={noMatches}
       onclick={onnext}
     >
@@ -177,8 +178,8 @@
     <button
       type="button"
       class="close"
-      aria-label="Close find"
-      title="Close (Esc)"
+      aria-label={i18n.t("find.close")}
+      title={`${i18n.t("find.close")} (Esc)`}
       onclick={onclose}
     >
       ×
@@ -194,15 +195,15 @@
         type="text"
         spellcheck="false"
         autocomplete="off"
-        placeholder="Replace"
-        aria-label="Replace with"
+        placeholder={i18n.t("find.replace")}
+        aria-label={i18n.t("find.replaceWith")}
       />
       <span class="count" aria-hidden="true"></span>
       <button
         type="button"
         class="nav"
-        aria-label="Replace one"
-        title="Replace (Enter / ⌘Enter)"
+        aria-label={i18n.t("find.replaceOne")}
+        title={`${i18n.t("find.replaceOne")} (Enter / ⌘Enter)`}
         disabled={noMatches}
         onclick={() => onreplace?.()}
       >
@@ -211,8 +212,8 @@
       <button
         type="button"
         class="nav"
-        aria-label="Replace all"
-        title="Replace all (Shift+Enter / ⇧⌘Enter)"
+        aria-label={i18n.t("find.replaceAll")}
+        title={`${i18n.t("find.replaceAll")} (Shift+Enter / ⇧⌘Enter)`}
         disabled={noMatches}
         onclick={() => onreplaceAll?.()}
       >
