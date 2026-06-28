@@ -7,6 +7,7 @@
   import { syntaxHighlighting, defaultHighlightStyle } from "@codemirror/language";
   import { doc } from "$lib/stores/doc.svelte";
   import { mdvCmTheme } from "./cm-theme";
+  import { mdvSyntaxHighlighting } from "./cm-syntax";
 
   let {
     text,
@@ -24,6 +25,10 @@
         history(),
         lineNumbers(),
         highlightActiveLine(),
+        // Markdown-tag colors first (heading / code / link / etc.); the
+        // default highlight runs as a fallback so non-markdown tags
+        // (inside fenced code blocks etc.) still get something sensible.
+        mdvSyntaxHighlighting,
         syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
         keymap.of([...defaultKeymap, ...historyKeymap]),
         markdown(),

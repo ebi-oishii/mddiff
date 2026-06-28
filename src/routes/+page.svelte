@@ -578,6 +578,15 @@
 
     --mdv-shadow:       light-dark(rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.5));
 
+    /* Syntax highlight colors (Source view). Based on GitHub Primer so
+       light and dark feel familiar to anyone who reads code on GitHub. */
+    --mdv-syntax-heading: light-dark(#0550ae, #79c0ff);
+    --mdv-syntax-code:    light-dark(#cf222e, #ff7b72);
+    --mdv-syntax-link:    light-dark(#0969da, #58a6ff);
+    --mdv-syntax-quote:   light-dark(#57606a, #8b949e);
+    --mdv-syntax-punct:   light-dark(#8c959f, #6e7681);
+    --mdv-syntax-meta:    light-dark(#6f42c1, #d2a8ff);
+
     --mdv-editor-font-size: 14px;
 
     background: var(--mdv-bg);
