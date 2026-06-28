@@ -1,15 +1,12 @@
 <script lang="ts">
   import { settings } from "$lib/stores/settings.svelte";
-  import type { FontSize, Theme } from "$lib/stores/settings.svelte";
-  import type { Mode } from "$lib/types";
+  import type { FontSize, TabWidth, Theme } from "$lib/stores/settings.svelte";
+  import type { DiffSubmode, Mode } from "$lib/types";
 
   let { onClose }: { onClose: () => void } = $props();
 
-  function update<K extends "theme" | "editorFontSize" | "defaultMode">(
-    key: K,
-    value: Theme | FontSize | Mode,
-  ) {
-    // @ts-expect-error narrow on key
+  function persistChange<K extends keyof typeof settings>(key: K, value: unknown) {
+    // @ts-expect-error narrow on key — store fields are heterogeneous
     settings[key] = value;
     settings.persist();
   }
@@ -27,12 +24,15 @@
   >
     <h2 id="settings-title">Settings</h2>
 
+    <div class="section-title">Appearance</div>
+
     <div class="row">
       <label for="theme">Theme</label>
       <select
         id="theme"
         value={settings.theme}
-        onchange={(e) => update("theme", (e.currentTarget as HTMLSelectElement).value as Theme)}
+        onchange={(e) =>
+          persistChange("theme", (e.currentTarget as HTMLSelectElement).value as Theme)}
       >
         <option value="auto">Auto (follow OS)</option>
         <option value="light">Light</option>
@@ -46,7 +46,10 @@
         id="fontsize"
         value={settings.editorFontSize}
         onchange={(e) =>
-          update("editorFontSize", (e.currentTarget as HTMLSelectElement).value as FontSize)}
+          persistChange(
+            "editorFontSize",
+            (e.currentTarget as HTMLSelectElement).value as FontSize,
+          )}
       >
         <option value="small">Small (12 px)</option>
         <option value="medium">Medium (14 px)</option>
@@ -59,13 +62,92 @@
       <select
         id="defmode"
         value={settings.defaultMode}
-        onchange={(e) => update("defaultMode", (e.currentTarget as HTMLSelectElement).value as Mode)}
+        onchange={(e) =>
+          persistChange("defaultMode", (e.currentTarget as HTMLSelectElement).value as Mode)}
       >
         <option value="source">Source</option>
         <option value="live">Live Preview</option>
         <option value="wysiwyg">WYSIWYG</option>
         <option value="preview">Preview</option>
         <option value="diff">Diff (when Git available)</option>
+      </select>
+    </div>
+
+    <div class="section-title">Source view</div>
+
+    <div class="row">
+      <label for="softwrap">Soft wrap</label>
+      <input
+        id="softwrap"
+        type="checkbox"
+        checked={settings.softWrap}
+        onchange={(e) =>
+          persistChange("softWrap", (e.currentTarget as HTMLInputElement).checked)}
+      />
+    </div>
+
+    <div class="row">
+      <label for="linenumbers">Line numbers</label>
+      <input
+        id="linenumbers"
+        type="checkbox"
+        checked={settings.lineNumbers}
+        onchange={(e) =>
+          persistChange("lineNumbers", (e.currentTarget as HTMLInputElement).checked)}
+      />
+    </div>
+
+    <div class="row">
+      <label for="tabwidth">Tab width</label>
+      <select
+        id="tabwidth"
+        value={String(settings.tabWidth)}
+        onchange={(e) =>
+          persistChange(
+            "tabWidth",
+            Number((e.currentTarget as HTMLSelectElement).value) as TabWidth,
+          )}
+      >
+        <option value="2">2 spaces</option>
+        <option value="4">4 spaces</option>
+        <option value="8">8 spaces</option>
+      </select>
+    </div>
+
+    <div class="section-title">Diff view</div>
+
+    <div class="row">
+      <label for="diffsubmode">Default sub-mode</label>
+      <select
+        id="diffsubmode"
+        value={settings.diffDefaultSubmode}
+        onchange={(e) =>
+          persistChange(
+            "diffDefaultSubmode",
+            (e.currentTarget as HTMLSelectElement).value as DiffSubmode,
+          )}
+      >
+        <option value="highlight">Highlight Only</option>
+        <option value="full">Full</option>
+        <option value="sidebyside">Side-by-Side</option>
+      </select>
+    </div>
+
+    <div class="row">
+      <label for="diffdebounce">Recompute delay</label>
+      <select
+        id="diffdebounce"
+        value={String(settings.diffDebounceMs)}
+        onchange={(e) =>
+          persistChange(
+            "diffDebounceMs",
+            Number((e.currentTarget as HTMLSelectElement).value),
+          )}
+      >
+        <option value="100">100 ms (snappy)</option>
+        <option value="250">250 ms (default)</option>
+        <option value="500">500 ms (light CPU)</option>
+        <option value="1000">1000 ms (large files)</option>
       </select>
     </div>
 
@@ -100,16 +182,32 @@
     max-width: 28em;
     width: 100%;
     box-shadow: 0 12px 40px var(--mdv-shadow);
+    max-height: calc(100vh - 2rem);
+    overflow-y: auto;
   }
   h2 {
     margin: 0 0 1rem;
     font-size: 1.1rem;
   }
+  .section-title {
+    margin: 1rem 0 0.4rem;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--mdv-text-mute);
+    border-top: 1px solid var(--mdv-border-mute);
+    padding-top: 0.7rem;
+  }
+  .section-title:first-of-type {
+    border-top: 0;
+    padding-top: 0;
+    margin-top: 0;
+  }
   .row {
     display: flex;
     align-items: center;
     gap: 0.75rem;
-    margin: 0.6rem 0;
+    margin: 0.5rem 0;
     font-size: 0.9rem;
   }
   .row label {
@@ -123,6 +221,11 @@
     border: 1px solid var(--mdv-border);
     border-radius: 4px;
     min-width: 12em;
+  }
+  .row input[type="checkbox"] {
+    width: 1rem;
+    height: 1rem;
+    margin: 0;
   }
   .hint {
     margin: 1rem 0 0;

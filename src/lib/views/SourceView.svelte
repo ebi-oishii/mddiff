@@ -1,11 +1,12 @@
 <script lang="ts">
   import { onMount, onDestroy } from "svelte";
-  import { EditorState } from "@codemirror/state";
+  import { Compartment, EditorState } from "@codemirror/state";
   import { EditorView, keymap, lineNumbers, highlightActiveLine } from "@codemirror/view";
   import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
   import { markdown } from "@codemirror/lang-markdown";
   import { syntaxHighlighting, defaultHighlightStyle } from "@codemirror/language";
   import { doc } from "$lib/stores/doc.svelte";
+  import { settings } from "$lib/stores/settings.svelte";
   import { mdvCmTheme } from "./cm-theme";
 
   let {
@@ -17,17 +18,25 @@
   let view: EditorView | null = null;
   let lastEmitted = "";
 
+  // Compartments let us swap extensions at runtime without rebuilding the
+  // EditorState. Used to honor settings.softWrap / lineNumbers / tabWidth
+  // without losing scroll position or selection when the user changes them.
+  const wrapComp = new Compartment();
+  const lineNumComp = new Compartment();
+  const tabSizeComp = new Compartment();
+
   onMount(() => {
     const state = EditorState.create({
       doc: text,
       extensions: [
         history(),
-        lineNumbers(),
+        lineNumComp.of(settings.lineNumbers ? lineNumbers() : []),
         highlightActiveLine(),
         syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
         keymap.of([...defaultKeymap, ...historyKeymap]),
         markdown(),
-        EditorView.lineWrapping,
+        wrapComp.of(settings.softWrap ? EditorView.lineWrapping : []),
+        tabSizeComp.of(EditorState.tabSize.of(settings.tabWidth)),
         mdvCmTheme,
         EditorView.updateListener.of((u) => {
           if (u.docChanged) {
@@ -78,6 +87,31 @@
         changes: { from: 0, to: view.state.doc.length, insert: text },
       });
     }
+  });
+
+  // Reactively re-configure the CM compartments when their settings change,
+  // so toggling Soft wrap / Line numbers / Tab width takes effect live.
+  $effect(() => {
+    if (!view) return;
+    view.dispatch({
+      effects: wrapComp.reconfigure(
+        settings.softWrap ? EditorView.lineWrapping : [],
+      ),
+    });
+  });
+  $effect(() => {
+    if (!view) return;
+    view.dispatch({
+      effects: lineNumComp.reconfigure(
+        settings.lineNumbers ? lineNumbers() : [],
+      ),
+    });
+  });
+  $effect(() => {
+    if (!view) return;
+    view.dispatch({
+      effects: tabSizeComp.reconfigure(EditorState.tabSize.of(settings.tabWidth)),
+    });
   });
 </script>
 

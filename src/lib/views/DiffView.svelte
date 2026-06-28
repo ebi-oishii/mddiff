@@ -1,5 +1,6 @@
 <script lang="ts">
   import { doc } from "$lib/stores/doc.svelte";
+  import { settings } from "$lib/stores/settings.svelte";
   import {
     gitFullDiff,
     gitHunks,
@@ -20,7 +21,9 @@
 
   const CUSTOM = "__custom__";
 
-  let submode = $state<DiffSubmode>("sidebyside");
+  // Initial sub-mode comes from settings; once the view is mounted the user
+  // can switch freely with the tabs without affecting the stored default.
+  let submode = $state<DiffSubmode>(settings.diffDefaultSubmode);
   let bases = $state<BaseOption[]>([]);
   let selected = $state<string>("HEAD");
   let customBase = $state("HEAD");
@@ -64,7 +67,7 @@
 
     if (!doc.path || !doc.gitAvailable) return;
     if (diffTimer) clearTimeout(diffTimer);
-    diffTimer = setTimeout(load, 250);
+    diffTimer = setTimeout(load, settings.diffDebounceMs);
     return () => {
       if (diffTimer) clearTimeout(diffTimer);
     };
