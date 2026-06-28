@@ -5,9 +5,10 @@
   import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
   import { markdown } from "@codemirror/lang-markdown";
   import { syntaxHighlighting, defaultHighlightStyle } from "@codemirror/language";
-  import { search, searchKeymap } from "@codemirror/search";
   import { doc } from "$lib/stores/doc.svelte";
   import { mdvCmTheme } from "./cm-theme";
+  import FindBar from "$lib/components/FindBar.svelte";
+  import { CmFindState, findExtension } from "./find-cm.svelte";
 
   let {
     text,
@@ -18,6 +19,8 @@
   let view: EditorView | null = null;
   let lastEmitted = "";
 
+  const find = new CmFindState();
+
   onMount(() => {
     const state = EditorState.create({
       doc: text,
@@ -26,8 +29,8 @@
         lineNumbers(),
         highlightActiveLine(),
         syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
-        search({ top: true }),
-        keymap.of([...defaultKeymap, ...historyKeymap, ...searchKeymap]),
+        findExtension(find.syncFromData),
+        keymap.of([...defaultKeymap, ...historyKeymap]),
         markdown(),
         EditorView.lineWrapping,
         mdvCmTheme,
@@ -42,11 +45,11 @@
     });
     view = new EditorView({ state, parent: container });
     lastEmitted = text;
+    find.bind(view);
+    window.addEventListener("keydown", find.onKeydown);
 
     // Move focus into the editor so the caret is visible immediately on mode
-    // switch, and so the CodeMirror searchKeymap (⌘F) reaches its handler.
-    // Without this, the user sees no caret and ⌘F is a no-op until they
-    // click into the editor first.
+    // switch. Without this the user sees no caret on entry to the view.
     view.focus();
 
     // Restore scroll position from DocStore so mode switches stay in place.
@@ -62,6 +65,8 @@
   });
 
   onDestroy(() => {
+    window.removeEventListener("keydown", find.onKeydown);
+    find.destroy();
     // Save topmost visible source line before tearing down so the next mode
     // can scroll there. posAtCoords is more reliable than lineBlockAtHeight
     // when the editor has padding/margins.
@@ -87,9 +92,31 @@
       });
     }
   });
+
+  $effect(() => {
+    void find.query;
+    void find.open;
+    find.refresh();
+  });
 </script>
 
 <div bind:this={container} class="source"></div>
+{#if find.open}
+  <FindBar
+    bind:query={find.query}
+    bind:replaceQuery={find.replaceQuery}
+    bind:replaceVisible={find.replaceVisible}
+    matchCount={find.matchCount}
+    currentIndex={find.currentIndex}
+    focusVersion={find.focusVersion}
+    enableReplace={true}
+    onnext={find.next}
+    onprev={find.prev}
+    onreplace={find.replace}
+    onreplaceAll={find.replaceAll}
+    onclose={find.close}
+  />
+{/if}
 
 <style>
   .source {

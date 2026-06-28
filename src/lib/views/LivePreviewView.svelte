@@ -4,10 +4,11 @@
   import { EditorView, keymap, highlightActiveLine } from "@codemirror/view";
   import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
   import { markdown } from "@codemirror/lang-markdown";
-  import { search, searchKeymap } from "@codemirror/search";
   import { livePreviewExtension } from "./livepreview";
   import { doc } from "$lib/stores/doc.svelte";
   import { mdvCmTheme } from "./cm-theme";
+  import FindBar from "$lib/components/FindBar.svelte";
+  import { CmFindState, findExtension } from "./find-cm.svelte";
 
   let {
     text,
@@ -18,14 +19,16 @@
   let view: EditorView | null = null;
   let lastEmitted = "";
 
+  const find = new CmFindState();
+
   onMount(() => {
     const state = EditorState.create({
       doc: text,
       extensions: [
         history(),
         highlightActiveLine(),
-        search({ top: true }),
-        keymap.of([...defaultKeymap, ...historyKeymap, ...searchKeymap]),
+        findExtension(find.syncFromData),
+        keymap.of([...defaultKeymap, ...historyKeymap]),
         markdown(),
         EditorView.lineWrapping,
         mdvCmTheme,
@@ -41,10 +44,10 @@
     });
     view = new EditorView({ state, parent: container });
     lastEmitted = text;
+    find.bind(view);
+    window.addEventListener("keydown", find.onKeydown);
 
-    // Focus on mount: makes the caret visible immediately, and lets ⌘F
-    // reach @codemirror/search's keymap (it only fires while the editor
-    // owns focus).
+    // Focus on mount so the caret is visible immediately on mode switch.
     view.focus();
 
     const restore = doc.currentLine;
@@ -58,6 +61,8 @@
   });
 
   onDestroy(() => {
+    window.removeEventListener("keydown", find.onKeydown);
+    find.destroy();
     if (view) {
       try {
         const rect = view.scrollDOM.getBoundingClientRect();
@@ -80,9 +85,31 @@
       });
     }
   });
+
+  $effect(() => {
+    void find.query;
+    void find.open;
+    find.refresh();
+  });
 </script>
 
 <div bind:this={container} class="live"></div>
+{#if find.open}
+  <FindBar
+    bind:query={find.query}
+    bind:replaceQuery={find.replaceQuery}
+    bind:replaceVisible={find.replaceVisible}
+    matchCount={find.matchCount}
+    currentIndex={find.currentIndex}
+    focusVersion={find.focusVersion}
+    enableReplace={true}
+    onnext={find.next}
+    onprev={find.prev}
+    onreplace={find.replace}
+    onreplaceAll={find.replaceAll}
+    onclose={find.close}
+  />
+{/if}
 
 <style>
   .live {
