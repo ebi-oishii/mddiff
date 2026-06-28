@@ -13,16 +13,27 @@
   let oldScroller: HTMLDivElement;
   let newScroller: HTMLDivElement;
   let syncedScroll = $state(true);
+
   /**
-   * Set of pane sides we just programmatically scrolled. The corresponding
-   * `scroll` event is consumed (and the entry removed) instead of
-   * propagating, which kills the feedback loop without depending on
-   * setTimeout ordering vs. browser scroll-event scheduling — the previous
-   * `suppressSync + setTimeout(0)` approach could "release" before the
-   * destination's scroll event drained, causing each pane to bounce the
-   * other back and the view to jitter / lock up at the extremes.
+   * Track the last scrollTop we programmatically wrote to each pane (and
+   * when). Incoming `scroll` events whose scrollTop matches a recent write
+   * within a small px / ms window are treated as echoes of our own command
+   * and consumed without propagating, while genuine user scrolls go
+   * through. This is more robust than counting Set entries — the browser
+   * sometimes coalesces multiple scrollTop writes into a single event, and
+   * the order of `scroll` event firing vs. setTimeout / microtask draining
+   * isn't fixed across engines.
    */
-  const inflightSync = new Set<"old" | "new">();
+  const lastCommand = {
+    old: { top: -1, at: 0 },
+    new: { top: -1, at: 0 },
+  };
+  const COMMAND_TOLERANCE_PX = 2;
+  const COMMAND_TIMEOUT_MS = 250;
+
+  // rAF throttle so a smooth-scroll burst doesn't fire N driveSyncs per frame.
+  let pendingSrc: "old" | "new" | null = null;
+  let rafToken: number | null = null;
 
   /** Find the source line at the top of the viewport (per `data-mdv-line`). */
   function topVisibleLine(scroller: HTMLDivElement): number | null {
@@ -56,36 +67,54 @@
     scroller.scrollTop = target.offsetTop;
   }
 
-  /**
-   * Drive `dst` from `src` via the line mapping. Returns true if `dst.scrollTop`
-   * actually moved (in which case the caller marks `dst` as inflight so the
-   * resulting scroll event won't bounce back).
-   */
-  function driveSync(srcSide: "old" | "new"): boolean {
+  /** Drive `dst` from `src` via the line mapping and record what we wrote. */
+  function driveSync(srcSide: "old" | "new") {
     const src = srcSide === "old" ? oldScroller : newScroller;
     const dst = srcSide === "old" ? newScroller : oldScroller;
-    if (!src || !dst) return false;
+    const dstSide = srcSide === "old" ? "new" : "old";
+    if (!src || !dst) return;
     const srcLine = topVisibleLine(src);
-    if (srcLine == null) return false;
+    if (srcLine == null) return;
     const dstLine =
       srcSide === "old"
         ? mapOldToNew(srcLine, payload.hunks)
         : mapNewToOld(srcLine, payload.hunks);
     const before = dst.scrollTop;
     scrollToLine(dst, dstLine);
-    return dst.scrollTop !== before;
+    if (dst.scrollTop !== before) {
+      lastCommand[dstSide] = { top: dst.scrollTop, at: performance.now() };
+    }
+  }
+
+  function isOurEcho(side: "old" | "new"): boolean {
+    const sc = side === "old" ? oldScroller : newScroller;
+    if (!sc) return false;
+    const cmd = lastCommand[side];
+    if (cmd.top < 0) return false;
+    const fresh = performance.now() - cmd.at <= COMMAND_TIMEOUT_MS;
+    const matches = Math.abs(sc.scrollTop - cmd.top) <= COMMAND_TOLERANCE_PX;
+    if (fresh && matches) {
+      // Consume — invalidate so a future user scroll at the same position
+      // isn't wrongly absorbed.
+      lastCommand[side] = { top: -1, at: 0 };
+      return true;
+    }
+    return false;
   }
 
   function onScroll(side: "old" | "new") {
     if (!syncedScroll) return;
-    if (inflightSync.has(side)) {
-      // This scroll was caused by our own driveSync — consume the marker so
-      // future genuine user scrolls on this pane are not ignored.
-      inflightSync.delete(side);
-      return;
-    }
-    const dstSide = side === "old" ? "new" : "old";
-    if (driveSync(side)) inflightSync.add(dstSide);
+    if (isOurEcho(side)) return;
+    // Throttle: at most one driveSync per animation frame; the latest side to
+    // scroll wins (matches user intent — they're focused on that pane).
+    pendingSrc = side;
+    if (rafToken != null) return;
+    rafToken = requestAnimationFrame(() => {
+      rafToken = null;
+      const src = pendingSrc;
+      pendingSrc = null;
+      if (src) driveSync(src);
+    });
   }
 
   function onOldScroll() {
@@ -100,7 +129,7 @@
     if (syncedScroll) {
       // Snap OLD to follow NEW right now — NEW is the editing target, so
       // align the comparison view to where the user currently is.
-      if (driveSync("new")) inflightSync.add("old");
+      driveSync("new");
     }
   }
 

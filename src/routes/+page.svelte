@@ -396,32 +396,32 @@
 </svelte:head>
 
 <div class="app">
-  <header>
-    <!-- Filename / dirty / current mode normally live in the OS window
-         title bar. Mac fullscreen (green button) hides that bar, so when
-         we detect fullscreen we surface the same info in-app instead. -->
-    {#if isFullscreen}
-      <div class="title">
-        <span class="filename">{basename(doc.path)}</span>
-        {#if doc.dirty}<span class="dirty" title="Unsaved changes">●</span>{/if}
-        <span class="mode-name">{modeLabel(mode)}</span>
-      </div>
-    {:else}
-      <div class="header-spacer"></div>
-    {/if}
-    <div class="menu-wrap" class:open={menuOpen}>
-      <button
-        class="menu-trigger"
-        onclick={() => (menuOpen = !menuOpen)}
-        aria-haspopup="menu"
-        aria-expanded={menuOpen}
-        aria-label="Menu"
-        title="Menu"
-      >
-        ☰
-      </button>
-      {#if menuOpen}
-        <div role="menu" class="menu">
+  <!-- Filename / dirty / current mode normally live in the OS window title
+       bar. Mac fullscreen (green button) hides that bar, so when we detect
+       fullscreen we float the same info on top-left. -->
+  {#if isFullscreen}
+    <div class="title-overlay">
+      <span class="filename">{basename(doc.path)}</span>
+      {#if doc.dirty}<span class="dirty" title="Unsaved changes">●</span>{/if}
+      <span class="mode-name">{modeLabel(mode)}</span>
+    </div>
+  {/if}
+
+  <!-- ☰ menu floats over the content top-right; the old dedicated header
+       strip was just wasting vertical space. -->
+  <div class="menu-wrap" class:open={menuOpen}>
+    <button
+      class="menu-trigger"
+      onclick={() => (menuOpen = !menuOpen)}
+      aria-haspopup="menu"
+      aria-expanded={menuOpen}
+      aria-label="Menu"
+      title="Menu"
+    >
+      ☰
+    </button>
+    {#if menuOpen}
+      <div role="menu" class="menu">
           <div class="section">Mode</div>
           {#each MODE_ENTRIES as m}
             {@const disabled = m.requiresGit && !doc.gitAvailable}
@@ -473,8 +473,7 @@
           </button>
         </div>
       {/if}
-    </div>
-  </header>
+  </div>
 
   {#if error}
     <div class="banner error">
@@ -606,25 +605,24 @@
     flex-direction: column;
     height: 100vh;
   }
-  header {
+  /* ---------- Floating overlays (no header strip) ---------- */
+  /* Title is only shown in fullscreen (OS title bar gone). Top-left floating
+     pill matches the menu's resting position on the right. */
+  .title-overlay {
+    position: fixed;
+    top: 0.45rem;
+    left: 0.75rem;
+    z-index: 25;
     display: flex;
     align-items: center;
-    gap: 1rem;
-    padding: 0.5rem 1rem;
-    border-bottom: 1px solid var(--mdv-border);
-    background: var(--mdv-surface);
-    flex-wrap: wrap;
-  }
-  .header-spacer {
-    flex: 1;
-  }
-  /* Shown only in fullscreen — see the markup above. */
-  .title {
-    display: flex;
-    align-items: baseline;
     gap: 0.4rem;
-    min-width: 0;
-    flex: 1 1 12ch;
+    padding: 0.25rem 0.6rem;
+    background: var(--mdv-surface-pop);
+    border: 1px solid var(--mdv-border-mute);
+    border-radius: 999px;
+    box-shadow: 0 2px 8px var(--mdv-shadow);
+    font-size: 0.85rem;
+    max-width: calc(100vw - 6rem);
   }
   .filename {
     font-weight: 500;
@@ -636,31 +634,39 @@
     color: var(--mdv-warn-fg);
   }
   .mode-name {
-    margin-left: 0.5rem;
-    padding: 0.05rem 0.55rem;
+    padding: 0.05rem 0.45rem;
     border-radius: 999px;
-    font-size: 0.74rem;
+    font-size: 0.7rem;
     text-transform: uppercase;
     letter-spacing: 0.05em;
     color: var(--mdv-accent-fg);
     background: var(--mdv-accent-bg);
   }
 
-  /* ---------- Menu ---------- */
+  /* ---------- Menu (floating top-right) ---------- */
   .menu-wrap {
-    position: relative;
-    display: inline-block;
+    position: fixed;
+    top: 0.45rem;
+    right: 0.75rem;
+    z-index: 30;
   }
   .menu-trigger {
-    background: transparent;
-    border: 1px solid transparent;
-    border-radius: 5px;
-    padding: 0.25rem 0.55rem;
+    background: var(--mdv-surface-pop);
+    border: 1px solid var(--mdv-border-mute);
+    border-radius: 999px;
+    width: 34px;
+    height: 34px;
+    padding: 0;
     font: inherit;
-    font-size: 1.1rem;
+    font-size: 1rem;
     line-height: 1;
     color: var(--mdv-text);
     cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 8px var(--mdv-shadow);
+    transition: background-color 0.12s;
   }
   .menu-trigger:hover,
   .menu-wrap.open .menu-trigger {
@@ -785,12 +791,9 @@
 
   /* ---------- Mobile ---------- */
   @media (max-width: 640px) {
-    header {
-      padding: 0.4rem 0.6rem;
-      gap: 0.5rem;
-    }
     .menu-trigger {
-      padding: 0.45rem 0.7rem;
+      width: 40px;
+      height: 40px;
     }
   }
 
