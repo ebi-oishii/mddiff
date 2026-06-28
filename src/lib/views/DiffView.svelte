@@ -54,6 +54,12 @@
   const isDisk = $derived(selected === DISK);
   const base = $derived(isCustom ? customBase.trim() || "HEAD" : selected);
 
+  // When history view is active, the diff's "current" side is the pinned
+  // historical content — not the live buffer. Everything (list_bases marker
+  // computation, diff calls, HighlightView overlay) flows through this
+  // single derived value.
+  const currentText = $derived(doc.history?.content ?? doc.text);
+
   // Auto-select the disk option when arriving from "Compare with disk".
   onMount(() => {
     if (doc.pendingDiskCompare != null) selected = DISK;
@@ -61,11 +67,11 @@
 
   $effect(() => {
     void doc.path;
-    void doc.text;
+    void currentText;
     if (!doc.path || !doc.gitAvailable) return;
     if (basesTimer) clearTimeout(basesTimer);
     const path = doc.path;
-    const text = doc.text;
+    const text = currentText;
     basesTimer = setTimeout(() => {
       gitListBases(path, text).then((b) => {
         bases = b;
@@ -78,7 +84,7 @@
 
   $effect(() => {
     void doc.path;
-    void doc.text;
+    void currentText;
     void submode;
     void base;
     void doc.pendingDiskCompare;
@@ -100,18 +106,18 @@
       if (isDisk) {
         const oldText = doc.pendingDiskCompare ?? "";
         if (submode === "highlight") {
-          hunks = await diffTextHunks(oldText, doc.text);
+          hunks = await diffTextHunks(oldText, currentText);
         } else if (submode === "full") {
-          lines = await diffTextFull(oldText, doc.text);
+          lines = await diffTextFull(oldText, currentText);
         } else {
-          sbs = await diffTextSideBySide(oldText, doc.text);
+          sbs = await diffTextSideBySide(oldText, currentText);
         }
       } else if (submode === "highlight") {
-        hunks = await gitHunks(doc.path, doc.text, base);
+        hunks = await gitHunks(doc.path, currentText, base);
       } else if (submode === "full") {
-        lines = await gitFullDiff(doc.path, doc.text, base);
+        lines = await gitFullDiff(doc.path, currentText, base);
       } else {
-        sbs = await gitSideBySide(doc.path, doc.text, base);
+        sbs = await gitSideBySide(doc.path, currentText, base);
       }
     } catch (e) {
       error = humanizeError(e, "read");
@@ -214,6 +220,9 @@
         </button>
       </div>
       <label class="base-select">
+        {#if doc.history}
+          <span class="pinned" title={doc.history.revspec}>{doc.history.label}</span>
+        {/if}
         <span class="prefix">vs</span>
         <select
           bind:value={selected}
@@ -309,7 +318,7 @@
   {:else if error}
     <div class="error">{error}</div>
   {:else if submode === "highlight"}
-    <HighlightView text={doc.text} {hunks} />
+    <HighlightView text={currentText} {hunks} />
   {:else if submode === "full"}
     <FullDiffView {lines} />
   {:else if sbs}
@@ -388,6 +397,19 @@
   }
   .base-select .prefix {
     user-select: none;
+  }
+  .base-select .pinned {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 0.82em;
+    color: var(--mddiff-text);
+    background: var(--mddiff-surface-hi);
+    border: 1px solid var(--mddiff-border-mute);
+    border-radius: 3px;
+    padding: 0.05rem 0.4rem;
+    max-width: 14em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   .base-select select {
     font: inherit;

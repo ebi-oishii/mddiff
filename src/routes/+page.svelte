@@ -888,11 +888,16 @@
     <div class="main-row">
       <div class="workspace" class:split={splitMode && !doc.history}>
       {#if doc.history}
-        <!-- History view: read-only Preview of the historical content. Split
-             mode and editing modes are bypassed; they come back the moment
-             the user exits history (state isn't mutated). -->
+        <!-- History view: read-only Preview by default, or Diff so the user
+             can compare the pinned version against other revisions. Editing
+             modes (Source/Live/WYSIWYG) are bypassed; they come back the
+             moment the user exits history (state isn't mutated). -->
         <section class="pane">
-          <PreviewView text={doc.history.content} />
+          {#if mode === "diff"}
+            <DiffView />
+          {:else}
+            <PreviewView text={doc.history.content} />
+          {/if}
         </section>
       {:else}
         <section class="pane">
