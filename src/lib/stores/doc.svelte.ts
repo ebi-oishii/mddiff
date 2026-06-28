@@ -8,9 +8,10 @@ class DocStore {
    * Topmost visible source line (1-based). Views write to this on unmount and
    * read from it on mount so switching modes keeps the user at the same place.
    * View implementations differ:
-   *   - SourceView / LivePreviewView: CodeMirror lineBlockAtHeight
+   *   - SourceView / LivePreviewView: CodeMirror posAtCoords / scrollIntoView
    *   - PreviewView: `[data-mdv-line]` attributes injected via markdown-it
-   *   - WysiwygView: not yet wired (Milkdown doesn't expose source positions)
+   *   - WysiwygView: ProseMirror top-level children indexed against
+   *     markdown-it top-level block tokens (Milkdown has no native source map)
    */
   currentLine = $state(1);
 

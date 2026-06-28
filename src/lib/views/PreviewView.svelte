@@ -39,16 +39,20 @@
   });
 
   let scroller: HTMLDivElement;
+  let scrollTimer: ReturnType<typeof setTimeout> | null = null;
 
   function topVisibleLine(): number | null {
     if (!scroller) return null;
-    const top = scroller.getBoundingClientRect().top;
+    const rect = scroller.getBoundingClientRect();
+    // Detached element returns a zero rect, in which case every child also
+    // reports zero — bail to avoid clobbering currentLine with line 1.
+    if (rect.width === 0 && rect.height === 0) return null;
+    const top = rect.top;
     const blocks = scroller.querySelectorAll<HTMLElement>("[data-mdv-line]");
     let last: number | null = null;
     for (const block of blocks) {
-      const rect = block.getBoundingClientRect();
-      // The first block whose top is at or below the viewport top wins.
-      if (rect.top >= top - 2) {
+      const br = block.getBoundingClientRect();
+      if (br.top >= top - 2) {
         const n = Number(block.dataset.mdvLine);
         return Number.isFinite(n) ? n : last;
       }
@@ -56,6 +60,16 @@
       if (Number.isFinite(n)) last = n;
     }
     return last;
+  }
+
+  function captureTopLine() {
+    const line = topVisibleLine();
+    if (line != null) doc.currentLine = line;
+  }
+
+  function onScroll() {
+    if (scrollTimer) clearTimeout(scrollTimer);
+    scrollTimer = setTimeout(captureTopLine, 80);
   }
 
   function scrollToLine(line: number) {
@@ -77,12 +91,18 @@
   onMount(() => {
     // Wait one frame for the rendered HTML to land in the DOM.
     const line = doc.currentLine;
-    requestAnimationFrame(() => scrollToLine(line));
+    requestAnimationFrame(() => {
+      scrollToLine(line);
+      // Attach the scroll listener AFTER the initial restore so the very
+      // first frame of restoration scroll doesn't overwrite currentLine.
+      scroller?.addEventListener("scroll", onScroll, { passive: true });
+    });
   });
 
   onDestroy(() => {
-    const line = topVisibleLine();
-    if (line != null) doc.currentLine = line;
+    if (scrollTimer) clearTimeout(scrollTimer);
+    captureTopLine();
+    scroller?.removeEventListener("scroll", onScroll);
   });
 </script>
 

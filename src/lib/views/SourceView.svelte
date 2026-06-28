@@ -16,6 +16,24 @@
   let container: HTMLDivElement;
   let view: EditorView | null = null;
   let lastEmitted = "";
+  let scrollTimer: ReturnType<typeof setTimeout> | null = null;
+
+  function captureTopLine() {
+    if (!view) return;
+    try {
+      const rect = view.scrollDOM.getBoundingClientRect();
+      // Detached element returns a zero rect — bail before posAtCoords maps
+      // (0, 0) to position 0 and clobbers currentLine with 1.
+      if (rect.width === 0 && rect.height === 0) return;
+      const pos = view.posAtCoords({ x: rect.left + 8, y: rect.top + 4 });
+      if (pos != null) doc.currentLine = view.state.doc.lineAt(pos).number;
+    } catch {}
+  }
+
+  function onScroll() {
+    if (scrollTimer) clearTimeout(scrollTimer);
+    scrollTimer = setTimeout(captureTopLine, 80);
+  }
 
   onMount(() => {
     const state = EditorState.create({
@@ -41,6 +59,13 @@
     view = new EditorView({ state, parent: container });
     lastEmitted = text;
 
+    // Track scroll continuously so doc.currentLine stays fresh regardless of
+    // unmount timing. Svelte 5's onDestroy can fire after the DOM has been
+    // detached, at which point getBoundingClientRect returns a zero rect and
+    // posAtCoords resolves to position 0 (line 1), silently clobbering the
+    // saved line. Continuous capture sidesteps that race.
+    view.scrollDOM.addEventListener("scroll", onScroll, { passive: true });
+
     // Restore scroll position from DocStore so mode switches stay in place.
     // Defer one frame so CodeMirror has measured the layout.
     const restore = doc.currentLine;
@@ -54,20 +79,11 @@
   });
 
   onDestroy(() => {
-    // Save topmost visible source line before tearing down so the next mode
-    // can scroll there. posAtCoords is more reliable than lineBlockAtHeight
-    // when the editor has padding/margins.
-    if (view) {
-      try {
-        const rect = view.scrollDOM.getBoundingClientRect();
-        const pos = view.posAtCoords({ x: rect.left + 8, y: rect.top + 4 });
-        if (pos != null) {
-          doc.currentLine = view.state.doc.lineAt(pos).number;
-        }
-      } catch {
-        // best-effort; ignore if the layout isn't available
-      }
-    }
+    if (scrollTimer) clearTimeout(scrollTimer);
+    // Last-chance capture in case a scroll event happened in the final ~80ms
+    // and the debounce hasn't fired yet. Best-effort; guarded inside.
+    captureTopLine();
+    view?.scrollDOM.removeEventListener("scroll", onScroll);
     view?.destroy();
   });
 
