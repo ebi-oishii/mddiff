@@ -73,14 +73,30 @@
     const dst = srcSide === "old" ? newScroller : oldScroller;
     const dstSide = srcSide === "old" ? "new" : "old";
     if (!src || !dst) return;
-    const srcLine = topVisibleLine(src);
-    if (srcLine == null) return;
-    const dstLine =
-      srcSide === "old"
-        ? mapOldToNew(srcLine, payload.hunks)
-        : mapNewToOld(srcLine, payload.hunks);
+
     const before = dst.scrollTop;
-    scrollToLine(dst, dstLine);
+    const srcMax = Math.max(0, src.scrollHeight - src.clientHeight);
+    const dstMax = Math.max(0, dst.scrollHeight - dst.clientHeight);
+
+    // Edge anchoring: when the source is pinned to the very top (or bottom),
+    // pin the destination too. Without this, line-based mapping snaps `dst`
+    // to the offsetTop of its first block, which is `padding-top` (not 0) —
+    // so the user can scroll src to literal 0 but the other pane stays
+    // ~24px down and "won't fully scroll to the top".
+    if (src.scrollTop <= 0) {
+      dst.scrollTop = 0;
+    } else if (src.scrollTop >= srcMax - 1) {
+      dst.scrollTop = dstMax;
+    } else {
+      const srcLine = topVisibleLine(src);
+      if (srcLine == null) return;
+      const dstLine =
+        srcSide === "old"
+          ? mapOldToNew(srcLine, payload.hunks)
+          : mapNewToOld(srcLine, payload.hunks);
+      scrollToLine(dst, dstLine);
+    }
+
     if (dst.scrollTop !== before) {
       lastCommand[dstSide] = { top: dst.scrollTop, at: performance.now() };
     }
