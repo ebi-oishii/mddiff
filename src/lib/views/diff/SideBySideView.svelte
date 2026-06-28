@@ -1,12 +1,10 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import MarkdownIt from "markdown-it";
-  import DOMPurify from "dompurify";
-  import taskLists from "markdown-it-task-lists";
   import type { HunkSummary, SideBySidePayload } from "$lib/types";
   import { mapNewToOld, mapOldToNew } from "./line-map";
   import FindBar from "$lib/components/FindBar.svelte";
   import { useFind } from "../use-find.svelte";
+  import { createPreviewMd, renderWithLineMap } from "../markdown-render";
 
   let {
     payload,
@@ -197,13 +195,7 @@
     }
   }
 
-  const md = new MarkdownIt({
-    html: true,
-    linkify: true,
-    breaks: false,
-    typographer: true,
-  });
-  md.use(taskLists, { enabled: false, label: false });
+  const md = createPreviewMd();
 
   type Side = "old" | "new";
 
@@ -217,28 +209,18 @@
   }
 
   /**
-   * Two-stage markdown-it pipeline:
-   *   1. parse to tokens (block-level tokens carry `token.map = [start, end_exclusive]`)
-   *   2. for each block_open token: tag with `data-mdv-line` (for scroll sync)
-   *      and, if its range overlaps any visible hunk on this side, inject
-   *      `class="mdv-changed mdv-changed-{kind}"` (for the colored overlay)
-   *   3. render
+   * Render a side of the diff with `data-mdv-line` for scroll sync and a
+   * `mdv-changed mdv-changed-{kind}` class on each block whose source range
+   * overlaps a visible hunk. The `removed` hunks only paint on the old side
+   * and the `added` hunks only on the new side — that pairing is what gives
+   * the colored gutter its directional meaning.
    */
   function highlightedHtml(
     text: string,
     hunks: HunkSummary[],
     side: Side,
   ): string {
-    const env: Record<string, unknown> = {};
-    const tokens = md.parse(text, env);
-
-    for (const token of tokens) {
-      if (!token.map || !token.type.endsWith("_open")) continue;
-      const tStart = token.map[0] + 1;
-      const tEnd = token.map[1];
-
-      token.attrJoin("data-mdv-line", String(tStart));
-
+    return renderWithLineMap(md, text, (token, tStart, tEnd) => {
       for (const h of hunks) {
         let hStart: number;
         let hEnd: number;
@@ -256,10 +238,6 @@
           break;
         }
       }
-    }
-
-    return DOMPurify.sanitize(md.renderer.render(tokens, md.options, env), {
-      ADD_ATTR: ["data-mdv-line"],
     });
   }
 

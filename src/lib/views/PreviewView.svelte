@@ -1,45 +1,15 @@
 <script lang="ts">
   import { onDestroy, onMount } from "svelte";
-  import MarkdownIt from "markdown-it";
-  import DOMPurify from "dompurify";
-  import taskLists from "markdown-it-task-lists";
   import { doc } from "$lib/stores/doc.svelte";
   import FindBar from "$lib/components/FindBar.svelte";
   import { useFind } from "./use-find.svelte";
   import { attachScrollTracker, type ScrollTracker } from "./scroll-tracker";
+  import { createPreviewMd, renderWithLineMap } from "./markdown-render";
 
   let { text }: { text: string } = $props();
 
-  const md = new MarkdownIt({
-    html: true,
-    linkify: true,
-    breaks: false,
-    typographer: true,
-  });
-  md.use(taskLists, { enabled: false, label: false });
-
-  /**
-   * 2-stage pipeline: parse → annotate each block_open token with its source
-   * line range as `data-mdv-line` → render. The attributes let us map between
-   * scroll positions in the rendered DOM and source line numbers, which is
-   * the basis for cross-mode scroll sync.
-   */
-  const html = $derived.by(() => {
-    // parse and render MUST share the same `env` so plugins (notably
-    // markdown-it-task-lists) can hand state between phases. Passing a fresh
-    // {} to render dropped the task-list metadata and broke `[x]`/`[ ]`
-    // checkbox rendering.
-    const env: Record<string, unknown> = {};
-    const tokens = md.parse(text, env);
-    for (const token of tokens) {
-      if (token.map && token.type.endsWith("_open")) {
-        token.attrJoin("data-mdv-line", String(token.map[0] + 1));
-      }
-    }
-    return DOMPurify.sanitize(md.renderer.render(tokens, md.options, env), {
-      ADD_ATTR: ["data-mdv-line"],
-    });
-  });
+  const md = createPreviewMd();
+  const html = $derived(renderWithLineMap(md, text));
 
   let scroller: HTMLDivElement;
   let scrollTracker: ScrollTracker | null = null;

@@ -1,6 +1,5 @@
 <script lang="ts">
   import { onMount, onDestroy } from "svelte";
-  import MarkdownIt from "markdown-it";
   import { Editor, defaultValueCtx, editorViewCtx, rootCtx } from "@milkdown/kit/core";
   import { commonmark } from "@milkdown/kit/preset/commonmark";
   import { gfm } from "@milkdown/kit/preset/gfm";
@@ -9,6 +8,7 @@
   import FindBar from "$lib/components/FindBar.svelte";
   import { useFind } from "./use-find.svelte";
   import { attachScrollTracker, type ScrollTracker } from "./scroll-tracker";
+  import { createLineMapMd } from "./markdown-render";
   import { doc } from "$lib/stores/doc.svelte";
 
   let {
@@ -31,7 +31,7 @@
   // reconstruct a top-level-block → source-line mapping by parsing the same
   // markdown with markdown-it. ProseMirror renders top-level doc nodes 1:1 as
   // `.ProseMirror` children, so the array index lines up with the child index.
-  const lineMapMd = new MarkdownIt({ html: true, linkify: true, breaks: false });
+  const lineMapMd = createLineMapMd();
   let cachedSrc = "";
   let cachedLines: number[] = [];
   function topLevelBlockLines(src: string): number[] {
