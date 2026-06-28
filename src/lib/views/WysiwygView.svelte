@@ -8,6 +8,7 @@
   import { getMarkdown, replaceAll } from "@milkdown/kit/utils";
   import FindBar from "$lib/components/FindBar.svelte";
   import { useFind } from "./use-find.svelte";
+  import { attachScrollTracker, type ScrollTracker } from "./scroll-tracker";
   import { doc } from "$lib/stores/doc.svelte";
 
   let {
@@ -24,7 +25,7 @@
   let editor: Editor | null = null;
   let lastEmitted = "";
   let ready = $state(false);
-  let scrollTimer: ReturnType<typeof setTimeout> | null = null;
+  let scrollTracker: ScrollTracker | null = null;
 
   // Milkdown doesn't expose source-line positions on its rendered nodes, so we
   // reconstruct a top-level-block → source-line mapping by parsing the same
@@ -91,16 +92,6 @@
     }
     const lines = topLevelBlockLines(lastEmitted || text);
     return lines[blockIndex] ?? null;
-  }
-
-  function captureTopLine() {
-    const line = topVisibleLine();
-    if (line != null) doc.currentLine = line;
-  }
-
-  function onScroll() {
-    if (scrollTimer) clearTimeout(scrollTimer);
-    scrollTimer = setTimeout(captureTopLine, 80);
   }
 
   // DOM-based find — same pattern as Preview / Diff. The scope is `.wys`
@@ -212,21 +203,24 @@
       try {
         scrollToLine(restore);
       } catch {}
-      // Attach scroll listener after the restore frame so the programmatic
+      // Attach scroll tracker after the restore frame so the programmatic
       // scroll doesn't race the user's first manual scroll for the debounce.
-      container?.addEventListener("scroll", onScroll, { passive: true });
+      if (container) {
+        scrollTracker = attachScrollTracker(container, {
+          computeLine: topVisibleLine,
+        });
+      }
     });
   });
 
   onDestroy(() => {
     container?.removeEventListener("click", handleTaskClick);
-    if (scrollTimer) clearTimeout(scrollTimer);
     try {
-      captureTopLine();
+      scrollTracker?.captureNow();
     } catch {
       // DOM might already be torn down; skip silently.
     }
-    container?.removeEventListener("scroll", onScroll);
+    scrollTracker?.detach();
     editor?.destroy();
     editor = null;
   });

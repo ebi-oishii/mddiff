@@ -6,6 +6,7 @@
   import { doc } from "$lib/stores/doc.svelte";
   import FindBar from "$lib/components/FindBar.svelte";
   import { useFind } from "./use-find.svelte";
+  import { attachScrollTracker, type ScrollTracker } from "./scroll-tracker";
 
   let { text }: { text: string } = $props();
 
@@ -41,7 +42,7 @@
   });
 
   let scroller: HTMLDivElement;
-  let scrollTimer: ReturnType<typeof setTimeout> | null = null;
+  let scrollTracker: ScrollTracker | null = null;
 
   function topVisibleLine(): number | null {
     if (!scroller) return null;
@@ -62,16 +63,6 @@
       if (Number.isFinite(n)) last = n;
     }
     return last;
-  }
-
-  function captureTopLine() {
-    const line = topVisibleLine();
-    if (line != null) doc.currentLine = line;
-  }
-
-  function onScroll() {
-    if (scrollTimer) clearTimeout(scrollTimer);
-    scrollTimer = setTimeout(captureTopLine, 80);
   }
 
   function scrollToLine(line: number) {
@@ -102,16 +93,19 @@
     const line = doc.currentLine;
     requestAnimationFrame(() => {
       scrollToLine(line);
-      // Attach the scroll listener AFTER the initial restore so the very
+      // Attach the scroll tracker AFTER the initial restore so the very
       // first frame of restoration scroll doesn't overwrite currentLine.
-      scroller?.addEventListener("scroll", onScroll, { passive: true });
+      if (scroller) {
+        scrollTracker = attachScrollTracker(scroller, {
+          computeLine: topVisibleLine,
+        });
+      }
     });
   });
 
   onDestroy(() => {
-    if (scrollTimer) clearTimeout(scrollTimer);
-    captureTopLine();
-    scroller?.removeEventListener("scroll", onScroll);
+    scrollTracker?.captureNow();
+    scrollTracker?.detach();
   });
 </script>
 

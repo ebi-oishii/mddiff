@@ -10,6 +10,8 @@
   import FindBar from "$lib/components/FindBar.svelte";
   import { findExtension } from "./find-cm.svelte";
   import { useCmFind } from "./use-find.svelte";
+  import { attachScrollTracker, type ScrollTracker } from "./scroll-tracker";
+  import { restoreCmToLine } from "./cm-editor";
 
   let {
     text,
@@ -19,21 +21,17 @@
   let container: HTMLDivElement;
   let view: EditorView | null = null;
   let lastEmitted = "";
-  let scrollTimer: ReturnType<typeof setTimeout> | null = null;
+  let scrollTracker: ScrollTracker | null = null;
 
-  function captureTopLine() {
-    if (!view) return;
+  function topVisibleLine(): number | null {
+    if (!view) return null;
     try {
       const rect = view.scrollDOM.getBoundingClientRect();
-      if (rect.width === 0 && rect.height === 0) return;
+      if (rect.width === 0 && rect.height === 0) return null;
       const pos = view.posAtCoords({ x: rect.left + 8, y: rect.top + 4 });
-      if (pos != null) doc.currentLine = view.state.doc.lineAt(pos).number;
+      if (pos != null) return view.state.doc.lineAt(pos).number;
     } catch {}
-  }
-
-  function onScroll() {
-    if (scrollTimer) clearTimeout(scrollTimer);
-    scrollTimer = setTimeout(captureTopLine, 80);
+    return null;
   }
 
   const find = useCmFind(() => {
@@ -69,22 +67,19 @@
     // Focus on mount so the caret is visible immediately on mode switch.
     view.focus();
 
-    view.scrollDOM.addEventListener("scroll", onScroll, { passive: true });
+    scrollTracker = attachScrollTracker(view.scrollDOM, {
+      computeLine: topVisibleLine,
+    });
 
     const restore = doc.currentLine;
     requestAnimationFrame(() => {
-      if (!view) return;
-      const total = view.state.doc.lines;
-      const safe = Math.max(1, Math.min(total, restore));
-      const pos = view.state.doc.line(safe).from;
-      view.dispatch({ effects: EditorView.scrollIntoView(pos, { y: "start" }) });
+      if (view) restoreCmToLine(view, restore);
     });
   });
 
   onDestroy(() => {
-    if (scrollTimer) clearTimeout(scrollTimer);
-    captureTopLine();
-    view?.scrollDOM.removeEventListener("scroll", onScroll);
+    scrollTracker?.captureNow();
+    scrollTracker?.detach();
     view?.destroy();
   });
 
