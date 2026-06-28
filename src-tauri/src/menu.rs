@@ -34,16 +34,40 @@ pub fn build(app: &AppHandle) -> tauri::Result<Menu<Wry>> {
         .build()?;
 
     let export_submenu = SubmenuBuilder::new(app, "Export")
-        .item(&MenuItem::with_id(app, "export_html", "HTML", true, None::<&str>)?)
-        .item(&MenuItem::with_id(app, "export_pdf", "PDF…", true, None::<&str>)?)
-        .item(&MenuItem::with_id(app, "export_text", "Plain text", true, None::<&str>)?)
-        .item(&MenuItem::with_id(app, "export_docx", "DOCX", true, None::<&str>)?)
+        .item(&MenuItem::with_id(
+            app,
+            "export_html",
+            "HTML",
+            true,
+            Some("CmdOrCtrl+Shift+H"),
+        )?)
+        .item(&MenuItem::with_id(
+            app,
+            "export_pdf",
+            "PDF…",
+            true,
+            Some("CmdOrCtrl+Shift+P"),
+        )?)
+        .item(&MenuItem::with_id(
+            app,
+            "export_text",
+            "Plain text",
+            true,
+            Some("CmdOrCtrl+Shift+T"),
+        )?)
+        .item(&MenuItem::with_id(
+            app,
+            "export_docx",
+            "DOCX",
+            true,
+            Some("CmdOrCtrl+Shift+D"),
+        )?)
         .item(&MenuItem::with_id(
             app,
             "export_mddiff",
             ".mddiff (with history)",
             true,
-            None::<&str>,
+            Some("CmdOrCtrl+Shift+M"),
         )?)
         .build()?;
 

@@ -635,6 +635,26 @@
         e.preventDefault();
         toggleSplit();
       }
+      // Export shortcuts: ⌘⇧ + initial of the format. Kept on Shift+letter
+      // since the menu items are inherently destination-of-export "Save As X"
+      // operations, conceptually paired with Save As (⌘⇧S).
+      else if (e.shiftKey && (e.key === "H" || e.key === "h")) {
+        e.preventDefault();
+        exportHtml();
+      } else if (e.shiftKey && (e.key === "P" || e.key === "p")) {
+        e.preventDefault();
+        exportPdf();
+      } else if (e.shiftKey && (e.key === "T" || e.key === "t")) {
+        e.preventDefault();
+        exportPlainText();
+      } else if (e.shiftKey && (e.key === "D" || e.key === "d")) {
+        e.preventDefault();
+        exportDocx();
+      } else if (e.shiftKey && (e.key === "M" || e.key === "m")) {
+        if (!doc.gitAvailable) return;
+        e.preventDefault();
+        openMddiffDialog();
+      }
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -741,10 +761,18 @@
           </button>
           <div class="sep"></div>
           <div class="section">{i18n.t("menu.exportHeading")}</div>
-          <button role="menuitem" onclick={exportHtml}>{i18n.t("menu.exportHtml")}</button>
-          <button role="menuitem" onclick={exportPdf}>{i18n.t("menu.exportPdf")}</button>
-          <button role="menuitem" onclick={exportPlainText}>{i18n.t("menu.exportPlain")}</button>
-          <button role="menuitem" onclick={exportDocx}>{i18n.t("menu.exportDocx")}</button>
+          <button role="menuitem" onclick={exportHtml}>
+            <span>{i18n.t("menu.exportHtml")}</span><kbd>{MOD}{SHIFT}H</kbd>
+          </button>
+          <button role="menuitem" onclick={exportPdf}>
+            <span>{i18n.t("menu.exportPdf")}</span><kbd>{MOD}{SHIFT}P</kbd>
+          </button>
+          <button role="menuitem" onclick={exportPlainText}>
+            <span>{i18n.t("menu.exportPlain")}</span><kbd>{MOD}{SHIFT}T</kbd>
+          </button>
+          <button role="menuitem" onclick={exportDocx}>
+            <span>{i18n.t("menu.exportDocx")}</span><kbd>{MOD}{SHIFT}D</kbd>
+          </button>
           <button
             role="menuitem"
             onclick={openMddiffDialog}
@@ -753,7 +781,7 @@
               ? i18n.t("menu.requiresMddiff")
               : i18n.t("menu.requiresGit")}
           >
-            {i18n.t("menu.exportMddiff")}
+            <span>{i18n.t("menu.exportMddiff")}</span><kbd>{MOD}{SHIFT}M</kbd>
           </button>
           <div class="sep"></div>
           <button role="menuitem" onclick={loadSample}>{i18n.t("menu.loadSample")}</button>
