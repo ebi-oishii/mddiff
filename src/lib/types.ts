@@ -26,11 +26,6 @@ export function removedCount(h: HunkSummary): number {
   return h.old_end - h.old_start + 1;
 }
 
-export function addedCount(h: HunkSummary): number {
-  if (h.kind === "removed") return 0;
-  return h.new_end - h.new_start + 1;
-}
-
 export type DiffLine =
   | { kind: "equal"; old_no: number; new_no: number; text: string }
   | { kind: "added"; new_no: number; text: string }

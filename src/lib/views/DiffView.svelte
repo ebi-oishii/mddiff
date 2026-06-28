@@ -2,6 +2,7 @@
   import { onMount } from "svelte";
   import { doc } from "$lib/stores/doc.svelte";
   import { settings } from "$lib/stores/settings.svelte";
+  import { humanizeError } from "$lib/errors";
   import {
     diffTextFull,
     diffTextHunks,
@@ -111,7 +112,7 @@
         sbs = await gitSideBySide(doc.path, doc.text, base);
       }
     } catch (e) {
-      error = String(e);
+      error = humanizeError(e, "read");
     } finally {
       loading = false;
     }

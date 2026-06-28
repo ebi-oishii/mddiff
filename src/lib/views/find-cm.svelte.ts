@@ -39,7 +39,15 @@ const setCurrentIdx = StateEffect.define<number>();
 function compute(state: EditorState, query: string, want: number): FindData {
   if (!query) return EMPTY;
   const matches: Match[] = [];
-  const cursor = new SearchCursor(state.doc, query);
+  // Case-insensitive to match find-dom.ts's behavior — same UI must mean
+  // the same semantics across Source/Live (CM) and Preview/Diff (DOM).
+  const cursor = new SearchCursor(
+    state.doc,
+    query,
+    0,
+    state.doc.length,
+    (x) => x.toLowerCase(),
+  );
   while (!cursor.next().done) {
     matches.push({ from: cursor.value.from, to: cursor.value.to });
   }

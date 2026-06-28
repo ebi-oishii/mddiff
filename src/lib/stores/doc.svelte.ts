@@ -37,6 +37,27 @@ class DocStore {
     this.pendingDiskCompare = null;
   }
 
+  /**
+   * Swap the buffer to a disk-read copy without resetting view state.
+   * Used by external-change auto-reload and the [Revert to disk] banner
+   * action — same content as `load()` would have given, but we keep the
+   * scroll position (currentLine) so the user isn't ejected to line 1.
+   */
+  reloadFromDisk(text: string) {
+    this.text = text;
+    this.savedText = text;
+  }
+
+  /**
+   * After Save As, the file now lives at a new path with possibly different
+   * Git status. Buffer contents are unchanged — `markSaved()` is the
+   * companion that snapshots them as clean.
+   */
+  setPath(path: string, gitAvailable: boolean) {
+    this.path = path;
+    this.gitAvailable = gitAvailable;
+  }
+
   markSaved() {
     this.savedText = this.text;
   }

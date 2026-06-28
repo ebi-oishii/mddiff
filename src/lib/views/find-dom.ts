@@ -42,6 +42,10 @@ export class DomFinder {
         if (parent.closest(".find-bar")) return NodeFilter.FILTER_REJECT;
         const tag = parent.tagName;
         if (tag === "SCRIPT" || tag === "STYLE") return NodeFilter.FILTER_REJECT;
+        // Skip diff gutter line numbers and +/- signs — matching against
+        // `1` shouldn't paint every numbered gutter cell. These classes
+        // are used by FullDiffView / HighlightView.
+        if (parent.closest(".ln, .sign")) return NodeFilter.FILTER_REJECT;
         return NodeFilter.FILTER_ACCEPT;
       },
     });

@@ -2,6 +2,7 @@
   import { gitListBases } from "$lib/ipc/git";
   import { mdvPack } from "$lib/ipc/mdv";
   import { pickSavePath, writeFile } from "$lib/ipc/fs";
+  import { humanizeError } from "$lib/errors";
   import type { BaseKind, BaseOption } from "$lib/types";
 
   let {
@@ -27,7 +28,7 @@
         bases = b;
       })
       .catch((e) => {
-        error = String(e);
+        error = humanizeError(e, "other");
       });
   });
 
@@ -54,7 +55,7 @@
         `.mdv saved: ${packed.commit_count} commits, ${packed.snapshot_count} snapshots, ${formatBytes(packed.bundle_bytes)} compressed`,
       );
     } catch (e) {
-      error = String(e);
+      error = humanizeError(e, "write");
     } finally {
       loading = false;
     }

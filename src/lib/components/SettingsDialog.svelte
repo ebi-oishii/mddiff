@@ -277,11 +277,6 @@
     color: var(--mdv-text-mute);
     line-height: 1.4;
   }
-  .row input[type="checkbox"] {
-    width: 1rem;
-    height: 1rem;
-    margin: 0;
-  }
   .actions {
     display: flex;
     justify-content: space-between;

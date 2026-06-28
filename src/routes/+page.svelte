@@ -204,6 +204,10 @@
   // Triggered by the `file-external-change` Tauri event.
   async function handleExternalChange(payload: ExternalChange) {
     if (!doc.path || payload.path !== doc.path) return;
+    // Snapshot the path we're racing against. If the user opens a different
+    // file mid-read, `doc.path` will have changed by the time we resume; the
+    // event we're handling is then about the wrong file and must be dropped.
+    const expectedPath = doc.path;
 
     if (payload.kind === "removed") {
       externalChange = { kind: "removed" };
@@ -212,7 +216,7 @@
 
     let diskText: string;
     try {
-      diskText = await readText(doc.path);
+      diskText = await readText(expectedPath);
     } catch (e) {
       // Disk read failed — likely a transient state (mid-rename). Drop the
       // event; if there's a real change, the next debounce window will fire.
@@ -220,13 +224,15 @@
       return;
     }
 
+    // The open file changed during the await — this disk read is stale.
+    if (doc.path !== expectedPath) return;
+
     // Filter out no-op events (notify can fire on mtime touches even when
     // bytes are identical, or our self-write suppression missed an event).
     if (diskText === doc.text) return;
 
     if (!doc.dirty && settings.autoReload) {
-      doc.text = diskText;
-      doc.savedText = diskText;
+      doc.reloadFromDisk(diskText);
       reloadFlash = "File reloaded from disk";
       setTimeout(() => {
         if (reloadFlash === "File reloaded from disk") reloadFlash = null;
@@ -238,9 +244,7 @@
 
   function applyDiskReload() {
     if (externalChange?.kind !== "modified") return;
-    const txt = externalChange.diskText;
-    doc.text = txt;
-    doc.savedText = txt;
+    doc.reloadFromDisk(externalChange.diskText);
     externalChange = null;
   }
 
@@ -331,7 +335,7 @@
     const { path } = largeFilePending;
     largeFilePending = null;
     void openPath(path, true).catch((e) => {
-      error = String(e);
+      error = humanizeError(e, "read");
     });
   }
 
@@ -360,8 +364,7 @@
     try {
       const path = await pickAndWriteFile(doc.text);
       if (path) {
-        doc.path = path;
-        doc.gitAvailable = await gitIsRepo(path);
+        doc.setPath(path, await gitIsRepo(path));
         doc.markSaved();
       }
     } catch (e) {
