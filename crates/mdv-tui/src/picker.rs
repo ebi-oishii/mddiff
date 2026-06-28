@@ -14,7 +14,14 @@ pub struct BasePicker {
 
 impl BasePicker {
     pub fn open(file: &Path, current: &str) -> Self {
-        let options = list_bases(file, Some(current)).unwrap_or_default();
+        // Match the GUI's default: only commits that actually changed this
+        // file. Special / Branch / Tag pass through (they're not filtered
+        // out by `file_changed`).
+        let options = list_bases(file, Some(current))
+            .unwrap_or_default()
+            .into_iter()
+            .filter(|o| o.file_changed)
+            .collect::<Vec<_>>();
         let mut state = ListState::default();
         if !options.is_empty() {
             state.select(Some(0));

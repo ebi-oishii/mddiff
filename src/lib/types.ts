@@ -62,4 +62,10 @@ export interface BaseOption {
   kind: BaseKind;
   detail: string | null;
   marker: DiffMarker;
+  /**
+   * For Commit kind: did this commit actually change the file (blob differs
+   * from its parent)? Special / Branch / Tag are always `true` so they're
+   * never filtered out of the default picker.
+   */
+  file_changed: boolean;
 }

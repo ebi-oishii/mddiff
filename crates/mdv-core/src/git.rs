@@ -43,6 +43,11 @@ pub struct BaseOption {
     /// Optional supplementary info (commit summary, etc.).
     pub detail: Option<String>,
     pub marker: DiffMarker,
+    /// True iff this revision changed the file's blob compared to its parent.
+    /// Always `true` for Special / Branch / Tag (we don't filter them out).
+    /// For Commit kind, this is what lets the UI hide "noise" commits that
+    /// didn't touch this file from the default picker.
+    pub file_changed: bool,
 }
 
 #[derive(Debug, Error)]
@@ -173,11 +178,15 @@ pub fn list_bases(file: &Path, current: Option<&str>) -> Result<Vec<BaseOption>,
     let current_oid = current
         .and_then(|c| git2::Oid::hash_object(git2::ObjectType::Blob, c.as_bytes()).ok());
 
-    let mk = |revspec: String, label: String, kind: BaseKind, detail: Option<String>| {
+    let mk = |revspec: String,
+              label: String,
+              kind: BaseKind,
+              detail: Option<String>,
+              file_changed: bool| {
         let blob = blob_oid_at(&repo, &rel, &revspec);
         let marker = match (current_oid, blob) {
             (None, _) => DiffMarker::Unknown,
-            (Some(_), None) => DiffMarker::Differs, // file absent at base counts as differing
+            (Some(_), None) => DiffMarker::Differs,
             (Some(cur), Some(b)) if cur == b => DiffMarker::Identical,
             (Some(_), Some(_)) => DiffMarker::Differs,
         };
@@ -187,6 +196,7 @@ pub fn list_bases(file: &Path, current: Option<&str>) -> Result<Vec<BaseOption>,
             kind,
             detail,
             marker,
+            file_changed,
         };
         (blob, opt)
     };
@@ -197,18 +207,21 @@ pub fn list_bases(file: &Path, current: Option<&str>) -> Result<Vec<BaseOption>,
             "HEAD".into(),
             BaseKind::Special,
             Some("current commit".into()),
+            true,
         ),
         mk(
             "HEAD~1".into(),
             "HEAD~1".into(),
             BaseKind::Special,
             Some("one commit before HEAD".into()),
+            true,
         ),
         mk(
             "HEAD~5".into(),
             "HEAD~5".into(),
             BaseKind::Special,
             Some("five commits before HEAD".into()),
+            true,
         ),
     ];
 
@@ -216,14 +229,26 @@ pub fn list_bases(file: &Path, current: Option<&str>) -> Result<Vec<BaseOption>,
         for entry in branches.flatten() {
             let (branch, _) = entry;
             if let Ok(Some(name)) = branch.name() {
-                entries.push(mk(name.to_string(), name.to_string(), BaseKind::Branch, None));
+                entries.push(mk(
+                    name.to_string(),
+                    name.to_string(),
+                    BaseKind::Branch,
+                    None,
+                    true,
+                ));
             }
         }
     }
 
     if let Ok(tags) = repo.tag_names(None) {
         for tag in tags.iter().flatten() {
-            entries.push(mk(tag.to_string(), tag.to_string(), BaseKind::Tag, None));
+            entries.push(mk(
+                tag.to_string(),
+                tag.to_string(),
+                BaseKind::Tag,
+                None,
+                true,
+            ));
         }
     }
 
@@ -239,11 +264,27 @@ pub fn list_bases(file: &Path, current: Option<&str>) -> Result<Vec<BaseOption>,
                 .chars()
                 .take(70)
                 .collect();
+
+            // file_changed: this commit's blob for `rel` differs from its
+            // first parent's blob. Used by the UI to hide commits that
+            // didn't touch this file from the default picker.
+            let commit_blob = commit
+                .tree()
+                .ok()
+                .and_then(|t| t.get_path(&rel).ok().map(|e| e.id()));
+            let parent_blob = commit
+                .parent(0)
+                .ok()
+                .and_then(|p| p.tree().ok())
+                .and_then(|t| t.get_path(&rel).ok().map(|e| e.id()));
+            let file_changed = commit_blob != parent_blob;
+
             entries.push(mk(
                 short.clone(),
                 format!("{}  {}", short, summary),
                 BaseKind::Commit,
                 None,
+                file_changed,
             ));
         }
     }
@@ -290,6 +331,7 @@ mod tests {
             kind,
             detail: None,
             marker,
+            file_changed: true,
         }
     }
 

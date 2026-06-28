@@ -29,6 +29,9 @@
   let sbs = $state<SideBySidePayload | null>(null);
   let error = $state<string | null>(null);
   let loading = $state(false);
+  // Default: hide commits that didn't touch this file. The "All commits"
+  // toggle reveals them as the sub-feature for per-commit comparison.
+  let showAllCommits = $state(false);
 
   let diffTimer: ReturnType<typeof setTimeout> | null = null;
   let basesTimer: ReturnType<typeof setTimeout> | null = null;
@@ -87,8 +90,16 @@
   }
 
   function byKind(kind: BaseKind): BaseOption[] {
-    return bases.filter((b) => b.kind === kind);
+    const all = bases.filter((b) => b.kind === kind);
+    if (kind === "commit" && !showAllCommits) {
+      return all.filter((b) => b.file_changed);
+    }
+    return all;
   }
+
+  const hiddenCommitCount = $derived(
+    bases.filter((b) => b.kind === "commit" && !b.file_changed).length,
+  );
 
   function optionLabel(b: BaseOption): string {
     const marker =
@@ -172,7 +183,11 @@
             </optgroup>
           {/if}
           {#if byKind("commit").length > 0}
-            <optgroup label="Recent commits">
+            <optgroup
+              label={showAllCommits
+                ? "Recent commits (all)"
+                : "Recent commits that changed this file"}
+            >
               {#each byKind("commit") as b}
                 <option value={b.revspec}>{optionLabel(b)}</option>
               {/each}
@@ -181,6 +196,19 @@
           <option value={CUSTOM}>Custom…</option>
         </select>
       </label>
+      {#if hiddenCommitCount > 0 || showAllCommits}
+        <!-- Sub-feature: per-commit comparison. Off by default so the
+             picker only shows commits that actually changed the file. -->
+        <label class="all-commits-toggle">
+          <input
+            type="checkbox"
+            bind:checked={showAllCommits}
+            aria-label="Show commits that didn't change this file"
+          />
+          <span>All commits</span>
+          {#if !showAllCommits}<span class="muted">(+{hiddenCommitCount})</span>{/if}
+        </label>
+      {/if}
       {#if isCustom}
         <form class="custom-form" onsubmit={applyCustom}>
           <input
@@ -293,6 +321,22 @@
     border-radius: 4px;
     padding: 0.22rem 0.4rem;
     max-width: 24em;
+  }
+  .all-commits-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.82rem;
+    color: var(--mdv-text-mute);
+    cursor: pointer;
+    user-select: none;
+  }
+  .all-commits-toggle input {
+    margin: 0;
+  }
+  .all-commits-toggle .muted {
+    color: var(--mdv-text-subtle);
+    font-size: 0.92em;
   }
   .custom-form {
     display: inline-flex;
