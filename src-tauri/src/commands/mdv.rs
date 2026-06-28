@@ -16,7 +16,15 @@ pub async fn mdv_pack(
     current_text: String,
     base: String,
 ) -> Result<PackResponse, String> {
-    let result = mdv_core::pack::pack(&path, &current_text, &base).map_err(|e| e.to_string())?;
+    let (author_name, author_email) = mdv_core::git::user_identity(&path);
+    let result = mdv_core::pack::pack(
+        &path,
+        &current_text,
+        &base,
+        &author_name,
+        author_email.as_deref(),
+    )
+    .map_err(|e| e.to_string())?;
     Ok(PackResponse {
         content: result.content,
         commit_count: result.commit_count,

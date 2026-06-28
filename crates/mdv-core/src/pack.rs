@@ -157,7 +157,22 @@ fn repo_id_for(file_abs: &Path) -> String {
     )
 }
 
-pub fn pack(file: &Path, current_text: &str, base_revspec: &str) -> Result<PackResult, PackError> {
+/// Pack the file's Git history (or a slice of it, anchored at `base_revspec`)
+/// plus the current buffer contents into a `.mdv` bundle.
+///
+/// The synthetic "Packaged" commit that represents the current buffer carries
+/// `author_name` / `author_email` in its metadata so receivers can see who
+/// produced the bundle. Callers should source these from the Git repo's
+/// `user.name` / `user.email` config (or whatever identity is appropriate to
+/// the host). Pass `"Unknown"` for the name if no identity is available;
+/// never hardcode a maintainer handle.
+pub fn pack(
+    file: &Path,
+    current_text: &str,
+    base_revspec: &str,
+    author_name: &str,
+    author_email: Option<&str>,
+) -> Result<PackResult, PackError> {
     let file_abs = canonicalize_lossy(file);
     let repo = git2::Repository::discover(&file_abs).map_err(|_| PackError::NotARepo)?;
     let workdir = repo.workdir().ok_or(PackError::NotARepo)?;
@@ -275,8 +290,8 @@ pub fn pack(file: &Path, current_text: &str, base_revspec: &str) -> Result<PackR
         parents: head_parent.into_iter().collect(),
         body: current_snap_id,
         author: Author {
-            name: "ebi-oishii".into(), // placeholder; v2 should read author config
-            email: None,
+            name: author_name.into(),
+            email: author_email.map(|s| s.to_string()),
         },
         created_at: Utc::now().to_rfc3339(),
         message: "Packaged".into(),

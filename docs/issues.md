@@ -52,7 +52,7 @@
 | M2 | 同 `repo_id` の 2 つの `.mdv` をマージ（コミット union） | ★★ |
 | M3 | 厳密 JCS (RFC 8785) 準拠の JSON 正規化 | ★ |
 | M4 | checkpoint / sidecar 履歴の永続化（連続編集の自動 commit） | ★★ |
-| M5 | `.mdv` 内ハンドルの user 設定（現在 author name = "ebi-oishii" ハードコード）| ★★ |
+| ~~M5~~ | ~~`.mdv` 内ハンドルの user 設定~~ ✓ 完了（Tauri 側で repo の git config user.name / user.email を読み、未設定なら "Unknown") | ★★ |
 | M6 | TUI から pack / extract | ★ |
 | M7 | 受信時の bundle 検証エラー UI（壊れた package block の取り扱い） | ★ |
 

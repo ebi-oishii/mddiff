@@ -71,6 +71,23 @@ pub fn is_in_repo(file: &Path) -> bool {
     git2::Repository::discover(&abs).is_ok()
 }
 
+/// Read `user.name` / `user.email` from the Git config that applies to
+/// `file`. Returns `("Unknown", None)` when the file isn't in a Git repo or
+/// the user identity isn't set — never hardcoded to a maintainer handle.
+/// Repo-level config wins over the global, matching how `git commit`
+/// resolves identity. Used by `.mdv` pack to stamp the synthetic head commit.
+pub fn user_identity(file: &Path) -> (String, Option<String>) {
+    let abs = canonicalize_lossy(file);
+    if let Ok(repo) = git2::Repository::discover(&abs) {
+        if let Ok(cfg) = repo.config() {
+            let name = cfg.get_string("user.name").ok();
+            let email = cfg.get_string("user.email").ok();
+            return (name.unwrap_or_else(|| "Unknown".to_string()), email);
+        }
+    }
+    ("Unknown".to_string(), None)
+}
+
 pub fn diff_against_head(file: &Path) -> Result<Vec<HunkSummary>, GitError> {
     let current = std::fs::read_to_string(file)?;
     diff_text_against_base(file, &current, DEFAULT_BASE)
