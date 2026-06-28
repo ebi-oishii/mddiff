@@ -1,6 +1,9 @@
 <script lang="ts">
+  import { onDestroy, onMount } from "svelte";
   import type { HunkKind, HunkSummary } from "$lib/types";
   import { removedCount } from "$lib/types";
+  import FindBar from "$lib/components/FindBar.svelte";
+  import { FindState } from "../find.svelte";
 
   let { text, hunks }: { text: string; hunks: HunkSummary[] } = $props();
 
@@ -21,9 +24,30 @@
     }
     return n;
   }
+
+  let scroller: HTMLDivElement;
+  const find = new FindState();
+
+  onMount(() => {
+    find.bind(scroller);
+    window.addEventListener("keydown", find.onKeydown);
+  });
+
+  onDestroy(() => {
+    window.removeEventListener("keydown", find.onKeydown);
+    find.destroy();
+  });
+
+  $effect(() => {
+    void text;
+    void hunks;
+    void find.query;
+    void find.open;
+    find.refresh();
+  });
 </script>
 
-<div class="hl-scroller">
+<div class="hl-scroller" bind:this={scroller}>
   <div class="hl">
     {#if removedAfter(0) > 0}
       <div class="rem-marker">— {removedAfter(0)} line{removedAfter(0) === 1 ? "" : "s"} removed —</div>
@@ -40,6 +64,17 @@
     {/each}
   </div>
 </div>
+{#if find.open}
+  <FindBar
+    bind:query={find.query}
+    matchCount={find.matchCount}
+    currentIndex={find.currentIndex}
+    focusVersion={find.focusVersion}
+    onnext={find.next}
+    onprev={find.prev}
+    onclose={find.close}
+  />
+{/if}
 
 <style>
   .hl-scroller {

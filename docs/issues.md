@@ -3,7 +3,7 @@
 ロードマップで先送りした項目、既知の小バグ、UX 改善、将来の機能候補を
 集約。優先度はざっくり ★★★（高）/ ★★（中）/ ★（低 or 大物）。
 
-最終更新: 2026-06-27
+最終更新: 2026-06-28
 
 ---
 
@@ -21,15 +21,15 @@
 
 | # | 内容 | 優先 |
 |---|---|---|
-| P1 | Source ↔ Preview ↔ Live Preview ↔ WYSIWYG の切替時にスクロール位置を維持 | ★★★ |
+| ~~P1~~ | ~~Source ↔ Preview ↔ Live Preview ↔ WYSIWYG の切替時にスクロール位置を維持~~ ✓ 完了 | ★★★ |
 | ~~P2~~ | ~~GUI Side-by-Side のペイン間スクロール同期~~ ✓ 完了（toggle 付き） | ★★ |
 | P3 | TUI Side-by-Side の左右ペイン独立スクロール | ★★ |
 | P4 | エラーハンドリング詳細化（ファイル消失検知、再読込ボタン） | ★★ |
-| P5 | 大容量ファイル制限を「警告 + override」に変更（現在 5MB 超は問答無用で拒否） | ★ |
-| P6 | Preview / Live Preview / Diff にも検索（⌘F） | ★★ |
+| ~~P5~~ | ~~大容量ファイル制限を「警告 + override」に変更~~ ✓ 完了（GUI: 5MB 超でモーダル / TUI: `--force`、100MB は両方 hard cap） | ★ |
+| ~~P6~~ | ~~Preview / Live Preview / Diff にも検索（⌘F）~~ ✓ 完了（Source/Live は CodeMirror search、Preview/Diff は DOM find） | ★★ |
 | P7 | モバイル：ボトムタブ UI、左右スワイプでモード切替 | ★★ |
-| P8 | unsaved 状態でアプリ / ウィンドウを閉じようとしたら確認 | ★★ |
-| P9 | 外部エディタで開いてるファイルが変更されたら検知して再読込を提案 | ★ |
+| ~~P8~~ | ~~unsaved 状態でアプリ / ウィンドウを閉じようとしたら確認~~ ✓ 完了（OS の close 要求すべてに発火） | ★★ |
+| ~~P9~~ | ~~外部エディタで開いてるファイルが変更されたら検知して再読込を提案~~ ✓ 完了（clean=silent reload / dirty=banner / Compare / 削除検知 / Settings 切替） | ★ |
 
 ## 機能追加
 

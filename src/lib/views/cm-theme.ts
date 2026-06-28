@@ -16,6 +16,14 @@ export const mdvCmTheme = EditorView.theme({
     color: "var(--mdv-text)",
     height: "100%",
   },
+  // CodeMirror's base theme paints a `outline: 1px dotted` on the focused
+  // editor wrapper. That's invisible when the editor extends to the
+  // viewport edge, but Source's outer padding pulls the wrapper inward and
+  // the dotted line shows up against the bg. Suppress it — the caret +
+  // active-line decoration already signal focus.
+  "&.cm-focused": {
+    outline: "none",
+  },
   ".cm-content": {
     caretColor: "var(--mdv-text)",
   },
@@ -31,8 +39,9 @@ export const mdvCmTheme = EditorView.theme({
     color: "var(--mdv-text-subtle)",
   },
   ".cm-activeLine": {
-    backgroundColor:
-      "color-mix(in srgb, var(--mdv-accent) 6%, transparent)",
+    // Shared with .source::before's active-line extension overlay so the
+    // strip outside cm-editor stays color-matched. Defined in +page.svelte.
+    backgroundColor: "var(--mdv-active-line-bg)",
   },
   ".cm-activeLineGutter": {
     backgroundColor:

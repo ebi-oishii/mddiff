@@ -31,6 +31,10 @@ struct Args {
     /// Git revision to compare against in Diff mode (e.g. HEAD, HEAD~1, main, <sha>).
     #[arg(long, default_value = "HEAD")]
     diff_base: String,
+    /// Open files larger than 5MB anyway. Above 100MB the file is still
+    /// refused — the WebView / TUI line wrapping degrade past that point.
+    #[arg(long)]
+    force: bool,
 }
 
 #[derive(Debug, Clone, Copy, ValueEnum)]
@@ -55,7 +59,16 @@ fn main() -> Result<()> {
 
     let (initial_text, path) = match &args.file {
         Some(p) => {
-            let text = mdv_core::fs::read_text_file(p)?;
+            let text = match mdv_core::fs::read_text_file_with(p, args.force) {
+                Ok(t) => t,
+                Err(mdv_core::fs::ReadError::TooLarge { actual, limit }) => {
+                    anyhow::bail!(
+                        "{p:?} is {} bytes (limit {limit}); re-run with --force to open anyway.",
+                        actual
+                    );
+                }
+                Err(e) => return Err(e.into()),
+            };
             // Canonicalize so git2 can correctly relate this path to the discovered repo workdir.
             let abs = std::fs::canonicalize(p).unwrap_or_else(|_| p.clone());
             (text, Some(abs))
