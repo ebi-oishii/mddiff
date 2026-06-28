@@ -166,6 +166,17 @@
     document.documentElement.style.setProperty("--mdv-editor-font-size", `${px}px`);
   });
 
+  // Surface fullscreen state to CSS so view-specific rules (e.g. SourceView's
+  // top padding to clear the floating title overlay) can scope themselves.
+  $effect(() => {
+    if (typeof document === "undefined") return;
+    if (isFullscreen) {
+      document.documentElement.dataset.fullscreen = "true";
+    } else {
+      delete document.documentElement.dataset.fullscreen;
+    }
+  });
+
   // Push filename + dirty + mode into the OS window title bar (Mac top bar,
   // Win/Linux window chrome). Quiet failure when not running under Tauri.
   $effect(() => {

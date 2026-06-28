@@ -111,4 +111,11 @@
     font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
     font-size: var(--mdv-editor-font-size, 14px);
   }
+  /* In fullscreen the floating "(filename) MODE" overlay (rendered by
+     +page.svelte at top-left) covers the first line of source because
+     CodeMirror's default content padding is only a few pixels. Live /
+     Preview / WYSIWYG have intrinsic 2rem top padding so they're fine. */
+  :global(:root[data-fullscreen] .source .cm-scroller) {
+    padding-top: 2.5rem;
+  }
 </style>

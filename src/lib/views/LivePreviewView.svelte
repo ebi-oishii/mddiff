@@ -123,6 +123,11 @@
     margin: 0 auto;
     padding: 2rem 3rem 4rem;
   }
+  /* In fullscreen the title overlay sits over the top of the canvas;
+     widen the top padding to clear it. */
+  :global(:root[data-fullscreen] .live .cm-content) {
+    padding-top: 2.5rem;
+  }
   :global(.live .cm-line) {
     padding: 0;
   }

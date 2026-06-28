@@ -196,6 +196,13 @@
     line-height: 1.7;
     color: light-dark(#222, #ddd);
   }
+  /* In fullscreen the title overlay (set by +page.svelte) sits at the top
+     of the canvas and clips the first paragraph if the content's own 2rem
+     padding doesn't quite clear it. Match SourceView by widening to 2.5rem
+     just for fullscreen. */
+  :global(:root[data-fullscreen] .wys .milkdown) {
+    padding-top: 2.5rem;
+  }
   :global(.wys .ProseMirror) {
     outline: none;
     min-height: 100%;

@@ -124,6 +124,11 @@
     line-height: 1.7;
     font-size: 16px;
   }
+  /* Match SourceView / LivePreview / WYSIWYG: in fullscreen the title
+     overlay covers the top, so widen the content's top padding. */
+  :global(:root[data-fullscreen]) .preview {
+    padding-top: 2.5rem;
+  }
   .preview :global(h1) {
     font-size: 2rem;
     margin: 1.5em 0 0.5em;

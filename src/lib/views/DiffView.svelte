@@ -268,6 +268,12 @@
     flex-wrap: wrap;
     font-size: 0.85rem;
   }
+  /* In fullscreen the title overlay covers the top-left, hiding the
+     Highlight / Full / Side-by-Side tabs. Push the toolbar down so the
+     overlay sits in its own row above. */
+  :global(:root[data-fullscreen]) .submode-bar {
+    padding-top: 2.5rem;
+  }
   .left {
     display: flex;
     align-items: center;
