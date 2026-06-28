@@ -1265,7 +1265,8 @@
   :global(:root.mddiff-modifier-down) :global(.preview a),
   :global(:root.mddiff-modifier-down) :global(.wys a),
   :global(:root.mddiff-modifier-down) :global(.sbs a),
-  :global(:root.mddiff-modifier-down) :global(.mddiff-lp-link) {
+  :global(:root.mddiff-modifier-down) :global(.mddiff-lp-link),
+  :global(:root.mddiff-modifier-down) :global(.mddiff-cm-link) {
     cursor: pointer;
   }
 </style>
