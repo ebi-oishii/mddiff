@@ -885,7 +885,8 @@
     {#if doc.history}
       <HistoryBanner />
     {/if}
-    <div class="workspace" class:split={splitMode && !doc.history}>
+    <div class="main-row">
+      <div class="workspace" class:split={splitMode && !doc.history}>
       {#if doc.history}
         <!-- History view: read-only Preview of the historical content. Split
              mode and editing modes are bypassed; they come back the moment
@@ -949,18 +950,19 @@
           </section>
         {/if}
       {/if}
+      </div>
+      {#if settings.outlineOpen}
+        <OutlineSidebar
+          headings={outlineHeadings}
+          activeIndex={outlineActiveIdx}
+          onJump={(line) => doc.jumpToLine(line)}
+          onClose={() => {
+            settings.outlineOpen = false;
+            settings.persist();
+          }}
+        />
+      {/if}
     </div>
-    {#if settings.outlineOpen}
-      <OutlineSidebar
-        headings={outlineHeadings}
-        activeIndex={outlineActiveIdx}
-        onJump={(line) => doc.jumpToLine(line)}
-        onClose={() => {
-          settings.outlineOpen = false;
-          settings.persist();
-        }}
-      />
-    {/if}
   </main>
 
   {#if mddiffDialogOpen && doc.path}
@@ -1315,12 +1317,21 @@
     background: var(--mddiff-bg);
     color: var(--mddiff-text);
     display: flex;
+    flex-direction: column;
+  }
+  /* Row container for the workspace + outline sidebar. Lives inside main
+     so the HistoryBanner can sit above as a column sibling, then the row
+     fills the rest. */
+  .main-row {
+    flex: 1;
+    min-height: 0;
+    display: flex;
     flex-direction: row;
   }
   /* Inner workspace owns the pane(s). Default is single-pane column; split
      mode flips to row so left/right panes sit side-by-side. The outline
-     sidebar lives as a sibling of .workspace inside main so it docks to the
-     right regardless of split state. */
+     sidebar lives as a sibling of .workspace inside .main-row so it docks to
+     the right regardless of split state. */
   .workspace {
     flex: 1;
     min-width: 0;
