@@ -41,16 +41,14 @@
       const pos = view.posAtDOM(li, 0);
       if (pos < 0) return;
       const resolved = view.state.doc.resolve(pos);
-      // Walk up from the click target's position until we hit the task
-      // list item node. Milkdown's GFM preset names it either
-      // `task_list_item` (Lezer-style) or `taskListItem` (camelCase
-      // depending on version) — accept both.
+      // Milkdown's GFM preset doesn't introduce a separate `task_list_item`
+      // node — it extends the base `list_item` schema with a nullable
+      // `checked` attr. A regular bullet/ordered item has `checked === null`;
+      // a task item has `checked: true | false`. Walk ancestors and toggle
+      // the first `list_item` that has a non-null `checked`.
       for (let d = resolved.depth; d >= 0; d--) {
         const node = resolved.node(d);
-        if (
-          node.type.name === "task_list_item" ||
-          node.type.name === "taskListItem"
-        ) {
+        if (node.type.name === "list_item" && node.attrs.checked != null) {
           const nodePos = resolved.before(d);
           view.dispatch(
             view.state.tr.setNodeMarkup(nodePos, null, {
