@@ -41,6 +41,7 @@ pub fn run() {
         commands::git::git_hunks,
         commands::git::git_full_diff,
         commands::git::git_side_by_side,
+        commands::git::git_read_at,
         commands::mddiff::mddiff_pack,
         commands::mddiff::mddiff_extract_body,
         commands::watcher::start_watch,

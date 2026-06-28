@@ -1,8 +1,25 @@
+/**
+ * Read-only "view this file at an older commit" mode. While `history` is
+ * non-null, the active view renders `history.content` (instead of `doc.text`)
+ * and editing is suppressed at the view level. `commits` + `index` drive the
+ * Prev/Next walk through eligible revisions; `previousMode` is what we should
+ * return to once the user exits history mode.
+ */
+export type HistoryView = {
+  revspec: string;
+  label: string;
+  content: string;
+  commits: { revspec: string; label: string }[];
+  index: number;
+};
+
 class DocStore {
   text = $state("");
   path = $state<string | null>(null);
   savedText = $state("");
   gitAvailable = $state(false);
+
+  history = $state<HistoryView | null>(null);
 
   /** Captured disk text for the "Compare with disk" action triggered from
    * the external-change banner. DiffView reads this when the user picks the
@@ -34,6 +51,37 @@ class DocStore {
     this.pendingScrollLine = line;
   }
 
+  /**
+   * Enter history view at the given commit position. The caller has already
+   * resolved the file content at that commit; we just install it.
+   */
+  enterHistory(
+    revspec: string,
+    label: string,
+    content: string,
+    commits: { revspec: string; label: string }[],
+    index: number,
+  ) {
+    this.history = { revspec, label, content, commits, index };
+  }
+
+  /** Replace the content shown by history view (for Prev/Next walk). */
+  updateHistoryContent(index: number, revspec: string, label: string, content: string) {
+    if (!this.history) return;
+    this.history = { ...this.history, index, revspec, label, content };
+  }
+
+  /** Restore the historical content into the live buffer as an edit and exit. */
+  restoreHistory() {
+    if (!this.history) return;
+    this.text = this.history.content;
+    this.history = null;
+  }
+
+  exitHistory() {
+    this.history = null;
+  }
+
   get dirty() {
     return this.text !== this.savedText;
   }
@@ -49,6 +97,7 @@ class DocStore {
     this.gitAvailable = gitAvailable;
     this.currentLine = 1;
     this.pendingDiskCompare = null;
+    this.history = null;
   }
 
   /**

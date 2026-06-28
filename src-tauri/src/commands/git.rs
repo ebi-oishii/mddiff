@@ -51,3 +51,8 @@ pub async fn git_side_by_side(
     mddiff_core::git::side_by_side_against_base(&path, &current_text, &base)
         .map_err(|e| e.to_string())
 }
+
+#[tauri::command]
+pub async fn git_read_at(path: PathBuf, revspec: String) -> Result<String, String> {
+    mddiff_core::git::read_at(&path, &revspec).map_err(|e| e.to_string())
+}

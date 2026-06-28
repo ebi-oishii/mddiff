@@ -139,6 +139,16 @@ export const ja: Dictionary = {
     close: "アウトラインを閉じる",
     toggle: "アウトラインの表示切替",
   },
+  history: {
+    viewAt: "この版を見る",
+    bannerReadonly: "履歴表示中（読み取り専用）:",
+    prev: "古い版",
+    next: "新しい版",
+    restore: "この版を復元",
+    exit: "履歴表示を終了",
+    none: "（古いコミットはありません）",
+    error: "この版を読み込めませんでした。",
+  },
   diff: {
     loading: "差分を計算中…",
     base: "比較対象",

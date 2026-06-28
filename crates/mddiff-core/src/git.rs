@@ -94,6 +94,10 @@ pub fn diff_against_head(file: &Path) -> Result<Vec<HunkSummary>, GitError> {
     diff_text_against_base(file, &current, DEFAULT_BASE)
 }
 
+pub fn read_at(file: &Path, revspec: &str) -> Result<String, GitError> {
+    base_text_for(file, revspec)
+}
+
 pub fn diff_text_against_base(
     file: &Path,
     current: &str,

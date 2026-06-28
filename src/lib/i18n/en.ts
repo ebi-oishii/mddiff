@@ -140,6 +140,16 @@ export const en = {
     close: "Close outline",
     toggle: "Toggle outline",
   },
+  history: {
+    viewAt: "View at this version",
+    bannerReadonly: "Viewing read-only at",
+    prev: "Older version",
+    next: "Newer version",
+    restore: "Restore this version",
+    exit: "Exit history view",
+    none: "(no older commits)",
+    error: "Couldn't read this revision.",
+  },
   diff: {
     loading: "Computing diff…",
     base: "Base",

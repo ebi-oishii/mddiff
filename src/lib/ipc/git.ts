@@ -55,6 +55,13 @@ export async function gitSideBySide(
   });
 }
 
+export async function gitReadAt(
+  path: string,
+  revspec: string,
+): Promise<string> {
+  return await invoke<string>("git_read_at", { path, revspec });
+}
+
 /**
  * Pure text-vs-text diffs. Used by the "Compare with disk" path which
  * doesn't go through Git.

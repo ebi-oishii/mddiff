@@ -34,6 +34,7 @@
   import MddiffExportDialog from "$lib/components/MddiffExportDialog.svelte";
   import SettingsDialog from "$lib/components/SettingsDialog.svelte";
   import OutlineSidebar from "$lib/components/OutlineSidebar.svelte";
+  import HistoryBanner from "$lib/components/HistoryBanner.svelte";
   import { extractHeadings, activeHeadingIndex } from "$lib/views/outline";
   import { settings, FONT_SIZE_PX } from "$lib/stores/settings.svelte";
   import SourceView from "$lib/views/SourceView.svelte";
@@ -881,61 +882,73 @@
     </div>
   {/if}
   <main>
-    <div class="workspace" class:split={splitMode}>
-    <section class="pane">
-      {@render titlePill(mode)}
-      {#if mode === "source"}
-        <SourceView
-          text={doc.text}
-          onchange={(t) => doc.setText(t)}
-          onerror={(msg) => (error = msg)}
-        />
-      {:else if mode === "live"}
-        <LivePreviewView
-          text={doc.text}
-          onchange={(t) => doc.setText(t)}
-          onerror={(msg) => (error = msg)}
-        />
-      {:else if mode === "wysiwyg"}
-        <WysiwygView
-          text={doc.text}
-          onchange={(t) => doc.setText(t)}
-          onnormalize={handleNormalize}
-        />
-      {:else if mode === "preview"}
-        <PreviewView text={doc.text} />
-      {:else}
-        <DiffView />
-      {/if}
-    </section>
-    {#if splitMode}
-      <section class="pane right">
-        {@render titlePill(rightMode)}
-        {#if rightMode === "source"}
-          <SourceView
-            text={doc.text}
-            onchange={(t) => doc.setText(t)}
-            onerror={(msg) => (error = msg)}
-          />
-        {:else if rightMode === "live"}
-          <LivePreviewView
-            text={doc.text}
-            onchange={(t) => doc.setText(t)}
-            onerror={(msg) => (error = msg)}
-          />
-        {:else if rightMode === "wysiwyg"}
-          <WysiwygView
-            text={doc.text}
-            onchange={(t) => doc.setText(t)}
-            onnormalize={() => {}}
-          />
-        {:else if rightMode === "preview"}
-          <PreviewView text={doc.text} />
-        {:else}
-          <DiffView />
-        {/if}
-      </section>
+    {#if doc.history}
+      <HistoryBanner />
     {/if}
+    <div class="workspace" class:split={splitMode && !doc.history}>
+      {#if doc.history}
+        <!-- History view: read-only Preview of the historical content. Split
+             mode and editing modes are bypassed; they come back the moment
+             the user exits history (state isn't mutated). -->
+        <section class="pane">
+          <PreviewView text={doc.history.content} />
+        </section>
+      {:else}
+        <section class="pane">
+          {@render titlePill(mode)}
+          {#if mode === "source"}
+            <SourceView
+              text={doc.text}
+              onchange={(t) => doc.setText(t)}
+              onerror={(msg) => (error = msg)}
+            />
+          {:else if mode === "live"}
+            <LivePreviewView
+              text={doc.text}
+              onchange={(t) => doc.setText(t)}
+              onerror={(msg) => (error = msg)}
+            />
+          {:else if mode === "wysiwyg"}
+            <WysiwygView
+              text={doc.text}
+              onchange={(t) => doc.setText(t)}
+              onnormalize={handleNormalize}
+            />
+          {:else if mode === "preview"}
+            <PreviewView text={doc.text} />
+          {:else}
+            <DiffView />
+          {/if}
+        </section>
+        {#if splitMode}
+          <section class="pane right">
+            {@render titlePill(rightMode)}
+            {#if rightMode === "source"}
+              <SourceView
+                text={doc.text}
+                onchange={(t) => doc.setText(t)}
+                onerror={(msg) => (error = msg)}
+              />
+            {:else if rightMode === "live"}
+              <LivePreviewView
+                text={doc.text}
+                onchange={(t) => doc.setText(t)}
+                onerror={(msg) => (error = msg)}
+              />
+            {:else if rightMode === "wysiwyg"}
+              <WysiwygView
+                text={doc.text}
+                onchange={(t) => doc.setText(t)}
+                onnormalize={() => {}}
+              />
+            {:else if rightMode === "preview"}
+              <PreviewView text={doc.text} />
+            {:else}
+              <DiffView />
+            {/if}
+          </section>
+        {/if}
+      {/if}
     </div>
     {#if settings.outlineOpen}
       <OutlineSidebar

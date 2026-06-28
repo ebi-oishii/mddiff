@@ -10,8 +10,10 @@
     gitFullDiff,
     gitHunks,
     gitListBases,
+    gitReadAt,
     gitSideBySide,
   } from "$lib/ipc/git";
+  import { i18n } from "$lib/i18n/index.svelte";
   import type {
     BaseKind,
     BaseOption,
@@ -145,6 +147,32 @@
     customBase = customBase.trim() || "HEAD";
   }
 
+  // "View at this version" — load the file content at the selected revspec
+  // into doc.history so the top-level layout switches to a read-only Preview
+  // of that revision. Walk-list is the file-changed commits (the picker's
+  // default view); if the user picked something not in that list (a branch,
+  // tag, or Custom revspec), we prepend it so they can still see it.
+  async function openHistoryView() {
+    if (!doc.path || isDisk) return;
+    const targetRevspec = base;
+    const targetLabel =
+      bases.find((b) => b.revspec === targetRevspec)?.label ?? targetRevspec;
+    const walk = bases
+      .filter((b) => b.kind === "commit" && b.file_changed)
+      .map((b) => ({ revspec: b.revspec, label: b.label }));
+    let index = walk.findIndex((c) => c.revspec === targetRevspec);
+    if (index < 0) {
+      walk.unshift({ revspec: targetRevspec, label: targetLabel });
+      index = 0;
+    }
+    try {
+      const content = await gitReadAt(doc.path, targetRevspec);
+      doc.enterHistory(targetRevspec, targetLabel, content, walk, index);
+    } catch (e) {
+      error = humanizeError(e, "read");
+    }
+  }
+
   const addedSum = $derived(
     hunks.reduce((n, h) => n + (h.kind === "removed" ? 0 : h.new_end - h.new_start + 1), 0),
   );
@@ -255,6 +283,14 @@
           />
           <button type="submit">Apply</button>
         </form>
+      {/if}
+      {#if !isDisk && doc.gitAvailable}
+        <button
+          type="button"
+          class="view-at"
+          onclick={openHistoryView}
+          title={i18n.t("history.viewAt")}
+        >{i18n.t("history.viewAt")}</button>
       {/if}
     </div>
     <div class="meta">
@@ -403,6 +439,19 @@
   }
   .custom-form button:hover {
     background: var(--mddiff-surface-hi);
+  }
+  .view-at {
+    font: inherit;
+    background: transparent;
+    border: 1px solid var(--mddiff-border);
+    border-radius: 4px;
+    padding: 0.22rem 0.6rem;
+    color: var(--mddiff-text);
+    cursor: pointer;
+  }
+  .view-at:hover {
+    background: var(--mddiff-surface-hi);
+    border-color: var(--mddiff-text-mute);
   }
   .meta {
     display: flex;
