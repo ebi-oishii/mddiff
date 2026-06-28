@@ -34,6 +34,13 @@
       <span class="badge">⌖</span>
       <span class="prefix">{i18n.t("history.bannerReadonly")}</span>
       <span class="label" title={hist.revspec}>{hist.label}</span>
+      <button
+        type="button"
+        class="unpin"
+        onclick={() => doc.exitHistory()}
+        aria-label={i18n.t("history.exit")}
+        title={`${i18n.t("history.exit")} (Esc)`}
+      >×</button>
       {#if loading}<span class="loading">…</span>{/if}
       {#if error}<span class="error">{error}</span>{/if}
     </div>
@@ -60,13 +67,6 @@
         onclick={() => doc.restoreHistory()}
         disabled={loading}
       >{i18n.t("history.restore")}</button>
-      <button
-        type="button"
-        class="close"
-        onclick={() => doc.exitHistory()}
-        aria-label={i18n.t("history.exit")}
-        title={`${i18n.t("history.exit")} (Esc)`}
-      >×</button>
     </div>
   </div>
 {/if}
@@ -140,10 +140,18 @@
   .restore {
     font-weight: 600;
   }
-  .close {
+  /* Unpin sits in the label group on the left so the affordance is right
+     next to the revision name it represents ("close THIS version"). */
+  .unpin {
+    flex-shrink: 0;
     border: 0;
     font-size: 1.1rem;
     line-height: 1;
-    padding: 0 0.4rem;
+    padding: 0 0.45rem;
+    opacity: 0.8;
+  }
+  .unpin:hover {
+    opacity: 1;
+    background: var(--mddiff-surface-pop);
   }
 </style>
