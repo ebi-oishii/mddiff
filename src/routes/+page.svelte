@@ -834,7 +834,8 @@
       <button class="dismiss" aria-label={i18n.t("banner.dismiss")} onclick={() => (normalization = null)}>×</button>
     </div>
   {/if}
-  <main class:split={splitMode}>
+  <main>
+    <div class="workspace" class:split={splitMode}>
     <section class="pane">
       {@render titlePill(mode)}
       {#if mode === "source"}
@@ -889,6 +890,7 @@
         {/if}
       </section>
     {/if}
+    </div>
     {#if settings.outlineOpen}
       <OutlineSidebar
         headings={outlineHeadings}
@@ -1254,12 +1256,24 @@
     background: var(--mddiff-bg);
     color: var(--mddiff-text);
     display: flex;
-    flex-direction: column;
-  }
-  main.split {
     flex-direction: row;
   }
-  main > .pane {
+  /* Inner workspace owns the pane(s). Default is single-pane column; split
+     mode flips to row so left/right panes sit side-by-side. The outline
+     sidebar lives as a sibling of .workspace inside main so it docks to the
+     right regardless of split state. */
+  .workspace {
+    flex: 1;
+    min-width: 0;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .workspace.split {
+    flex-direction: row;
+  }
+  .workspace > .pane {
     flex: 1 1 100%;
     min-width: 0;
     min-height: 0;
@@ -1269,10 +1283,10 @@
     /* Anchors the per-pane fullscreen title pill (absolute) to this pane. */
     position: relative;
   }
-  main.split > .pane {
+  .workspace.split > .pane {
     flex-basis: 50%;
   }
-  main.split > .pane + .pane {
+  .workspace.split > .pane + .pane {
     border-left: 1px solid var(--mddiff-border);
   }
 </style>
