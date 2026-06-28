@@ -493,12 +493,6 @@
       <button class="dismiss" aria-label="Dismiss" onclick={() => (normalization = null)}>×</button>
     </div>
   {/if}
-  {#if !doc.path && !doc.text}
-    <div class="banner hint">
-      Press <kbd>{MOD}O</kbd> to open a file, or use the <strong>☰</strong> menu for Sample and other actions.
-    </div>
-  {/if}
-
   <main>
     {#if mode === "source"}
       <SourceView text={doc.text} onchange={(t) => doc.setText(t)} />
@@ -735,8 +729,7 @@
   .menu .mode-item.active {
     color: var(--mdv-accent-fg);
   }
-  .menu kbd,
-  .banner kbd {
+  .menu kbd {
     font: inherit;
     font-size: 0.76em;
     color: var(--mdv-text-mute);
@@ -769,14 +762,6 @@
     background: var(--mdv-success-bg);
     color: var(--mdv-success-fg);
     border-bottom-color: var(--mdv-success-border);
-  }
-  .banner.hint {
-    background: var(--mdv-info-bg);
-    color: var(--mdv-info-fg);
-    border-bottom-color: var(--mdv-info-border);
-  }
-  .banner.hint strong {
-    color: var(--mdv-accent-fg);
   }
   .banner .dismiss {
     margin-left: auto;
