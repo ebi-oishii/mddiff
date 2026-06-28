@@ -12,7 +12,7 @@ import {
  * CodeMirror 6 extension implementing a Typora-style live preview:
  *   - inline / heading syntax characters (e.g. `**`, `#`, `` ` ``, `[`, `](url)`)
  *     are visually hidden via Decoration.replace
- *   - the rendered text receives a class (mdv-lp-h1, -bold, -italic, -code, -link, ...)
+ *   - the rendered text receives a class (mddiff-lp-h1, -bold, -italic, -code, -link, ...)
  *   - if the cursor / selection touches the same line as a node, that node is
  *     "active" and stays raw so the user can edit the markdown directly
  *
@@ -66,7 +66,7 @@ function buildDecorations(state: EditorState): DecorationSet {
         case "ATXHeading6": {
           const level = name.slice("ATXHeading".length);
           ranges.push(
-            Decoration.mark({ class: `mdv-lp-h${level}` }).range(node.from, node.to),
+            Decoration.mark({ class: `mddiff-lp-h${level}` }).range(node.from, node.to),
           );
           return;
         }
@@ -84,25 +84,25 @@ function buildDecorations(state: EditorState): DecorationSet {
 
         case "StrongEmphasis": {
           ranges.push(
-            Decoration.mark({ class: "mdv-lp-bold" }).range(node.from, node.to),
+            Decoration.mark({ class: "mddiff-lp-bold" }).range(node.from, node.to),
           );
           return;
         }
         case "Emphasis": {
           ranges.push(
-            Decoration.mark({ class: "mdv-lp-italic" }).range(node.from, node.to),
+            Decoration.mark({ class: "mddiff-lp-italic" }).range(node.from, node.to),
           );
           return;
         }
         case "InlineCode": {
           ranges.push(
-            Decoration.mark({ class: "mdv-lp-code" }).range(node.from, node.to),
+            Decoration.mark({ class: "mddiff-lp-code" }).range(node.from, node.to),
           );
           return;
         }
         case "Link": {
           ranges.push(
-            Decoration.mark({ class: "mdv-lp-link" }).range(node.from, node.to),
+            Decoration.mark({ class: "mddiff-lp-link" }).range(node.from, node.to),
           );
           return;
         }

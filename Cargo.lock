@@ -2025,11 +2025,11 @@ dependencies = [
 ]
 
 [[package]]
-name = "mdv"
+name = "mddiff"
 version = "0.1.0"
 dependencies = [
  "base64 0.22.1",
- "mdv-core",
+ "mddiff-core",
  "notify-debouncer-mini",
  "serde",
  "serde_json",
@@ -2039,7 +2039,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "mdv-core"
+name = "mddiff-core"
 version = "0.1.0"
 dependencies = [
  "base64 0.22.1",
@@ -2054,13 +2054,13 @@ dependencies = [
 ]
 
 [[package]]
-name = "mdv-tui"
+name = "mddiff-tui"
 version = "0.1.0"
 dependencies = [
  "anyhow",
  "clap",
  "crossterm",
- "mdv-core",
+ "mddiff-core",
  "pulldown-cmark",
  "ratatui",
  "tui-textarea",

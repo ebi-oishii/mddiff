@@ -10,10 +10,10 @@ import { EditorView } from "@codemirror/view";
  * Values are read from our app-wide design tokens so this stays in sync with
  * the rest of the UI without duplicating colors.
  */
-export const mdvCmTheme = EditorView.theme({
+export const mddiffCmTheme = EditorView.theme({
   "&": {
-    backgroundColor: "var(--mdv-editor-bg)",
-    color: "var(--mdv-text)",
+    backgroundColor: "var(--mddiff-editor-bg)",
+    color: "var(--mddiff-text)",
     height: "100%",
   },
   // CodeMirror's base theme paints a `outline: 1px dotted` on the focused
@@ -25,30 +25,30 @@ export const mdvCmTheme = EditorView.theme({
     outline: "none",
   },
   ".cm-content": {
-    caretColor: "var(--mdv-text)",
+    caretColor: "var(--mddiff-text)",
   },
   ".cm-cursor, .cm-dropCursor": {
-    borderLeftColor: "var(--mdv-text)",
+    borderLeftColor: "var(--mddiff-text)",
   },
   ".cm-gutters": {
-    backgroundColor: "var(--mdv-editor-gutter)",
-    color: "var(--mdv-text-subtle)",
-    borderRight: "1px solid var(--mdv-border-mute)",
+    backgroundColor: "var(--mddiff-editor-gutter)",
+    color: "var(--mddiff-text-subtle)",
+    borderRight: "1px solid var(--mddiff-border-mute)",
   },
   ".cm-gutterElement": {
-    color: "var(--mdv-text-subtle)",
+    color: "var(--mddiff-text-subtle)",
   },
   ".cm-activeLine": {
     // Shared with .source::before's active-line extension overlay so the
     // strip outside cm-editor stays color-matched. Defined in +page.svelte.
-    backgroundColor: "var(--mdv-active-line-bg)",
+    backgroundColor: "var(--mddiff-active-line-bg)",
   },
   ".cm-activeLineGutter": {
     backgroundColor:
-      "color-mix(in srgb, var(--mdv-accent) 12%, transparent)",
-    color: "var(--mdv-text)",
+      "color-mix(in srgb, var(--mddiff-accent) 12%, transparent)",
+    color: "var(--mddiff-text)",
   },
   "&.cm-focused .cm-selectionBackground, ::selection": {
-    backgroundColor: "var(--mdv-accent-bg)",
+    backgroundColor: "var(--mddiff-accent-bg)",
   },
 });

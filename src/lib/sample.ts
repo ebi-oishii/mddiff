@@ -4,7 +4,7 @@
  * (or any environment without convenient files to open). Covers the syntax
  * each mode handles, so it doubles as a smoke test.
  */
-export const SAMPLE_MD = `# Welcome to mdv
+export const SAMPLE_MD = `# Welcome to mddiff
 
 A lightweight Markdown viewer and editor for Desktop, Mobile and TUI.
 
@@ -36,7 +36,7 @@ Links work too: [Tauri](https://tauri.app), [Svelte](https://svelte.dev).
 
 \`\`\`rust
 fn main() {
-    let greeting = "こんにちは, mdv!";
+    let greeting = "こんにちは, mddiff!";
     println!("{}", greeting);
 }
 \`\`\`
@@ -44,7 +44,7 @@ fn main() {
 ## Blockquote
 
 > 1 ファイルを静かに読んで、少し直して、差分を見る。
-> それが mdv の役目です。
+> それが mddiff の役目です。
 
 ## Table
 

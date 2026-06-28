@@ -7,8 +7,8 @@
   import { syntaxHighlighting, defaultHighlightStyle } from "@codemirror/language";
   import { doc } from "$lib/stores/doc.svelte";
   import { settings } from "$lib/stores/settings.svelte";
-  import { mdvCmTheme } from "./cm-theme";
-  import { mdvSyntaxHighlighting } from "./cm-syntax";
+  import { mddiffCmTheme } from "./cm-theme";
+  import { mddiffSyntaxHighlighting } from "./cm-syntax";
   import FindBar from "$lib/components/FindBar.svelte";
   import { findExtension } from "./find-cm.svelte";
   import { useCmFind } from "./use-find.svelte";
@@ -44,11 +44,11 @@
     void find.open;
   });
 
-  // Active-line extension overlay: paints `--mdv-active-line-bg` across the
+  // Active-line extension overlay: paints `--mddiff-active-line-bg` across the
   // full .source width at the current line's y. The right 3rem padding
   // strip lies outside cm-editor, so without this the highlight visibly
   // stops 3rem before the viewport edge. We position the .source::before
-  // by writing CSS vars (--mdv-source-active-y / --mdv-source-active-h);
+  // by writing CSS vars (--mddiff-source-active-y / --mddiff-source-active-h);
   // the actual paint happens in style {}.
   //
   // We measure the rendered .cm-activeLine element directly (instead of
@@ -64,18 +64,18 @@
       if (!lineEl) {
         // No active line (e.g. multi-line selection mid-drag) — hide the
         // overlay by pushing it off-screen.
-        container.style.setProperty("--mdv-source-active-y", "-9999px");
-        container.style.setProperty("--mdv-source-active-h", "0");
+        container.style.setProperty("--mddiff-source-active-y", "-9999px");
+        container.style.setProperty("--mddiff-source-active-h", "0");
         return;
       }
       const lineRect = lineEl.getBoundingClientRect();
       const sourceRect = container.getBoundingClientRect();
       container.style.setProperty(
-        "--mdv-source-active-y",
+        "--mddiff-source-active-y",
         `${lineRect.top - sourceRect.top}px`,
       );
       container.style.setProperty(
-        "--mdv-source-active-h",
+        "--mddiff-source-active-h",
         `${lineRect.height}px`,
       );
     } catch {
@@ -100,14 +100,14 @@
         // Markdown-tag colors first (heading / code / link / etc.); the
         // default highlight runs as a fallback so non-markdown tags
         // (inside fenced code blocks etc.) still get something sensible.
-        mdvSyntaxHighlighting,
+        mddiffSyntaxHighlighting,
         syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
         findExtension(find.syncFromData),
         keymap.of([...defaultKeymap, ...historyKeymap]),
         markdown(),
         wrapComp.of(settings.softWrap ? EditorView.lineWrapping : []),
         tabSizeComp.of(EditorState.tabSize.of(settings.tabWidth)),
-        mdvCmTheme,
+        mddiffCmTheme,
         EditorView.updateListener.of((u) => {
           if (u.docChanged) {
             const next = u.state.doc.toString();
@@ -219,7 +219,7 @@
      editor-instance-specific bits remain here. */
   :global(.cm-editor) {
     font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-    font-size: var(--mdv-editor-font-size, 14px);
+    font-size: var(--mddiff-editor-font-size, 14px);
   }
   /* Reserve a right strip so long lines don't slide under the floating ☰
      button (top-right, 34px + 12px inset + shadow ≈ 54px).
@@ -252,9 +252,9 @@
     position: absolute;
     left: 0;
     right: 0;
-    top: var(--mdv-source-active-y, -9999px);
-    height: var(--mdv-source-active-h, 0);
-    background: var(--mdv-active-line-bg);
+    top: var(--mddiff-source-active-y, -9999px);
+    height: var(--mddiff-source-active-h, 0);
+    background: var(--mddiff-active-line-bg);
     pointer-events: none;
   }
   /* In fullscreen the floating "(filename) MODE" overlay (rendered by

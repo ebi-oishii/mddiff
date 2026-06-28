@@ -207,24 +207,24 @@ export async function printAsPdf(text: string, title: string): Promise<void> {
   const exportStyle = parsed.querySelector("style")?.textContent ?? "";
 
   const container = document.createElement("div");
-  container.id = "mdv-print-container";
+  container.id = "mddiff-print-container";
   container.innerHTML = bodyContent;
 
   const styleEl = document.createElement("style");
-  styleEl.id = "mdv-print-style";
+  styleEl.id = "mddiff-print-style";
   // Single @media print block: hide everything else, show the container,
   // override the app's 100vh body so all content paginates. EXPORT_CSS has
   // its own @media print inside; nested @media print resolves the same as
   // a single one per CSS spec.
   styleEl.textContent = `
-    #mdv-print-container { display: none; }
+    #mddiff-print-container { display: none; }
     @media print {
       html, body {
         height: auto !important;
         overflow: visible !important;
       }
-      body > *:not(#mdv-print-container) { display: none !important; }
-      #mdv-print-container { display: block !important; }
+      body > *:not(#mddiff-print-container) { display: none !important; }
+      #mddiff-print-container { display: block !important; }
       ${exportStyle}
     }
   `;

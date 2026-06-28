@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use mdv_core::git::{list_bases, BaseKind, BaseOption, DiffMarker};
+use mddiff_core::git::{list_bases, BaseKind, BaseOption, DiffMarker};
 use ratatui::layout::{Constraint, Direction, Layout, Rect};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};

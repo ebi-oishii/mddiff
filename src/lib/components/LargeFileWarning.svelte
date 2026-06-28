@@ -65,19 +65,19 @@
     padding: 1rem;
   }
   .modal {
-    background: var(--mdv-surface-pop);
-    color: var(--mdv-text);
-    border: 1px solid var(--mdv-border);
+    background: var(--mddiff-surface-pop);
+    color: var(--mddiff-text);
+    border: 1px solid var(--mddiff-border);
     border-radius: 8px;
     padding: 1.25rem 1.5rem;
     max-width: 30em;
     width: 100%;
-    box-shadow: 0 12px 40px var(--mdv-shadow);
+    box-shadow: 0 12px 40px var(--mddiff-shadow);
   }
   h2 {
     margin: 0 0 0.5rem;
     font-size: 1.1rem;
-    color: var(--mdv-warn-fg);
+    color: var(--mddiff-warn-fg);
   }
   .filename {
     margin: 0.25rem 0;
@@ -88,12 +88,12 @@
   .size {
     margin: 0.4rem 0 0.8rem;
     font-size: 0.9rem;
-    color: var(--mdv-text-mute);
+    color: var(--mddiff-text-mute);
   }
   .hint {
     margin: 0.5rem 0 0;
     font-size: 0.85rem;
-    color: var(--mdv-text-mute);
+    color: var(--mddiff-text-mute);
     line-height: 1.5;
   }
   .actions {
@@ -104,18 +104,18 @@
   }
   .actions button {
     background: transparent;
-    border: 1px solid var(--mdv-border);
+    border: 1px solid var(--mddiff-border);
     border-radius: 5px;
     padding: 0.4rem 1rem;
     font: inherit;
-    color: var(--mdv-text);
+    color: var(--mddiff-text);
     cursor: pointer;
   }
   .actions button:hover {
-    background: var(--mdv-surface-hi);
+    background: var(--mddiff-surface-hi);
   }
   .actions button.primary {
-    background: var(--mdv-warn-fg);
+    background: var(--mddiff-warn-fg);
     color: light-dark(#fff, #1e1e1e);
     border-color: transparent;
   }

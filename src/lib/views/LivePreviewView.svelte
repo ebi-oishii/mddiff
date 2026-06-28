@@ -6,7 +6,7 @@
   import { markdown } from "@codemirror/lang-markdown";
   import { livePreviewExtension } from "./livepreview";
   import { doc } from "$lib/stores/doc.svelte";
-  import { mdvCmTheme } from "./cm-theme";
+  import { mddiffCmTheme } from "./cm-theme";
   import FindBar from "$lib/components/FindBar.svelte";
   import { findExtension } from "./find-cm.svelte";
   import { useCmFind } from "./use-find.svelte";
@@ -49,7 +49,7 @@
         keymap.of([...defaultKeymap, ...historyKeymap]),
         markdown(),
         EditorView.lineWrapping,
-        mdvCmTheme,
+        mddiffCmTheme,
         livePreviewExtension,
         EditorView.updateListener.of((u) => {
           if (u.docChanged) {
@@ -158,50 +158,50 @@
   }
 
   /* Heading sizes (mark decorations). */
-  :global(.mdv-lp-h1) {
+  :global(.mddiff-lp-h1) {
     font-size: 1.85em;
     font-weight: 700;
     line-height: 1.25;
   }
-  :global(.mdv-lp-h2) {
+  :global(.mddiff-lp-h2) {
     font-size: 1.5em;
     font-weight: 700;
     line-height: 1.25;
   }
-  :global(.mdv-lp-h3) {
+  :global(.mddiff-lp-h3) {
     font-size: 1.3em;
     font-weight: 600;
     line-height: 1.3;
   }
-  :global(.mdv-lp-h4) {
+  :global(.mddiff-lp-h4) {
     font-size: 1.15em;
     font-weight: 600;
   }
-  :global(.mdv-lp-h5) {
+  :global(.mddiff-lp-h5) {
     font-size: 1.05em;
     font-weight: 600;
   }
-  :global(.mdv-lp-h6) {
+  :global(.mddiff-lp-h6) {
     font-size: 1em;
     font-weight: 600;
     color: light-dark(#666, #aaa);
   }
 
   /* Inline styles. */
-  :global(.mdv-lp-bold) {
+  :global(.mddiff-lp-bold) {
     font-weight: 700;
   }
-  :global(.mdv-lp-italic) {
+  :global(.mddiff-lp-italic) {
     font-style: italic;
   }
-  :global(.mdv-lp-code) {
+  :global(.mddiff-lp-code) {
     background: light-dark(#f3f3f3, #2a2a2a);
     padding: 0.1em 0.35em;
     border-radius: 3px;
     font-family: ui-monospace, "SF Mono", Menlo, monospace;
     font-size: 0.92em;
   }
-  :global(.mdv-lp-link) {
+  :global(.mddiff-lp-link) {
     color: light-dark(#0969da, #58a6ff);
     text-decoration: underline;
     text-underline-offset: 0.15em;

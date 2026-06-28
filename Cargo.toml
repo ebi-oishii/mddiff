@@ -2,8 +2,8 @@
 resolver = "2"
 members = [
     "src-tauri",
-    "crates/mdv-core",
-    "crates/mdv-tui",
+    "crates/mddiff-core",
+    "crates/mddiff-tui",
 ]
 
 [workspace.package]
@@ -11,7 +11,7 @@ version = "0.1.0"
 edition = "2021"
 authors = ["ebi-oishii"]
 license = "MIT"
-repository = "https://github.com/ebi-oishii/mdv"
+repository = "https://github.com/ebi-oishii/mddiff"
 
 [workspace.dependencies]
 serde = { version = "1", features = ["derive"] }

@@ -1,10 +1,10 @@
 [package]
-name = "mdv-core"
+name = "mddiff-core"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
-description = "Shared logic for mdv (document state, diff, git)."
+description = "Shared logic for mddiff (document state, diff, git)."
 
 [dependencies]
 serde = { workspace = true }

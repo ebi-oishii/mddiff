@@ -1,5 +1,5 @@
 [package]
-name = "mdv"
+name = "mddiff"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
@@ -7,14 +7,14 @@ license.workspace = true
 description = "Lightweight cross-platform Markdown viewer and editor"
 
 [lib]
-name = "mdv_lib"
+name = "mddiff_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-mdv-core = { path = "../crates/mdv-core" }
+mddiff-core = { path = "../crates/mddiff-core" }
 tauri = { version = "2", features = [] }
 tauri-plugin-dialog = "2"
 serde = { workspace = true }

@@ -27,13 +27,13 @@ export interface Settings {
   /** Diff view: which sub-mode (Highlight / Full / Side-by-Side) to land
    * on when entering Diff mode. */
   diffDefaultSubmode: DiffSubmode;
-  /** Editor syntax theme — swaps the --mdv-syntax-* palette used by the
+  /** Editor syntax theme — swaps the --mddiff-syntax-* palette used by the
    * Source view's markdown highlighting. Doesn't touch editor background
    * or text color so it stays consistent with the app's light/dark mode. */
   editorTheme: EditorTheme;
 }
 
-const STORAGE_KEY = "mdv-settings-v1";
+const STORAGE_KEY = "mddiff-settings-v1";
 
 const DEFAULTS: Settings = {
   theme: "auto",

@@ -14,7 +14,7 @@ class DocStore {
    * read from it on mount so switching modes keeps the user at the same place.
    * View implementations differ:
    *   - SourceView / LivePreviewView: CodeMirror posAtCoords / scrollIntoView
-   *   - PreviewView: `[data-mdv-line]` attributes injected via markdown-it
+   *   - PreviewView: `[data-mddiff-line]` attributes injected via markdown-it
    *   - WysiwygView: ProseMirror top-level children indexed against
    *     markdown-it top-level block tokens (Milkdown has no native source map)
    */

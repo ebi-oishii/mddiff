@@ -76,7 +76,7 @@ pub fn is_in_repo(file: &Path) -> bool {
 /// `file`. Returns `("Unknown", None)` when the file isn't in a Git repo or
 /// the user identity isn't set — never hardcoded to a maintainer handle.
 /// Repo-level config wins over the global, matching how `git commit`
-/// resolves identity. Used by `.mdv` pack to stamp the synthetic head commit.
+/// resolves identity. Used by `.mddiff` pack to stamp the synthetic head commit.
 pub fn user_identity(file: &Path) -> (String, Option<String>) {
     let abs = canonicalize_lossy(file);
     if let Ok(repo) = git2::Repository::discover(&abs) {

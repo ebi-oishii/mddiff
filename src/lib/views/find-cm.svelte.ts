@@ -61,7 +61,7 @@ function compute(state: EditorState, query: string, want: number): FindData {
 function buildDecos(matches: Match[], current: number): DecorationSet {
   const decos = matches.map((m, i) =>
     Decoration.mark({
-      class: i === current ? "mdv-find-hit mdv-find-current" : "mdv-find-hit",
+      class: i === current ? "mddiff-find-hit mddiff-find-current" : "mddiff-find-hit",
     }).range(m.from, m.to),
   );
   return Decoration.set(decos, true);

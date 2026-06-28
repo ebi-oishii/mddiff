@@ -1,14 +1,14 @@
 # 既存ツール調査メモ
 
-目的は競合分析ではなく、mdv の使用感を良くするために既存ツールから学ぶことを整理すること。
-mdv は「Markdown IDE」や「ノート管理アプリ」ではなく、1 つの Markdown を静かに読む・少し直す・
+目的は競合分析ではなく、mddiff の使用感を良くするために既存ツールから学ぶことを整理すること。
+mddiff は「Markdown IDE」や「ノート管理アプリ」ではなく、1 つの Markdown を静かに読む・少し直す・
 差分を見るための軽量 viewer / reviewer として考える。
 
 調査日: 2026-06-27
 
 ## 1. 方向性
 
-mdv の中心価値:
+mddiff の中心価値:
 
 - 1 ファイルをすぐ開ける
 - workspace / vault / project を要求しない
@@ -16,18 +16,18 @@ mdv の中心価値:
 - Preview / Source / Live Preview / WYSIWYG / Diff の切り替えが軽い
 - Git 管理下なら差分が自然に見える
 - GUI と TUI/CLI の両方で同じ core を使える
-- 必要なら `.mdv` package として履歴ごと渡せる
+- 必要なら `.mddiff` package として履歴ごと渡せる
 
-既存ツールのいいところは取り入れるが、mdv は多機能化で勝負しない。
+既存ツールのいいところは取り入れるが、mddiff は多機能化で勝負しない。
 
 ## 2. 調査対象と学ぶ点
 
-| Tool | 近い点 | mdv に取り入れたい点 | mdv では避けたい点 |
+| Tool | 近い点 | mddiff に取り入れたい点 | mddiff では避けたい点 |
 |---|---|---|---|
 | VS Code Markdown | Markdown preview、Git diff、拡張性 | Preview / Source / Diff を滑らかに切り替える。Git 管理下で自然に diff へ行ける | workspace、拡張、サイドバー、ステータス過多 |
 | GitHub rich diff | Markdown の rendered diff | prose diff / rendered diff を重要機能にする。source diff と rendered diff を切替可能にする | PR / Web / repository 前提 |
 | Obsidian | local Markdown、version history、ファイル資産 | local-first、ファイルが主役、履歴の価値 | vault、graph、backlink、plugin 管理 |
-| Marked | Markdown preview / review / export | 「好きな editor で書いて、mdv で確認する」使い方。previewer としての静けさ | export / validation / advanced tooling の肥大化 |
+| Marked | Markdown preview / review / export | 「好きな editor で書いて、mddiff で確認する」使い方。previewer としての静けさ | export / validation / advanced tooling の肥大化 |
 | iA Writer | 静かな writing 環境 | 余計な UI を消す。読む/書く領域を主役にする | writing app 化、文体支援や集中モードの作り込みすぎ |
 | Typora | live preview 的な自然さ | Source と Preview の心理的距離を縮める。編集中も rendered result が見える | Source を隠しすぎて Markdown の制御感を失うこと |
 | Milkdown / ProseMirror 系 | Markdown-aware WYSIWYG | Markdown を意識せず軽く直せる mode。Source / Live Preview と切替できる rich editing | WYSIWYG だけを正とする設計、表記正規化の無自覚な発生 |
@@ -42,7 +42,7 @@ mdv の中心価値:
 
 ### 3.1 Single File First
 
-VS Code / Obsidian と逆に、mdv は「開いた 1 ファイル」が常に主役。
+VS Code / Obsidian と逆に、mddiff は「開いた 1 ファイル」が常に主役。
 
 - 起動直後に本文を表示する
 - ファイルツリーを常設しない
@@ -65,7 +65,7 @@ iA Writer、ghostwriter、Marked から学ぶ点。
 Markdown は source だけでなく、読む文書として扱う。
 
 - Preview を編集の副産物にしない
-- `mdv file.md` は Preview または前回 mode で開く
+- `mddiff file.md` は Preview または前回 mode で開く
 - Source へ切り替えたときにスクロール位置をなるべく維持する
 - TUI でも Preview が読めることを重視する
 
@@ -98,7 +98,7 @@ Git GUI ではなく Markdown reviewer として diff を見せる。
 - Side-by-side は必要な時だけ。常時 2 pane にしない
 - 行単位だけでなく、将来的には見出し/段落単位の変更一覧を出す
 
-GitHub の rendered prose diff は重要な参考。mdv ではローカル・軽量・TUI でも使える方向に落とす。
+GitHub の rendered prose diff は重要な参考。mddiff ではローカル・軽量・TUI でも使える方向に落とす。
 
 ### 3.6 CLI/TUI Should Feel Native
 
@@ -109,13 +109,13 @@ Glow、delta、lazygit から学ぶ点。
 - `/`, `n`, `N` で検索
 - `?` で help
 - `Tab` または `Ctrl+E` で mode 切替
-- `mdv cat`, `mdv diff`, `mdv flatten`, `mdv pack` を shell script から使える
+- `mddiff cat`, `mddiff diff`, `mddiff flatten`, `mddiff pack` を shell script から使える
 
 TUI は GUI の劣化版ではなく、端末で自然に使える viewer / reviewer にする。
 
 ## 4. 取り込まない方がよいもの
 
-mdv の使い心地を壊しやすい方向:
+mddiff の使い心地を壊しやすい方向:
 
 - ファイルツリー常設
 - vault / workspace / project 概念
@@ -130,7 +130,7 @@ mdv の使い心地を壊しやすい方向:
 
 これらは便利だが、VS Code / Obsidian / Zettlr に近づきすぎる。
 
-## 5. mdv に落とす機能候補
+## 5. mddiff に落とす機能候補
 
 ### Phase A: 使用感の核
 
@@ -163,7 +163,7 @@ mdv の使い心地を壊しやすい方向:
 
 ### Phase C: Handoff
 
-- `.mdv` package
+- `.mddiff` package
 - `pack`, `unpack`, `cat`, `flatten`, `verify`
 - 履歴つき共有時の warning
 - 履歴なし export
@@ -179,15 +179,15 @@ mdv の使い心地を壊しやすい方向:
 
 短い説明:
 
-> mdv は、1 つの Markdown を静かに読んで、少し直して、差分を見るための軽量 viewer / reviewer。
+> mddiff は、1 つの Markdown を静かに読んで、少し直して、差分を見るための軽量 viewer / reviewer。
 
-`.mdv` を含める説明:
+`.mddiff` を含める説明:
 
-> mdv は、Git やクラウドなしでも Markdown の履歴を package として持ち運べる。
+> mddiff は、Git やクラウドなしでも Markdown の履歴を package として持ち運べる。
 
 より CLI 寄り:
 
-> mdv sits between `less`, Markdown preview, and `git diff`.
+> mddiff sits between `less`, Markdown preview, and `git diff`.
 
 ## 7. Sources
 

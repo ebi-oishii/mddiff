@@ -1,4 +1,4 @@
-# mdv
+# mddiff
 
 軽量・クロスプラットフォームの Markdown ビューア兼エディタ。
 GUI（Desktop / Mobile）と TUI を 1 つの core 実装で動かす。
@@ -21,9 +21,9 @@ GUI（Desktop / Mobile）と TUI を 1 つの core 実装で動かす。
   ratatui の popup で base ピッカー + vim 風 `:w` `:q` `:wq` `:q!`
 - **Export to HTML / PDF / Plain text / DOCX**: GUI の Export ▾ ボタンから。
   PDF は OS のプリントダイアログ経由（追加依存なし）
-- **`.mdv` パッケージ入出力**: Git 配下のファイルを履歴ごと 1 ファイルに
+- **`.mddiff` パッケージ入出力**: Git 配下のファイルを履歴ごと 1 ファイルに
   bundle（zstd+base64 を HTML コメント内）。受信側は Git なしで本文を
-  読める。仕様は [docs/mdv-protocol.md](docs/mdv-protocol.md)
+  読める。仕様は [docs/mddiff-protocol.md](docs/mddiff-protocol.md)
 - **配布形態**:
   - GUI = Tauri 2（Mac / Windows / Linux / iOS / Android）
   - TUI = 単独バイナリ（リリースビルドで 2.3MB）
@@ -33,9 +33,9 @@ GUI（Desktop / Mobile）と TUI を 1 つの core 実装で動かす。
 Cargo ワークスペースで 3 crate に分割：
 
 ```
-mdv/
-├── crates/mdv-core/   # UI 非依存の純粋ロジック（diff, git, fs, doc state）
-├── crates/mdv-tui/    # ratatui ベースの端末 UI
+mddiff/
+├── crates/mddiff-core/   # UI 非依存の純粋ロジック（diff, git, fs, doc state）
+├── crates/mddiff-tui/    # ratatui ベースの端末 UI
 └── src-tauri/         # Tauri 2 シェル + Svelte 5 + CodeMirror / Milkdown
 ```
 
@@ -54,10 +54,10 @@ iOS は `brew install cocoapods` も必要。
 
 ### TUI
 ```sh
-cargo run -p mdv-tui                       # ファイル指定なし
-cargo run -p mdv-tui -- README.md          # ファイル指定
-cargo run -p mdv-tui -- --diff-base HEAD~3 README.md  # 任意 revision と比較
-cargo run -p mdv-tui -- --read-only README.md         # 読み取り専用
+cargo run -p mddiff-tui                       # ファイル指定なし
+cargo run -p mddiff-tui -- README.md          # ファイル指定
+cargo run -p mddiff-tui -- --diff-base HEAD~3 README.md  # 任意 revision と比較
+cargo run -p mddiff-tui -- --read-only README.md         # 読み取り専用
 ```
 
 ### 品質チェック
@@ -78,5 +78,5 @@ MIT — [LICENSE](LICENSE) 参照。
 - [docs/decisions.md](docs/decisions.md) — 技術選定 (14 ADRs)
 - [docs/roadmap.md](docs/roadmap.md) — フェーズと進捗
 - [docs/tooling-research.md](docs/tooling-research.md) — 既存ツールから取り入れる使用感
-- [docs/mdv-protocol.md](docs/mdv-protocol.md) — `.mdv` portable package format v1
+- [docs/mddiff-protocol.md](docs/mddiff-protocol.md) — `.mddiff` portable package format v1
 - [docs/issues.md](docs/issues.md) — 取り組み候補リスト（バグ・ポリッシュ・機能候補）

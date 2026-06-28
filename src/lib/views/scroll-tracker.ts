@@ -32,7 +32,7 @@ export interface ScrollTracker {
  * to `doc.currentLine`. This is the shared infrastructure behind cross-mode
  * scroll position retention — each view supplies its own `computeLine`
  * because how "top visible line" is determined differs by host
- * (CodeMirror posAtCoords vs. `data-mdv-line` block scan vs. ProseMirror
+ * (CodeMirror posAtCoords vs. `data-mddiff-line` block scan vs. ProseMirror
  * children index).
  *
  * Why continuous tracking instead of a one-shot read in onDestroy:

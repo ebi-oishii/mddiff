@@ -1,7 +1,7 @@
 /**
  * DOM-based find for read-only views (Preview, Diff sub-views) that don't
  * use CodeMirror. Walks text nodes inside a given scope, wraps every
- * case-insensitive occurrence of the query in a `<mark class="mdv-find-hit">`,
+ * case-insensitive occurrence of the query in a `<mark class="mddiff-find-hit">`,
  * and exposes navigation between matches.
  *
  * Marker styling lives in FindBar.svelte (`:global`) so views don't need to
@@ -65,7 +65,7 @@ export class DomFinder {
           fragments.push(document.createTextNode(text.slice(lastEnd, found)));
         }
         const mark = document.createElement("mark");
-        mark.className = "mdv-find-hit";
+        mark.className = "mddiff-find-hit";
         mark.textContent = text.slice(found, found + qLen);
         fragments.push(mark);
         this.marks.push(mark);
@@ -118,7 +118,7 @@ export class DomFinder {
 
   private markCurrent(): void {
     this.marks.forEach((m, i) => {
-      m.classList.toggle("mdv-find-current", i === this.currentIdx);
+      m.classList.toggle("mddiff-find-current", i === this.currentIdx);
     });
   }
 

@@ -29,7 +29,7 @@
     renderToHtml,
     renderToPlainText,
   } from "$lib/export";
-  import MdvExportDialog from "$lib/components/MdvExportDialog.svelte";
+  import MddiffExportDialog from "$lib/components/MddiffExportDialog.svelte";
   import SettingsDialog from "$lib/components/SettingsDialog.svelte";
   import { settings, FONT_SIZE_PX } from "$lib/stores/settings.svelte";
   import SourceView from "$lib/views/SourceView.svelte";
@@ -45,8 +45,8 @@
   let normalization = $state<string | null>(null);
   let settingsOpen = $state(false);
   let menuOpen = $state(false);
-  let mdvDialogOpen = $state(false);
-  let mdvStatus = $state<string | null>(null);
+  let mddiffDialogOpen = $state(false);
+  let mddiffStatus = $state<string | null>(null);
   // Active when the user picks a file that exceeds the soft size threshold
   // but stays under the hard cap. Cleared on confirm or cancel.
   let largeFilePending = $state<{ path: string; size: number } | null>(null);
@@ -156,7 +156,7 @@
     export_pdf: () => exportPdf(),
     export_text: () => exportPlainText(),
     export_docx: () => exportDocx(),
-    export_mdv: () => openMdvDialog(),
+    export_mddiff: () => openMddiffDialog(),
     preferences: () => openSettings(),
   };
 
@@ -181,7 +181,7 @@
   $effect(() => {
     if (typeof document === "undefined") return;
     const px = FONT_SIZE_PX[settings.editorFontSize];
-    document.documentElement.style.setProperty("--mdv-editor-font-size", `${px}px`);
+    document.documentElement.style.setProperty("--mddiff-editor-font-size", `${px}px`);
   });
 
   // (Re)attach the file watcher whenever the open path changes. Clearing the
@@ -196,7 +196,7 @@
       return;
     }
     void startWatch(p).catch((e) => {
-      console.error("[mdv] startWatch failed", e);
+      console.error("[mddiff] startWatch failed", e);
     });
   });
 
@@ -220,7 +220,7 @@
     } catch (e) {
       // Disk read failed — likely a transient state (mid-rename). Drop the
       // event; if there's a real change, the next debounce window will fire.
-      console.error("[mdv] external-change read failed", e);
+      console.error("[mddiff] external-change read failed", e);
       return;
     }
 
@@ -461,25 +461,25 @@
     }
   }
 
-  function openMdvDialog() {
+  function openMddiffDialog() {
     closeMenu();
     error = null;
     if (!doc.path) {
-      error = ".mdv export requires a saved file in a Git repository";
+      error = ".mddiff export requires a saved file in a Git repository";
       return;
     }
     if (!doc.gitAvailable) {
       error = "this file is not in a Git repository";
       return;
     }
-    mdvDialogOpen = true;
+    mddiffDialogOpen = true;
   }
 
-  function onMdvSaved(msg: string) {
-    mdvDialogOpen = false;
-    mdvStatus = msg;
+  function onMddiffSaved(msg: string) {
+    mddiffDialogOpen = false;
+    mddiffStatus = msg;
     setTimeout(() => {
-      if (mdvStatus === msg) mdvStatus = null;
+      if (mddiffStatus === msg) mddiffStatus = null;
     }, 6000);
   }
 
@@ -615,7 +615,7 @@
 </script>
 
 <svelte:head>
-  <title>{basename(doc.path)}{doc.dirty ? " •" : ""} — mdv</title>
+  <title>{basename(doc.path)}{doc.dirty ? " •" : ""} — mddiff</title>
 </svelte:head>
 
 <div class="app">
@@ -696,13 +696,13 @@
           <button role="menuitem" onclick={exportDocx}>DOCX</button>
           <button
             role="menuitem"
-            onclick={openMdvDialog}
+            onclick={openMddiffDialog}
             disabled={!doc.gitAvailable}
             title={doc.gitAvailable
-              ? "Bundle history into a .mdv package"
+              ? "Bundle history into a .mddiff package"
               : "Requires a Git-managed file"}
           >
-            .mdv <span class="muted">(with history)</span>
+            .mddiff <span class="muted">(with history)</span>
           </button>
           <div class="sep"></div>
           <button role="menuitem" onclick={loadSample}>Load sample</button>
@@ -719,10 +719,10 @@
       <button class="dismiss" aria-label="Dismiss" onclick={() => (error = null)}>×</button>
     </div>
   {/if}
-  {#if mdvStatus}
+  {#if mddiffStatus}
     <div class="banner info">
-      <span>{mdvStatus}</span>
-      <button class="dismiss" aria-label="Dismiss" onclick={() => (mdvStatus = null)}>×</button>
+      <span>{mddiffStatus}</span>
+      <button class="dismiss" aria-label="Dismiss" onclick={() => (mddiffStatus = null)}>×</button>
     </div>
   {/if}
   {#if externalChange?.kind === "modified"}
@@ -810,12 +810,12 @@
     {/if}
   </main>
 
-  {#if mdvDialogOpen && doc.path}
-    <MdvExportDialog
+  {#if mddiffDialogOpen && doc.path}
+    <MddiffExportDialog
       path={doc.path}
       currentText={doc.text}
-      onSaved={onMdvSaved}
-      onCancel={() => (mdvDialogOpen = false)}
+      onSaved={onMddiffSaved}
+      onCancel={() => (mddiffDialogOpen = false)}
     />
   {/if}
   {#if settingsOpen}
@@ -848,62 +848,62 @@
        switches between modes. Header / popovers / hover use a slightly
        lighter step for chrome separation, never the canvas going dark
        further. */
-    --mdv-bg:           light-dark(#ffffff, #1e1e1e);
-    --mdv-surface:      light-dark(#f6f8fa, #252526);
-    --mdv-surface-hi:   light-dark(#eaeef2, #2d2d2e);
-    --mdv-surface-pop:  light-dark(#ffffff, #2a2a2b);
-    --mdv-editor-bg:    light-dark(#ffffff, #1e1e1e);
-    --mdv-editor-gutter:light-dark(#f6f8fa, #252526);
+    --mddiff-bg:           light-dark(#ffffff, #1e1e1e);
+    --mddiff-surface:      light-dark(#f6f8fa, #252526);
+    --mddiff-surface-hi:   light-dark(#eaeef2, #2d2d2e);
+    --mddiff-surface-pop:  light-dark(#ffffff, #2a2a2b);
+    --mddiff-editor-bg:    light-dark(#ffffff, #1e1e1e);
+    --mddiff-editor-gutter:light-dark(#f6f8fa, #252526);
 
     /* Text */
-    --mdv-text:         light-dark(#1f2328, #d4d4d4);
-    --mdv-text-mute:    light-dark(#656d76, #9d9d9d);
-    --mdv-text-subtle:  light-dark(#8c959f, #6e6e6e);
+    --mddiff-text:         light-dark(#1f2328, #d4d4d4);
+    --mddiff-text-mute:    light-dark(#656d76, #9d9d9d);
+    --mddiff-text-subtle:  light-dark(#8c959f, #6e6e6e);
 
     /* Borders */
-    --mdv-border:       light-dark(#d0d7de, #3c3c3c);
-    --mdv-border-mute:  light-dark(#eaeef2, #2d2d2d);
+    --mddiff-border:       light-dark(#d0d7de, #3c3c3c);
+    --mddiff-border-mute:  light-dark(#eaeef2, #2d2d2d);
 
     /* Accent */
-    --mdv-accent:       light-dark(#0969da, #58a6ff);
-    --mdv-accent-bg:    light-dark(#ddf4ff, #1f3551);
-    --mdv-accent-fg:    light-dark(#0a3069, #b9d4ff);
+    --mddiff-accent:       light-dark(#0969da, #58a6ff);
+    --mddiff-accent-bg:    light-dark(#ddf4ff, #1f3551);
+    --mddiff-accent-fg:    light-dark(#0a3069, #b9d4ff);
 
     /* Status colors */
-    --mdv-warn-fg:      light-dark(#9a6700, #d4a72c);
-    --mdv-warn-bg:      light-dark(#fff8c5, #2c241a);
-    --mdv-warn-border:  light-dark(#f0d68c, #3d3214);
-    --mdv-danger-fg:    light-dark(#cf222e, #f85149);
-    --mdv-danger-bg:    light-dark(#ffebe9, #2c1a1a);
-    --mdv-danger-border:light-dark(#f8b4ad, #3d2020);
-    --mdv-success-fg:   light-dark(#1a7f37, #3fb950);
-    --mdv-success-bg:   light-dark(#dafbe1, #1a2e1f);
-    --mdv-success-border:light-dark(#a4d9b1, #2a4530);
-    --mdv-info-fg:      light-dark(#16325c, #b9d4ff);
-    --mdv-info-bg:      light-dark(#ddf4ff, #1a2538);
-    --mdv-info-border:  light-dark(#bcd8fa, #2a3a55);
+    --mddiff-warn-fg:      light-dark(#9a6700, #d4a72c);
+    --mddiff-warn-bg:      light-dark(#fff8c5, #2c241a);
+    --mddiff-warn-border:  light-dark(#f0d68c, #3d3214);
+    --mddiff-danger-fg:    light-dark(#cf222e, #f85149);
+    --mddiff-danger-bg:    light-dark(#ffebe9, #2c1a1a);
+    --mddiff-danger-border:light-dark(#f8b4ad, #3d2020);
+    --mddiff-success-fg:   light-dark(#1a7f37, #3fb950);
+    --mddiff-success-bg:   light-dark(#dafbe1, #1a2e1f);
+    --mddiff-success-border:light-dark(#a4d9b1, #2a4530);
+    --mddiff-info-fg:      light-dark(#16325c, #b9d4ff);
+    --mddiff-info-bg:      light-dark(#ddf4ff, #1a2538);
+    --mddiff-info-border:  light-dark(#bcd8fa, #2a3a55);
 
-    --mdv-shadow:       light-dark(rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.5));
+    --mddiff-shadow:       light-dark(rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.5));
 
     /* Syntax highlight colors (Source view). Default palette (GitHub) lives
        on :root; alternate themes live below as :root[data-editor-theme]
        overrides so the chosen palette wins through specificity. */
-    --mdv-syntax-heading: light-dark(#0550ae, #79c0ff);
-    --mdv-syntax-code:    light-dark(#cf222e, #ff7b72);
-    --mdv-syntax-link:    light-dark(#0969da, #58a6ff);
-    --mdv-syntax-quote:   light-dark(#57606a, #8b949e);
-    --mdv-syntax-punct:   light-dark(#8c959f, #6e7681);
-    --mdv-syntax-meta:    light-dark(#6f42c1, #d2a8ff);
+    --mddiff-syntax-heading: light-dark(#0550ae, #79c0ff);
+    --mddiff-syntax-code:    light-dark(#cf222e, #ff7b72);
+    --mddiff-syntax-link:    light-dark(#0969da, #58a6ff);
+    --mddiff-syntax-quote:   light-dark(#57606a, #8b949e);
+    --mddiff-syntax-punct:   light-dark(#8c959f, #6e7681);
+    --mddiff-syntax-meta:    light-dark(#6f42c1, #d2a8ff);
 
     /* Single source of truth for the Source view's active-line tint.
-       Used by mdvCmTheme (inside cm-editor) AND .source::before (the
+       Used by mddiffCmTheme (inside cm-editor) AND .source::before (the
        extension strip that reaches into the right padding). */
-    --mdv-active-line-bg: color-mix(in srgb, var(--mdv-accent) 6%, transparent);
+    --mddiff-active-line-bg: color-mix(in srgb, var(--mddiff-accent) 6%, transparent);
 
-    --mdv-editor-font-size: 14px;
+    --mddiff-editor-font-size: 14px;
 
-    background: var(--mdv-bg);
-    color: var(--mdv-text);
+    background: var(--mddiff-bg);
+    color: var(--mddiff-text);
   }
   :global(:root[data-theme="light"]) {
     color-scheme: light;
@@ -916,7 +916,7 @@
   }
 
   /* ---------- Editor syntax themes ----------
-     Overrides for the --mdv-syntax-* palette only. Editor background, text,
+     Overrides for the --mddiff-syntax-* palette only. Editor background, text,
      and gutter stay tied to the app's light/dark mode so the editor doesn't
      visually break away from the rest of the UI. "github" is the default
      defined on :root above; this section adds "solarized" and "dracula". */
@@ -924,24 +924,24 @@
     /* Ethan Schoonover's Solarized accent set. The picks below contrast on
        both Solarized Light (#fdf6e3) and Solarized Dark (#002b36), and the
        neutral-leaning ones (quote / punct) flip with light-dark(). */
-    --mdv-syntax-heading: #268bd2; /* blue */
-    --mdv-syntax-code:    #d33682; /* magenta */
-    --mdv-syntax-link:    #2aa198; /* cyan */
-    --mdv-syntax-quote:   light-dark(#93a1a1, #586e75); /* base1 / base01 */
-    --mdv-syntax-punct:   light-dark(#93a1a1, #586e75);
-    --mdv-syntax-meta:    #6c71c4; /* violet */
+    --mddiff-syntax-heading: #268bd2; /* blue */
+    --mddiff-syntax-code:    #d33682; /* magenta */
+    --mddiff-syntax-link:    #2aa198; /* cyan */
+    --mddiff-syntax-quote:   light-dark(#93a1a1, #586e75); /* base1 / base01 */
+    --mddiff-syntax-punct:   light-dark(#93a1a1, #586e75);
+    --mddiff-syntax-meta:    #6c71c4; /* violet */
   }
   :global(:root[data-editor-theme="dracula"]) {
     /* Dracula is fundamentally a dark theme — the palette is designed
        against #282a36. We don't force the app bg here (would clash with
        the global theme setting), so these colors will look a bit pale on
        a light app bg; that's expected. */
-    --mdv-syntax-heading: #bd93f9; /* purple */
-    --mdv-syntax-code:    #ff79c6; /* pink */
-    --mdv-syntax-link:    #8be9fd; /* cyan */
-    --mdv-syntax-quote:   #6272a4; /* comment */
-    --mdv-syntax-punct:   #6272a4;
-    --mdv-syntax-meta:    #ffb86c; /* orange */
+    --mddiff-syntax-heading: #bd93f9; /* purple */
+    --mddiff-syntax-code:    #ff79c6; /* pink */
+    --mddiff-syntax-link:    #8be9fd; /* cyan */
+    --mddiff-syntax-quote:   #6272a4; /* comment */
+    --mddiff-syntax-punct:   #6272a4;
+    --mddiff-syntax-meta:    #ffb86c; /* orange */
   }
 
   /* ---------- Shell ---------- */
@@ -962,10 +962,10 @@
     align-items: center;
     gap: 0.4rem;
     padding: 0.25rem 0.6rem;
-    background: var(--mdv-surface-pop);
-    border: 1px solid var(--mdv-border-mute);
+    background: var(--mddiff-surface-pop);
+    border: 1px solid var(--mddiff-border-mute);
     border-radius: 999px;
-    box-shadow: 0 2px 8px var(--mdv-shadow);
+    box-shadow: 0 2px 8px var(--mddiff-shadow);
     font-size: 0.85rem;
     max-width: calc(100vw - 6rem);
   }
@@ -976,7 +976,7 @@
     white-space: nowrap;
   }
   .dirty {
-    color: var(--mdv-warn-fg);
+    color: var(--mddiff-warn-fg);
   }
   .mode-name {
     padding: 0.05rem 0.45rem;
@@ -984,8 +984,8 @@
     font-size: 0.7rem;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    color: var(--mdv-accent-fg);
-    background: var(--mdv-accent-bg);
+    color: var(--mddiff-accent-fg);
+    background: var(--mddiff-accent-bg);
   }
 
   /* ---------- Menu (floating top-right) ---------- */
@@ -996,8 +996,8 @@
     z-index: 30;
   }
   .menu-trigger {
-    background: var(--mdv-surface-pop);
-    border: 1px solid var(--mdv-border-mute);
+    background: var(--mddiff-surface-pop);
+    border: 1px solid var(--mddiff-border-mute);
     border-radius: 999px;
     width: 34px;
     height: 34px;
@@ -1005,28 +1005,28 @@
     font: inherit;
     font-size: 1rem;
     line-height: 1;
-    color: var(--mdv-text);
+    color: var(--mddiff-text);
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 2px 8px var(--mdv-shadow);
+    box-shadow: 0 2px 8px var(--mddiff-shadow);
     transition: background-color 0.12s;
   }
   .menu-trigger:hover,
   .menu-wrap.open .menu-trigger {
-    background: var(--mdv-surface-hi);
-    border-color: var(--mdv-border);
+    background: var(--mddiff-surface-hi);
+    border-color: var(--mddiff-border);
   }
   .menu {
     position: absolute;
     top: calc(100% + 6px);
     right: 0;
     z-index: 50;
-    background: var(--mdv-surface-pop);
-    border: 1px solid var(--mdv-border);
+    background: var(--mddiff-surface-pop);
+    border: 1px solid var(--mddiff-border);
     border-radius: 6px;
-    box-shadow: 0 8px 24px var(--mdv-shadow);
+    box-shadow: 0 8px 24px var(--mddiff-shadow);
     min-width: 16em;
     padding: 0.2rem;
     display: flex;
@@ -1045,12 +1045,12 @@
     background: transparent;
     border: 0;
     border-radius: 3px;
-    color: var(--mdv-text);
+    color: var(--mddiff-text);
     font: inherit;
     cursor: pointer;
   }
   .menu button:hover:not(:disabled) {
-    background: var(--mdv-surface-hi);
+    background: var(--mddiff-surface-hi);
   }
   .menu button:disabled {
     opacity: 0.45;
@@ -1059,36 +1059,36 @@
   .menu .section {
     padding: 0.35rem 0.55rem 0.1rem;
     font-size: 0.66rem;
-    color: var(--mdv-text-mute);
+    color: var(--mddiff-text-mute);
     text-transform: uppercase;
     letter-spacing: 0.06em;
   }
   .menu .sep {
     height: 1px;
-    background: var(--mdv-border-mute);
+    background: var(--mddiff-border-mute);
     margin: 0.18rem 0;
   }
   .menu .muted {
-    color: var(--mdv-text-mute);
+    color: var(--mddiff-text-mute);
     font-size: 0.88em;
   }
   .menu .mode-item .check {
     display: inline-block;
     width: 1em;
     margin-right: 0.25em;
-    color: var(--mdv-accent);
+    color: var(--mddiff-accent);
   }
   .menu .mode-item.active {
-    color: var(--mdv-accent-fg);
+    color: var(--mddiff-accent-fg);
   }
   .menu kbd {
     font: inherit;
     font-size: 0.76em;
-    color: var(--mdv-text-mute);
-    background: var(--mdv-surface-hi);
+    color: var(--mddiff-text-mute);
+    background: var(--mddiff-surface-hi);
     padding: 0.05em 0.4em;
     border-radius: 3px;
-    border: 1px solid var(--mdv-border-mute);
+    border: 1px solid var(--mddiff-border-mute);
   }
 
   /* ---------- Banners ---------- */
@@ -1101,19 +1101,19 @@
     font-size: 0.85rem;
   }
   .banner.error {
-    background: var(--mdv-danger-bg);
-    color: var(--mdv-danger-fg);
-    border-bottom-color: var(--mdv-danger-border);
+    background: var(--mddiff-danger-bg);
+    color: var(--mddiff-danger-fg);
+    border-bottom-color: var(--mddiff-danger-border);
   }
   .banner.warn {
-    background: var(--mdv-warn-bg);
-    color: var(--mdv-warn-fg);
-    border-bottom-color: var(--mdv-warn-border);
+    background: var(--mddiff-warn-bg);
+    color: var(--mddiff-warn-fg);
+    border-bottom-color: var(--mddiff-warn-border);
   }
   .banner.info {
-    background: var(--mdv-success-bg);
-    color: var(--mdv-success-fg);
-    border-bottom-color: var(--mdv-success-border);
+    background: var(--mddiff-success-bg);
+    color: var(--mddiff-success-fg);
+    border-bottom-color: var(--mddiff-success-border);
   }
   .banner .dismiss {
     margin-left: auto;
@@ -1161,8 +1161,8 @@
     /* Anchor the canvas color here so every mode (Preview / WYSIWYG / Diff /
        editors) sits on the same background. Editors override via CM theme
        but use the same token, so they read as one continuous surface. */
-    background: var(--mdv-bg);
-    color: var(--mdv-text);
+    background: var(--mddiff-bg);
+    color: var(--mddiff-text);
     display: flex;
     flex-direction: column;
   }
@@ -1181,38 +1181,38 @@
     flex-basis: 50%;
   }
   main.split > .pane + .pane {
-    border-left: 1px solid var(--mdv-border);
+    border-left: 1px solid var(--mddiff-border);
   }
   .pane-mode-bar {
     display: flex;
     align-items: center;
     gap: 0.25rem;
     padding: 0.3rem 0.5rem;
-    border-bottom: 1px solid var(--mdv-border);
-    background: var(--mdv-surface);
+    border-bottom: 1px solid var(--mddiff-border);
+    background: var(--mddiff-surface);
     font-size: 0.78rem;
     flex-shrink: 0;
   }
   .pane-mode-bar button {
     background: transparent;
     border: 0;
-    color: var(--mdv-text-mute);
+    color: var(--mddiff-text-mute);
     padding: 0.22rem 0.55rem;
     border-radius: 3px;
     font: inherit;
     cursor: pointer;
   }
   .pane-mode-bar button:hover:not(:disabled) {
-    background: var(--mdv-surface-hi);
-    color: var(--mdv-text);
+    background: var(--mddiff-surface-hi);
+    color: var(--mddiff-text);
   }
   .pane-mode-bar button:disabled {
     opacity: 0.4;
     cursor: not-allowed;
   }
   .pane-mode-bar button.active {
-    background: var(--mdv-accent-bg);
-    color: var(--mdv-accent-fg);
+    background: var(--mddiff-accent-bg);
+    color: var(--mddiff-accent-fg);
   }
   .pane-mode-bar .close-split {
     margin-left: auto;
