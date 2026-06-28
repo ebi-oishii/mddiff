@@ -148,6 +148,13 @@ export const ja: Dictionary = {
     exit: "履歴表示を終了",
     none: "（古いコミットはありません）",
     error: "この版を読み込めませんでした。",
+    editLockedTitle: "履歴表示中は編集できません",
+    editLockedBody:
+      "現在は古い版を読み取り専用で表示中です。編集するには、まずこの版をバッファに復元してください。",
+    editLockedDirtyBody:
+      "現在は古い版を読み取り専用で表示中です。編集するには、まずこの版をバッファに復元してください。※現在の未保存の編集は上書きされます。",
+    editLockedOk: "復元して編集",
+    editLockedCancel: "履歴ビューを継続",
   },
   diff: {
     loading: "差分を計算中…",

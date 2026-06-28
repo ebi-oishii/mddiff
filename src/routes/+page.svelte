@@ -549,7 +549,7 @@
     return i18n.t(`mode.${m}`);
   }
 
-  function setMode(target: Mode) {
+  async function setMode(target: Mode) {
     closeMenu();
     // Refuse Diff when neither Git nor a "Compare with disk" payload is
     // available — the view would have nothing to compare against.
@@ -559,6 +559,27 @@
       doc.pendingDiskCompare == null
     ) {
       return;
+    }
+    // In history view, edit modes (Source/Live/WYSIWYG) are unreachable —
+    // the buffer rendered there would be the live `doc.text`, not the
+    // pinned historical content. Surface this with a confirm dialog so the
+    // user understands the trade-off (restore overwrites their buffer) and
+    // can choose to proceed or stay in history view.
+    if (
+      doc.history &&
+      (target === "source" || target === "live" || target === "wysiwyg")
+    ) {
+      const body = doc.dirty
+        ? i18n.t("history.editLockedDirtyBody")
+        : i18n.t("history.editLockedBody");
+      const ok = await confirm(body, {
+        title: i18n.t("history.editLockedTitle"),
+        kind: "warning",
+        okLabel: i18n.t("history.editLockedOk"),
+        cancelLabel: i18n.t("history.editLockedCancel"),
+      });
+      if (!ok) return;
+      doc.restoreHistory();
     }
     mode = target;
   }
