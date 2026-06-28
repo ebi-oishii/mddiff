@@ -20,7 +20,7 @@
 
   const CUSTOM = "__custom__";
 
-  let submode = $state<DiffSubmode>("highlight");
+  let submode = $state<DiffSubmode>("sidebyside");
   let bases = $state<BaseOption[]>([]);
   let selected = $state<string>("HEAD");
   let customBase = $state("HEAD");

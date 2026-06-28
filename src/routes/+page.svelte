@@ -677,10 +677,11 @@
     border-radius: 6px;
     box-shadow: 0 8px 24px var(--mdv-shadow);
     min-width: 16em;
-    padding: 0.25rem;
+    padding: 0.2rem;
     display: flex;
     flex-direction: column;
-    font-size: 0.88rem;
+    font-size: 0.85rem;
+    line-height: 1.35;
   }
   .menu button {
     display: flex;
@@ -688,11 +689,11 @@
     justify-content: space-between;
     gap: 1rem;
     width: 100%;
-    padding: 0.4rem 0.7rem;
+    padding: 0.22rem 0.55rem;
     text-align: left;
     background: transparent;
     border: 0;
-    border-radius: 4px;
+    border-radius: 3px;
     color: var(--mdv-text);
     font: inherit;
     cursor: pointer;
@@ -705,8 +706,8 @@
     cursor: not-allowed;
   }
   .menu .section {
-    padding: 0.4rem 0.7rem 0.15rem;
-    font-size: 0.7rem;
+    padding: 0.35rem 0.55rem 0.1rem;
+    font-size: 0.66rem;
     color: var(--mdv-text-mute);
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -714,7 +715,7 @@
   .menu .sep {
     height: 1px;
     background: var(--mdv-border-mute);
-    margin: 0.25rem 0;
+    margin: 0.18rem 0;
   }
   .menu .muted {
     color: var(--mdv-text-mute);
