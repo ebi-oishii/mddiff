@@ -41,16 +41,20 @@
   });
 
   let scroller: HTMLDivElement;
+  let scrollTimer: ReturnType<typeof setTimeout> | null = null;
 
   function topVisibleLine(): number | null {
     if (!scroller) return null;
-    const top = scroller.getBoundingClientRect().top;
+    const rect = scroller.getBoundingClientRect();
+    // Detached element returns a zero rect, in which case every child also
+    // reports zero — bail to avoid clobbering currentLine with line 1.
+    if (rect.width === 0 && rect.height === 0) return null;
+    const top = rect.top;
     const blocks = scroller.querySelectorAll<HTMLElement>("[data-mdv-line]");
     let last: number | null = null;
     for (const block of blocks) {
-      const rect = block.getBoundingClientRect();
-      // The first block whose top is at or below the viewport top wins.
-      if (rect.top >= top - 2) {
+      const br = block.getBoundingClientRect();
+      if (br.top >= top - 2) {
         const n = Number(block.dataset.mdvLine);
         return Number.isFinite(n) ? n : last;
       }
@@ -58,6 +62,16 @@
       if (Number.isFinite(n)) last = n;
     }
     return last;
+  }
+
+  function captureTopLine() {
+    const line = topVisibleLine();
+    if (line != null) doc.currentLine = line;
+  }
+
+  function onScroll() {
+    if (scrollTimer) clearTimeout(scrollTimer);
+    scrollTimer = setTimeout(captureTopLine, 80);
   }
 
   function scrollToLine(line: number) {
@@ -83,14 +97,20 @@
     window.addEventListener("keydown", find.onKeydown);
     // Wait one frame for the rendered HTML to land in the DOM.
     const line = doc.currentLine;
-    requestAnimationFrame(() => scrollToLine(line));
+    requestAnimationFrame(() => {
+      scrollToLine(line);
+      // Attach the scroll listener AFTER the initial restore so the very
+      // first frame of restoration scroll doesn't overwrite currentLine.
+      scroller?.addEventListener("scroll", onScroll, { passive: true });
+    });
   });
 
   onDestroy(() => {
     window.removeEventListener("keydown", find.onKeydown);
     find.destroy();
-    const line = topVisibleLine();
-    if (line != null) doc.currentLine = line;
+    if (scrollTimer) clearTimeout(scrollTimer);
+    captureTopLine();
+    scroller?.removeEventListener("scroll", onScroll);
   });
 
   // Re-apply find when query or rendered html changes (e.g. file reloaded
@@ -132,6 +152,11 @@
     padding: 2rem 3rem 4rem;
     line-height: 1.7;
     font-size: 16px;
+  }
+  /* Match SourceView / LivePreview / WYSIWYG: in fullscreen the title
+     overlay covers the top, so widen the content's top padding. */
+  :global(:root[data-fullscreen]) .preview {
+    padding-top: 2.5rem;
   }
   .preview :global(h1) {
     font-size: 2rem;
