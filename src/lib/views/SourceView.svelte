@@ -95,4 +95,21 @@
     font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
     font-size: var(--mdv-editor-font-size, 14px);
   }
+  /* Reserve a right strip so long lines don't slide under the floating ☰
+     button (top-right, ~46px wide including its right offset). Live /
+     Preview / WYSIWYG already have intrinsic right padding via their
+     content boxes; only Source extended edge-to-edge. */
+  :global(.source .cm-content) {
+    padding-right: 3rem;
+  }
+  /* The active-line decoration is a `<div class="cm-activeLine">` whose
+     box is bounded by .cm-content's content-area, so without help it
+     stops 3rem short of the editor's right edge, leaving a dead strip
+     where the highlight is missing. A negative right margin pushes its
+     box into .cm-content's padding area (still inside the border), so
+     the background color reaches the visual edge while the line's text
+     and caret stay in the original content rectangle. */
+  :global(.source .cm-activeLine) {
+    margin-right: -3rem;
+  }
 </style>
