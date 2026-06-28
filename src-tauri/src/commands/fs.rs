@@ -3,8 +3,13 @@ use std::path::PathBuf;
 use base64::Engine;
 
 #[tauri::command]
-pub async fn read_text_file(path: PathBuf) -> Result<String, String> {
-    mdv_core::fs::read_text_file(&path).map_err(|e| e.to_string())
+pub async fn read_text_file(path: PathBuf, force: Option<bool>) -> Result<String, String> {
+    mdv_core::fs::read_text_file_with(&path, force.unwrap_or(false)).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn file_size(path: PathBuf) -> Result<u64, String> {
+    mdv_core::fs::file_size(&path).map_err(|e| e.to_string())
 }
 
 #[tauri::command]

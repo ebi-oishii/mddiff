@@ -3,7 +3,7 @@ mod commands;
 #[cfg(not(any(target_os = "android", target_os = "ios")))]
 mod menu;
 
-use commands::fs::{read_text_file, write_binary_file, write_text_file};
+use commands::fs::{file_size, read_text_file, write_binary_file, write_text_file};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -27,6 +27,7 @@ pub fn run() {
         read_text_file,
         write_text_file,
         write_binary_file,
+        file_size,
         commands::git::git_is_repo,
         commands::git::git_list_bases,
         commands::git::git_hunks,
@@ -37,7 +38,7 @@ pub fn run() {
     ]);
 
     #[cfg(any(target_os = "android", target_os = "ios"))]
-    let builder = builder.invoke_handler(tauri::generate_handler![read_text_file, write_text_file]);
+    let builder = builder.invoke_handler(tauri::generate_handler![read_text_file, write_text_file, file_size]);
 
     builder
         .run(tauri::generate_context!())
