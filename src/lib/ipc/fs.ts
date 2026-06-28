@@ -34,6 +34,20 @@ export async function writeFile(path: string, text: string): Promise<void> {
 }
 
 /**
+ * Read an already-known path. Skips the open dialog (used by Reload from
+ * disk, where we already have a path from `doc.path`). `.mdv` bundles get
+ * the same trailing-comment strip as `pickAndReadFile`.
+ */
+export async function readPath(path: string): Promise<LoadedFile> {
+  const raw = await invoke<string>("read_text_file", { path });
+  const text = path.toLowerCase().endsWith(".mdv")
+    ? await mdvExtractBody(raw)
+    : raw;
+  const gitAvailable = await gitIsRepo(path);
+  return { path, text, gitAvailable };
+}
+
+/**
  * Chunked Uint8Array → base64 so we don't blow the call stack on large arrays
  * (String.fromCharCode(...arr) is bounded by argument count limits).
  */

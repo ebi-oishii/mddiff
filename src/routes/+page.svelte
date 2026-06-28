@@ -2,14 +2,17 @@
   import { onMount, onDestroy } from "svelte";
   import { listen, type UnlistenFn } from "@tauri-apps/api/event";
   import { getCurrentWindow } from "@tauri-apps/api/window";
+  import { confirm } from "@tauri-apps/plugin-dialog";
   import { doc } from "$lib/stores/doc.svelte";
   import {
     pickAndReadFile,
     pickAndWriteFile,
     pickSavePath,
+    readPath,
     writeBinaryFile,
     writeFile,
   } from "$lib/ipc/fs";
+  import { humanizeError } from "$lib/errors";
   import { gitIsRepo } from "$lib/ipc/git";
   import {
     printAsPdf,
@@ -96,6 +99,9 @@
       case "save_as":
         saveAs();
         break;
+      case "reload":
+        reloadFromDisk();
+        break;
       case "sample":
         loadSample();
         break;
@@ -173,7 +179,7 @@
       const loaded = await pickAndReadFile();
       if (loaded) doc.load(loaded.path, loaded.text, loaded.gitAvailable);
     } catch (e) {
-      error = String(e);
+      error = humanizeError(e, "read");
     }
   }
 
@@ -188,7 +194,7 @@
         await saveAs();
       }
     } catch (e) {
-      error = String(e);
+      error = humanizeError(e, "write");
     }
   }
 
@@ -203,7 +209,37 @@
         doc.markSaved();
       }
     } catch (e) {
-      error = String(e);
+      error = humanizeError(e, "write");
+    }
+  }
+
+  // Discard local edits and pull the file from disk again. Used when the user
+  // wants to undo accumulated changes without losing the file context (VSCode
+  // calls this "Revert File"). Confirms first if there are unsaved changes.
+  async function reloadFromDisk() {
+    closeMenu();
+    error = null;
+    if (!doc.path) {
+      error = "No file is open to reload.";
+      return;
+    }
+    if (doc.dirty) {
+      const ok = await confirm(
+        "Discard unsaved changes and reload the file from disk?",
+        {
+          title: "Reload from disk",
+          kind: "warning",
+          okLabel: "Reload",
+          cancelLabel: "Cancel",
+        },
+      );
+      if (!ok) return;
+    }
+    try {
+      const loaded = await readPath(doc.path);
+      doc.load(loaded.path, loaded.text, loaded.gitAvailable);
+    } catch (e) {
+      error = humanizeError(e, "read");
     }
   }
 
@@ -227,7 +263,7 @@
       if (!path) return;
       await writeFile(path, renderToHtml(doc.text, exportTitle()));
     } catch (e) {
-      error = String(e);
+      error = humanizeError(e, "write");
     }
   }
 
@@ -237,7 +273,7 @@
     try {
       await printAsPdf(doc.text, exportTitle());
     } catch (e) {
-      error = String(e);
+      error = humanizeError(e, "other");
     }
   }
 
@@ -249,7 +285,7 @@
       if (!path) return;
       await writeFile(path, renderToPlainText(doc.text));
     } catch (e) {
-      error = String(e);
+      error = humanizeError(e, "write");
     }
   }
 
@@ -262,7 +298,7 @@
       const bytes = await renderToDocx(doc.text, exportTitle());
       await writeBinaryFile(path, bytes);
     } catch (e) {
-      error = String(e);
+      error = humanizeError(e, "write");
     }
   }
 
@@ -381,6 +417,12 @@
       } else if (e.key === "s") {
         e.preventDefault();
         save();
+      } else if (e.key === "r" && e.shiftKey) {
+        // ⌘⇧R — Reload from disk (mirrors VSCode's "Revert File").
+        // Plain ⌘R is the browser refresh shortcut and we don't want
+        // to shadow it during dev.
+        e.preventDefault();
+        reloadFromDisk();
       } else if (e.key === ",") {
         e.preventDefault();
         openSettings();
@@ -449,6 +491,16 @@
           </button>
           <button role="menuitem" onclick={saveAs}>
             <span>Save As…</span><kbd>{MOD}{SHIFT}S</kbd>
+          </button>
+          <button
+            role="menuitem"
+            onclick={reloadFromDisk}
+            disabled={!doc.path}
+            title={doc.path
+              ? "Discard local edits and reload the file from disk"
+              : "Open a file first"}
+          >
+            <span>Reload from disk</span><kbd>{MOD}{SHIFT}R</kbd>
           </button>
           <div class="sep"></div>
           <div class="section">Export as</div>
