@@ -21,6 +21,7 @@
     type ExternalChange,
   } from "$lib/ipc/fs";
   import { humanizeError } from "$lib/errors";
+  import { i18n } from "$lib/i18n/index.svelte";
   import LargeFileWarning from "$lib/components/LargeFileWarning.svelte";
   import { gitIsRepo } from "$lib/ipc/git";
   import {
@@ -79,6 +80,7 @@
 
   onMount(async () => {
     settings.hydrate();
+    i18n.hydrate();
     if (!doc.path && !doc.text) {
       mode = settings.defaultMode;
     }
@@ -121,10 +123,12 @@
       closeUnlisten = await win.onCloseRequested(async (event) => {
         if (!doc.dirty) return;
         event.preventDefault();
-        const ok = await confirm(
-          "There are unsaved changes. Close without saving?",
-          { title: "Unsaved changes", kind: "warning", okLabel: "Discard & close", cancelLabel: "Cancel" },
-        );
+        const ok = await confirm(i18n.t("confirm.closeUnsavedBody"), {
+          title: i18n.t("confirm.closeUnsavedTitle"),
+          kind: "warning",
+          okLabel: i18n.t("confirm.closeUnsavedOk"),
+          cancelLabel: i18n.t("confirm.closeUnsavedCancel"),
+        });
         if (ok) await win.destroy();
       });
     } catch {
@@ -233,9 +237,12 @@
 
     if (!doc.dirty && settings.autoReload) {
       doc.reloadFromDisk(diskText);
-      reloadFlash = "File reloaded from disk";
+      const flashText = i18n.t("banner.reloadFlash");
+      reloadFlash = flashText;
       setTimeout(() => {
-        if (reloadFlash === "File reloaded from disk") reloadFlash = null;
+        // Only clear if it's still our flash — locale could have changed
+        // between set and timeout fire, so compare against the value we set.
+        if (reloadFlash === flashText) reloadFlash = null;
       }, 4000);
       return;
     }
@@ -294,8 +301,7 @@
   });
 
   function handleNormalize(_orig: string, normalized: string) {
-    normalization =
-      "WYSIWYG により表記が正規化されました（例: `*foo*` / `_foo_` の統一、リンクの展開、改行整理など）。Source モードで内容を確認できます。";
+    normalization = i18n.t("banner.normalization");
     doc.adoptNormalized(normalized);
   }
 
@@ -379,19 +385,16 @@
     closeMenu();
     error = null;
     if (!doc.path) {
-      error = "No file is open to reload.";
+      error = i18n.t("errors.noFileOpen");
       return;
     }
     if (doc.dirty) {
-      const ok = await confirm(
-        "Discard unsaved changes and reload the file from disk?",
-        {
-          title: "Reload from disk",
-          kind: "warning",
-          okLabel: "Reload",
-          cancelLabel: "Cancel",
-        },
-      );
+      const ok = await confirm(i18n.t("confirm.reloadBody"), {
+        title: i18n.t("confirm.reloadTitle"),
+        kind: "warning",
+        okLabel: i18n.t("menu.reloadFromDisk"),
+        cancelLabel: i18n.t("confirm.closeUnsavedCancel"),
+      });
       if (!ok) return;
     }
     try {
@@ -492,17 +495,19 @@
     menuOpen = false;
   }
 
-  type ModeEntry = { id: Mode; label: string; key: string; requiresGit?: boolean };
+  type ModeEntry = { id: Mode; key: string; requiresGit?: boolean };
   const MODE_ENTRIES: ModeEntry[] = [
-    { id: "source", label: "Source", key: "1" },
-    { id: "live", label: "Live Preview", key: "2" },
-    { id: "wysiwyg", label: "WYSIWYG", key: "3" },
-    { id: "preview", label: "Preview", key: "4" },
-    { id: "diff", label: "Diff", key: "5", requiresGit: true },
+    { id: "source", key: "1" },
+    { id: "live", key: "2" },
+    { id: "wysiwyg", key: "3" },
+    { id: "preview", key: "4" },
+    { id: "diff", key: "5", requiresGit: true },
   ];
 
+  // Label is locale-dependent. Reads `i18n.resolved` ($state) so any caller
+  // inside a template re-evaluates when the language changes.
   function modeLabel(m: Mode): string {
-    return MODE_ENTRIES.find((e) => e.id === m)?.label ?? m;
+    return i18n.t(`mode.${m}`);
   }
 
   function setMode(target: Mode) {
@@ -638,14 +643,14 @@
       onclick={() => (menuOpen = !menuOpen)}
       aria-haspopup="menu"
       aria-expanded={menuOpen}
-      aria-label="Menu"
-      title="Menu"
+      aria-label={i18n.t("menu.label")}
+      title={i18n.t("menu.label")}
     >
       ☰
     </button>
     {#if menuOpen}
       <div role="menu" class="menu">
-          <div class="section">Mode</div>
+          <div class="section">{i18n.t("mode.source").replace(/^./, (c) => c.toUpperCase())}</div>
           {#each MODE_ENTRIES as m}
             {@const disabled = m.requiresGit && !doc.gitAvailable}
             <button
@@ -654,60 +659,60 @@
               class:active={mode === m.id}
               {disabled}
               onclick={() => setMode(m.id)}
-              title={disabled ? "Requires a Git-managed file" : undefined}
+              title={disabled ? i18n.t("menu.requiresGit") : undefined}
             >
               <span>
                 <span class="check" aria-hidden="true">{mode === m.id ? "✓" : ""}</span>
-                {m.label}
+                {modeLabel(m.id)}
               </span>
               <kbd>{MOD}{m.key}</kbd>
             </button>
           {/each}
           <div class="sep"></div>
           <button role="menuitem" onclick={toggleSplit}>
-            <span>{splitMode ? "Close split" : "Split right"}</span>
+            <span>{splitMode ? i18n.t("menu.splitClose") : i18n.t("menu.splitOpen")}</span>
             <kbd>{MOD}\</kbd>
           </button>
           <div class="sep"></div>
           <button role="menuitem" onclick={open}>
-            <span>Open…</span><kbd>{MOD}O</kbd>
+            <span>{i18n.t("menu.open")}</span><kbd>{MOD}O</kbd>
           </button>
           <button role="menuitem" onclick={save}>
-            <span>Save</span><kbd>{MOD}S</kbd>
+            <span>{i18n.t("menu.save")}</span><kbd>{MOD}S</kbd>
           </button>
           <button role="menuitem" onclick={saveAs}>
-            <span>Save As…</span><kbd>{MOD}{SHIFT}S</kbd>
+            <span>{i18n.t("menu.saveAs")}</span><kbd>{MOD}{SHIFT}S</kbd>
           </button>
           <button
             role="menuitem"
             onclick={reloadFromDisk}
             disabled={!doc.path}
             title={doc.path
-              ? "Discard local edits and reload the file from disk"
-              : "Open a file first"}
+              ? i18n.t("menu.reloadEnabled")
+              : i18n.t("menu.reloadDisabled")}
           >
-            <span>Reload from disk</span><kbd>{MOD}{SHIFT}R</kbd>
+            <span>{i18n.t("menu.reloadFromDisk")}</span><kbd>{MOD}{SHIFT}R</kbd>
           </button>
           <div class="sep"></div>
-          <div class="section">Export as</div>
-          <button role="menuitem" onclick={exportHtml}>HTML</button>
-          <button role="menuitem" onclick={exportPdf}>PDF <span class="muted">(via print)</span></button>
-          <button role="menuitem" onclick={exportPlainText}>Plain text</button>
-          <button role="menuitem" onclick={exportDocx}>DOCX</button>
+          <div class="section">{i18n.t("menu.exportHeading")}</div>
+          <button role="menuitem" onclick={exportHtml}>{i18n.t("menu.exportHtml")}</button>
+          <button role="menuitem" onclick={exportPdf}>{i18n.t("menu.exportPdf")}</button>
+          <button role="menuitem" onclick={exportPlainText}>{i18n.t("menu.exportPlain")}</button>
+          <button role="menuitem" onclick={exportDocx}>{i18n.t("menu.exportDocx")}</button>
           <button
             role="menuitem"
             onclick={openMddiffDialog}
             disabled={!doc.gitAvailable}
             title={doc.gitAvailable
-              ? "Bundle history into a .mddiff package"
-              : "Requires a Git-managed file"}
+              ? i18n.t("menu.requiresMddiff")
+              : i18n.t("menu.requiresGit")}
           >
-            .mddiff <span class="muted">(with history)</span>
+            {i18n.t("menu.exportMddiff")}
           </button>
           <div class="sep"></div>
-          <button role="menuitem" onclick={loadSample}>Load sample</button>
+          <button role="menuitem" onclick={loadSample}>{i18n.t("menu.loadSample")}</button>
           <button role="menuitem" onclick={openSettings}>
-            <span>Settings…</span><kbd>{MOD},</kbd>
+            <span>{i18n.t("menu.preferences")}</span><kbd>{MOD},</kbd>
           </button>
         </div>
       {/if}
@@ -716,44 +721,44 @@
   {#if error}
     <div class="banner error">
       <span>{error}</span>
-      <button class="dismiss" aria-label="Dismiss" onclick={() => (error = null)}>×</button>
+      <button class="dismiss" aria-label={i18n.t("banner.dismiss")} onclick={() => (error = null)}>×</button>
     </div>
   {/if}
   {#if mddiffStatus}
     <div class="banner info">
       <span>{mddiffStatus}</span>
-      <button class="dismiss" aria-label="Dismiss" onclick={() => (mddiffStatus = null)}>×</button>
+      <button class="dismiss" aria-label={i18n.t("banner.dismiss")} onclick={() => (mddiffStatus = null)}>×</button>
     </div>
   {/if}
   {#if externalChange?.kind === "modified"}
     <div class="banner warn">
-      <span>This file has been modified on disk.</span>
+      <span>{i18n.t("banner.fileModified")}</span>
       <div class="actions">
-        <button class="action" onclick={applyDiskReload}>Revert to disk</button>
-        <button class="action" onclick={compareWithDisk}>Compare</button>
-        <button class="action" onclick={dismissExternalChange}>Dismiss</button>
+        <button class="action" onclick={applyDiskReload}>{i18n.t("banner.revertToDisk")}</button>
+        <button class="action" onclick={compareWithDisk}>{i18n.t("banner.compare")}</button>
+        <button class="action" onclick={dismissExternalChange}>{i18n.t("banner.dismiss")}</button>
       </div>
     </div>
   {/if}
   {#if externalChange?.kind === "removed"}
     <div class="banner error">
-      <span>This file was deleted externally.</span>
+      <span>{i18n.t("banner.fileDeleted")}</span>
       <div class="actions">
-        <button class="action" onclick={saveDeleted}>Save (recreate)</button>
-        <button class="action" onclick={dismissExternalChange}>Dismiss</button>
+        <button class="action" onclick={saveDeleted}>{i18n.t("banner.saveRecreate")}</button>
+        <button class="action" onclick={dismissExternalChange}>{i18n.t("banner.dismiss")}</button>
       </div>
     </div>
   {/if}
   {#if reloadFlash}
     <div class="banner info">
       <span>{reloadFlash}</span>
-      <button class="dismiss" aria-label="Dismiss" onclick={() => (reloadFlash = null)}>×</button>
+      <button class="dismiss" aria-label={i18n.t("banner.dismiss")} onclick={() => (reloadFlash = null)}>×</button>
     </div>
   {/if}
   {#if normalization && mode === "wysiwyg"}
     <div class="banner warn">
       <span>{normalization}</span>
-      <button class="dismiss" aria-label="Dismiss" onclick={() => (normalization = null)}>×</button>
+      <button class="dismiss" aria-label={i18n.t("banner.dismiss")} onclick={() => (normalization = null)}>×</button>
     </div>
   {/if}
   {#snippet renderView(m: Mode, withNormalizeBanner: boolean)}
@@ -789,16 +794,16 @@
               class:active={rightMode === m.id}
               {disabled}
               onclick={() => setRightMode(m.id)}
-              title={disabled ? "Requires a Git-managed file" : m.label}
+              title={disabled ? i18n.t("menu.requiresGit") : modeLabel(m.id)}
             >
-              {m.label}
+              {modeLabel(m.id)}
             </button>
           {/each}
           <button
             class="close-split"
             onclick={toggleSplit}
-            aria-label="Close split"
-            title="Close split"
+            aria-label={i18n.t("menu.splitClose")}
+            title={i18n.t("menu.splitClose")}
           >
             ×
           </button>
@@ -1067,10 +1072,6 @@
     height: 1px;
     background: var(--mddiff-border-mute);
     margin: 0.18rem 0;
-  }
-  .menu .muted {
-    color: var(--mddiff-text-mute);
-    font-size: 0.88em;
   }
   .menu .mode-item .check {
     display: inline-block;

@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { i18n } from "$lib/i18n/index.svelte";
+
   let {
     path,
     sizeBytes,
@@ -35,20 +37,16 @@
     onclick={(e) => e.stopPropagation()}
     onkeydown={(e) => e.key === "Escape" && onCancel()}
   >
-    <h2 id="large-file-title">Large file</h2>
+    <h2 id="large-file-title">{i18n.t("largeFile.title")}</h2>
     <p class="filename">{basename(path)}</p>
     <p class="size">
-      Size: <strong>{sizeLabel}</strong> (warning threshold 5 MB)
+      <strong>{sizeLabel}</strong>
     </p>
-    <p class="hint">
-      Opening files larger than 5 MB may make Live Preview, WYSIWYG and Diff
-      slow or unresponsive. Source mode handles large files best — consider
-      switching to it after opening.
-    </p>
+    <p class="hint">{i18n.t("largeFile.hint", { warnMb: 5 })}</p>
 
     <div class="actions">
-      <button type="button" class="secondary" onclick={onCancel}>Cancel</button>
-      <button type="button" class="primary" onclick={onConfirm}>Open anyway</button>
+      <button type="button" class="secondary" onclick={onCancel}>{i18n.t("largeFile.cancel")}</button>
+      <button type="button" class="primary" onclick={onConfirm}>{i18n.t("largeFile.confirm")}</button>
     </div>
   </div>
 </div>
