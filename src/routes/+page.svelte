@@ -71,6 +71,7 @@
     typeof navigator !== "undefined" && /mac/i.test(navigator.platform);
   const MOD = isMac ? "⌘" : "Ctrl+";
   const SHIFT = isMac ? "⇧" : "Shift+";
+  const ALT = isMac ? "⌥" : "Alt+";
 
   let menuUnlisten: UnlistenFn | null = null;
   let resizeUnlisten: UnlistenFn | null = null;
@@ -286,13 +287,23 @@
   });
 
 
+  // Mode label for the title bar / overlay. In split mode show both panes
+  // separated by " / " so the user can tell at a glance what's on each side.
+  function titleModeLabel(): string {
+    return splitMode
+      ? `${modeLabel(mode)} / ${modeLabel(rightMode)}`
+      : modeLabel(mode);
+  }
+
   // Push filename + dirty + mode into the OS window title bar (Mac top bar,
   // Win/Linux window chrome). Quiet failure when not running under Tauri.
   $effect(() => {
     void doc.path;
     void doc.dirty;
     void mode;
-    const title = `${basename(doc.path)}${doc.dirty ? " ●" : ""} · ${modeLabel(mode)}`;
+    void rightMode;
+    void splitMode;
+    const title = `${basename(doc.path)}${doc.dirty ? " ●" : ""} · ${titleModeLabel()}`;
     try {
       getCurrentWindow().setTitle(title);
     } catch {
@@ -579,13 +590,24 @@
       const mod = e.metaKey || e.ctrlKey;
       if (!mod) return;
 
-      // Mode shortcuts (⌘1 .. ⌘5) — driven by MODE_ENTRIES so adding a
-      // mode adds its shortcut here automatically. setMode enforces the
-      // Diff availability rule.
+      // Mode shortcuts: ⌘1..⌘5 for the (left) primary pane, and ⌥⌘1..⌥⌘5 for
+      // the right pane when split is open. Driven by MODE_ENTRIES so adding
+      // a mode adds both shortcuts here automatically. setMode / setRightMode
+      // enforce the Diff availability rule.
+      //
+      // On Mac ⌥+digit produces a different e.key ("¡", "™", ...), so for the
+      // Alt-modified path we match against the physical key (e.code).
       for (const m of MODE_ENTRIES) {
-        if (e.key === m.key) {
+        const matchesPlain = !e.altKey && e.key === m.key;
+        const matchesAlt = e.altKey && e.code === `Digit${m.key}`;
+        if (matchesPlain) {
           e.preventDefault();
           setMode(m.id);
+          return;
+        }
+        if (matchesAlt && splitMode) {
+          e.preventDefault();
+          setRightMode(m.id);
           return;
         }
       }
@@ -631,7 +653,7 @@
     <div class="title-overlay">
       <span class="filename">{basename(doc.path)}</span>
       {#if doc.dirty}<span class="dirty" title="Unsaved changes">●</span>{/if}
-      <span class="mode-name">{modeLabel(mode)}</span>
+      <span class="mode-name">{titleModeLabel()}</span>
     </div>
   {/if}
 
@@ -673,6 +695,26 @@
             <span>{splitMode ? i18n.t("menu.splitClose") : i18n.t("menu.splitOpen")}</span>
             <kbd>{MOD}\</kbd>
           </button>
+          {#if splitMode}
+            <div class="section">{i18n.t("menu.rightPaneMode")}</div>
+            {#each MODE_ENTRIES as m}
+              {@const disabled = m.requiresGit && !doc.gitAvailable}
+              <button
+                role="menuitem"
+                class="mode-item"
+                class:active={rightMode === m.id}
+                {disabled}
+                onclick={() => { setRightMode(m.id); closeMenu(); }}
+                title={disabled ? i18n.t("menu.requiresGit") : undefined}
+              >
+                <span>
+                  <span class="check" aria-hidden="true">{rightMode === m.id ? "✓" : ""}</span>
+                  {modeLabel(m.id)}
+                </span>
+                <kbd>{ALT}{MOD}{m.key}</kbd>
+              </button>
+            {/each}
+          {/if}
           <div class="sep"></div>
           <button role="menuitem" onclick={open}>
             <span>{i18n.t("menu.open")}</span><kbd>{MOD}O</kbd>
@@ -793,32 +835,7 @@
     </section>
     {#if splitMode}
       <section class="pane right">
-        <div class="pane-mode-bar" role="tablist" aria-label="Right pane mode">
-          {#each MODE_ENTRIES as m}
-            {@const disabled = m.requiresGit && !doc.gitAvailable}
-            <button
-              role="tab"
-              aria-selected={rightMode === m.id}
-              class:active={rightMode === m.id}
-              {disabled}
-              onclick={() => setRightMode(m.id)}
-              title={disabled ? i18n.t("menu.requiresGit") : modeLabel(m.id)}
-            >
-              {modeLabel(m.id)}
-            </button>
-          {/each}
-          <button
-            class="close-split"
-            onclick={toggleSplit}
-            aria-label={i18n.t("menu.splitClose")}
-            title={i18n.t("menu.splitClose")}
-          >
-            ×
-          </button>
-        </div>
-        <div class="pane-view">
-          {@render renderView(rightMode, false)}
-        </div>
+        {@render renderView(rightMode, false)}
       </section>
     {/if}
   </main>
@@ -1191,52 +1208,5 @@
   }
   main.split > .pane + .pane {
     border-left: 1px solid var(--mddiff-border);
-  }
-  .pane-mode-bar {
-    display: flex;
-    align-items: center;
-    gap: 0.25rem;
-    /* Right padding clears the floating ☰ menu (34px + 0.75rem right offset
-       ≈ 3rem). Without this the close × sits underneath the menu trigger
-       and can't be clicked. */
-    padding: 0.3rem 3rem 0.3rem 0.5rem;
-    border-bottom: 1px solid var(--mddiff-border);
-    background: var(--mddiff-surface);
-    font-size: 0.78rem;
-    flex-shrink: 0;
-  }
-  .pane-mode-bar button {
-    background: transparent;
-    border: 0;
-    color: var(--mddiff-text-mute);
-    padding: 0.22rem 0.55rem;
-    border-radius: 3px;
-    font: inherit;
-    cursor: pointer;
-  }
-  .pane-mode-bar button:hover:not(:disabled) {
-    background: var(--mddiff-surface-hi);
-    color: var(--mddiff-text);
-  }
-  .pane-mode-bar button:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-  }
-  .pane-mode-bar button.active {
-    background: var(--mddiff-accent-bg);
-    color: var(--mddiff-accent-fg);
-  }
-  .pane-mode-bar .close-split {
-    margin-left: auto;
-    font-size: 1rem;
-    line-height: 1;
-    padding: 0.1rem 0.45rem;
-  }
-  .pane-view {
-    flex: 1;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
   }
 </style>

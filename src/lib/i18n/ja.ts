@@ -31,6 +31,7 @@ export const ja: Dictionary = {
     preferences: "設定…",
     splitOpen: "右に分割",
     splitClose: "分割を閉じる",
+    rightPaneMode: "右ペインのモード",
     requiresGit: "Git 管理下のファイルが必要です",
     requiresMddiff: "履歴を .mddiff パッケージにまとめます",
     reloadDisabled: "先にファイルを開いてください",
