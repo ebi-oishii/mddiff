@@ -1,10 +1,12 @@
 <script lang="ts">
   import { onMount, onDestroy } from "svelte";
+  import MarkdownIt from "markdown-it";
   import { Editor, defaultValueCtx, rootCtx } from "@milkdown/kit/core";
   import { commonmark } from "@milkdown/kit/preset/commonmark";
   import { gfm } from "@milkdown/kit/preset/gfm";
   import { listener, listenerCtx } from "@milkdown/kit/plugin/listener";
   import { getMarkdown, replaceAll } from "@milkdown/kit/utils";
+  import { doc } from "$lib/stores/doc.svelte";
 
   let {
     text,
@@ -20,6 +22,64 @@
   let editor: Editor | null = null;
   let lastEmitted = "";
   let ready = $state(false);
+
+  // Milkdown doesn't expose source-line positions on its rendered nodes, so we
+  // reconstruct a top-level-block → source-line mapping by parsing the same
+  // markdown with markdown-it. ProseMirror renders top-level doc nodes 1:1 as
+  // `.ProseMirror` children, so the array index lines up with the child index.
+  const lineMapMd = new MarkdownIt({ html: true, linkify: true, breaks: false });
+  function topLevelBlockLines(src: string): number[] {
+    const tokens = lineMapMd.parse(src, {});
+    const lines: number[] = [];
+    for (const tok of tokens) {
+      if (tok.level !== 0) continue;
+      if (!tok.map) continue;
+      if (tok.type === "inline") continue;
+      if (tok.type.endsWith("_close")) continue;
+      lines.push(tok.map[0] + 1);
+    }
+    return lines;
+  }
+
+  function proseMirrorRoot(): HTMLElement | null {
+    return container?.querySelector(".ProseMirror") as HTMLElement | null;
+  }
+
+  function scrollToLine(line: number) {
+    const root = proseMirrorRoot();
+    if (!root || !container) return;
+    const lines = topLevelBlockLines(lastEmitted || text);
+    if (lines.length === 0) return;
+    // largest i with lines[i] <= line; if line < lines[0], stay at the top.
+    let target = 0;
+    for (let i = 0; i < lines.length; i++) {
+      if (lines[i] <= line) target = i;
+      else break;
+    }
+    const children = root.children;
+    if (target >= children.length) target = children.length - 1;
+    const el = children[target] as HTMLElement | undefined;
+    if (el) container.scrollTop = el.offsetTop;
+  }
+
+  function topVisibleLine(): number | null {
+    const root = proseMirrorRoot();
+    if (!root || !container) return null;
+    const top = container.getBoundingClientRect().top;
+    const children = Array.from(root.children) as HTMLElement[];
+    if (children.length === 0) return null;
+    let blockIndex = 0;
+    for (let i = 0; i < children.length; i++) {
+      const rect = children[i].getBoundingClientRect();
+      if (rect.top >= top - 2) {
+        blockIndex = i;
+        break;
+      }
+      blockIndex = i;
+    }
+    const lines = topLevelBlockLines(lastEmitted || text);
+    return lines[blockIndex] ?? null;
+  }
 
   onMount(async () => {
     const initial = text;
@@ -59,9 +119,22 @@
     }
 
     ready = true;
+
+    // Restore scroll position last so Milkdown's render has been committed
+    // and lastEmitted (post-normalization) is set for an accurate line map.
+    const restore = doc.currentLine;
+    requestAnimationFrame(() => {
+      try { scrollToLine(restore); } catch {}
+    });
   });
 
   onDestroy(() => {
+    try {
+      const line = topVisibleLine();
+      if (line != null) doc.currentLine = line;
+    } catch {
+      // DOM might already be torn down; skip silently.
+    }
     editor?.destroy();
     editor = null;
   });
