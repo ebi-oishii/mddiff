@@ -1,10 +1,33 @@
 <script lang="ts">
+  import { onDestroy, onMount } from "svelte";
   import type { DiffLine } from "$lib/types";
+  import FindBar from "$lib/components/FindBar.svelte";
+  import { FindState } from "../find.svelte";
 
   let { lines }: { lines: DiffLine[] } = $props();
+
+  let scroller: HTMLDivElement;
+  const find = new FindState();
+
+  onMount(() => {
+    find.bind(scroller);
+    window.addEventListener("keydown", find.onKeydown);
+  });
+
+  onDestroy(() => {
+    window.removeEventListener("keydown", find.onKeydown);
+    find.destroy();
+  });
+
+  $effect(() => {
+    void lines;
+    void find.query;
+    void find.open;
+    find.refresh();
+  });
 </script>
 
-<div class="diff-scroller">
+<div class="diff-scroller" bind:this={scroller}>
   <div class="diff">
     {#if lines.length === 0}
       <div class="empty">No differences.</div>
@@ -36,6 +59,17 @@
     {/if}
   </div>
 </div>
+{#if find.open}
+  <FindBar
+    bind:query={find.query}
+    matchCount={find.matchCount}
+    currentIndex={find.currentIndex}
+    focusVersion={find.focusVersion}
+    onnext={find.next}
+    onprev={find.prev}
+    onclose={find.close}
+  />
+{/if}
 
 <style>
   .diff-scroller {

@@ -3,7 +3,7 @@
 ロードマップで先送りした項目、既知の小バグ、UX 改善、将来の機能候補を
 集約。優先度はざっくり ★★★（高）/ ★★（中）/ ★（低 or 大物）。
 
-最終更新: 2026-06-27
+最終更新: 2026-06-28
 
 ---
 
@@ -21,22 +21,22 @@
 
 | # | 内容 | 優先 |
 |---|---|---|
-| P1 | Source ↔ Preview ↔ Live Preview ↔ WYSIWYG の切替時にスクロール位置を維持 | ★★★ |
+| ~~P1~~ | ~~Source ↔ Preview ↔ Live Preview ↔ WYSIWYG の切替時にスクロール位置を維持~~ ✓ 完了 | ★★★ |
 | ~~P2~~ | ~~GUI Side-by-Side のペイン間スクロール同期~~ ✓ 完了（toggle 付き） | ★★ |
 | P3 | TUI Side-by-Side の左右ペイン独立スクロール | ★★ |
-| P4 | エラーハンドリング詳細化（ファイル消失検知、再読込ボタン） | ★★ |
-| P5 | 大容量ファイル制限を「警告 + override」に変更（現在 5MB 超は問答無用で拒否） | ★ |
-| P6 | Preview / Live Preview / Diff にも検索（⌘F） | ★★ |
+| ~~P4~~ | ~~エラーハンドリング詳細化（ファイル消失検知、再読込ボタン）~~ ✓ 完了（消失検知は P9 経由、Reload from disk + ⌘⇧R、エラー翻訳） | ★★ |
+| ~~P5~~ | ~~大容量ファイル制限を「警告 + override」に変更~~ ✓ 完了（GUI: 5MB 超でモーダル / TUI: `--force`、100MB は両方 hard cap） | ★ |
+| ~~P6~~ | ~~Preview / Live Preview / Diff にも検索（⌘F）~~ ✓ 完了（Source/Live は CodeMirror search、Preview/Diff は DOM find） | ★★ |
 | P7 | モバイル：ボトムタブ UI、左右スワイプでモード切替 | ★★ |
-| P8 | unsaved 状態でアプリ / ウィンドウを閉じようとしたら確認 | ★★ |
-| P9 | 外部エディタで開いてるファイルが変更されたら検知して再読込を提案 | ★ |
+| ~~P8~~ | ~~unsaved 状態でアプリ / ウィンドウを閉じようとしたら確認~~ ✓ 完了（OS の close 要求すべてに発火） | ★★ |
+| ~~P9~~ | ~~外部エディタで開いてるファイルが変更されたら検知して再読込を提案~~ ✓ 完了（clean=silent reload / dirty=banner / Compare / 削除検知 / Settings 切替） | ★ |
 
 ## 機能追加
 
 | # | 内容 | 優先 |
 |---|---|---|
 | ~~F1~~ | ~~WYSIWYG タスクリストのクリック toggle~~ ✓ 完了（NodeView ではなく container 経由の click handler + ProseMirror setNodeMarkup） | ★★ |
-| F2 | Settings に項目追加：Soft wrap、行番号 on/off、タブ幅、Diff debounce、Side-by-Side default | ★★ |
+| ~~F2~~ | ~~Settings に項目追加：Soft wrap、行番号 on/off、タブ幅、Diff debounce、Side-by-Side default~~ ✓ 完了（5 項目すべて + CM Compartment で hot-reload） | ★★ |
 | F3 | エディタ配色テーマ（GitHub Light/Dark, Solarized, Dracula 等） | ★ |
 | F4 | TUI コマンドモード拡張：`:e <path>`、`:w <path>`、`:export <fmt> <path>` | ★★ |
 | F5 | TUI 検索（`/`, `n`, `N`） | ★★ |

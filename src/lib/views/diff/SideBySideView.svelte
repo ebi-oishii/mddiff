@@ -1,9 +1,12 @@
 <script lang="ts">
+  import { onDestroy, onMount } from "svelte";
   import MarkdownIt from "markdown-it";
   import DOMPurify from "dompurify";
   import taskLists from "markdown-it-task-lists";
   import type { HunkSummary, SideBySidePayload } from "$lib/types";
   import { mapNewToOld, mapOldToNew } from "./line-map";
+  import FindBar from "$lib/components/FindBar.svelte";
+  import { FindState } from "../find.svelte";
 
   let {
     payload,
@@ -12,7 +15,30 @@
 
   let oldScroller: HTMLDivElement;
   let newScroller: HTMLDivElement;
+  let sbsWrap: HTMLDivElement;
   let syncedScroll = $state(true);
+
+  // Find scopes both panes — the outer .sbs wrapper contains both. A match
+  // in either pane is reachable; scrollIntoView walks the parent chain and
+  // scrolls the right .pane-scroller into position.
+  const find = new FindState();
+
+  onMount(() => {
+    find.bind(sbsWrap);
+    window.addEventListener("keydown", find.onKeydown);
+  });
+
+  onDestroy(() => {
+    window.removeEventListener("keydown", find.onKeydown);
+    find.destroy();
+  });
+
+  $effect(() => {
+    void payload;
+    void find.query;
+    void find.open;
+    find.refresh();
+  });
 
   /**
    * Track the last scrollTop we programmatically wrote to each pane (and
@@ -254,7 +280,7 @@
   );
 </script>
 
-<div class="sbs">
+<div class="sbs" bind:this={sbsWrap}>
   <!-- LEFT pane: current buffer. The "primary" side that the user is
        editing reads left-to-right naturally; the comparison base sits to
        the right as the reference. -->
@@ -290,6 +316,17 @@
     {syncedScroll ? "🔗" : "⛓"}
   </button>
 </div>
+{#if find.open}
+  <FindBar
+    bind:query={find.query}
+    matchCount={find.matchCount}
+    currentIndex={find.currentIndex}
+    focusVersion={find.focusVersion}
+    onnext={find.next}
+    onprev={find.prev}
+    onclose={find.close}
+  />
+{/if}
 
 <style>
   .sbs {

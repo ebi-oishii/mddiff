@@ -2,14 +2,26 @@
   import { onMount, onDestroy } from "svelte";
   import { listen, type UnlistenFn } from "@tauri-apps/api/event";
   import { getCurrentWindow } from "@tauri-apps/api/window";
+  import { confirm } from "@tauri-apps/plugin-dialog";
   import { doc } from "$lib/stores/doc.svelte";
   import {
-    pickAndReadFile,
+    pickFile,
     pickAndWriteFile,
     pickSavePath,
+    readFile,
+    readPath,
+    readText,
+    getFileSize,
+    startWatch,
+    stopWatch,
     writeBinaryFile,
     writeFile,
+    LARGE_FILE_BYTES,
+    HARD_CAP_BYTES,
+    type ExternalChange,
   } from "$lib/ipc/fs";
+  import { humanizeError } from "$lib/errors";
+  import LargeFileWarning from "$lib/components/LargeFileWarning.svelte";
   import { gitIsRepo } from "$lib/ipc/git";
   import {
     printAsPdf,
@@ -35,6 +47,22 @@
   let menuOpen = $state(false);
   let mdvDialogOpen = $state(false);
   let mdvStatus = $state<string | null>(null);
+  // Active when the user picks a file that exceeds the soft size threshold
+  // but stays under the hard cap. Cleared on confirm or cancel.
+  let largeFilePending = $state<{ path: string; size: number } | null>(null);
+
+  // External-change banner state. `diskText` is read once when the change is
+  // detected so Revert / Compare don't race with a follow-up write.
+  type ExternalChangeState =
+    | { kind: "modified"; diskText: string }
+    | { kind: "removed" };
+  let externalChange = $state<ExternalChangeState | null>(null);
+  let reloadFlash = $state<string | null>(null);
+
+  // Split view: render the same document side-by-side with two independent
+  // modes. Common case: Source on the left, Preview on the right.
+  let splitMode = $state(false);
+  let rightMode = $state<Mode>("preview");
 
   // Detect Mac at runtime for shortcut hint glyphs. Non-Mac users see "Ctrl+"
   // instead of ⌘ so the menu hint actually matches the key they need to press.
@@ -45,6 +73,8 @@
 
   let menuUnlisten: UnlistenFn | null = null;
   let resizeUnlisten: UnlistenFn | null = null;
+  let externalChangeUnlisten: UnlistenFn | null = null;
+  let closeUnlisten: UnlistenFn | null = null;
   let isFullscreen = $state(false);
 
   onMount(async () => {
@@ -63,6 +93,16 @@
       // listen unavailable (e.g. browser / SSR) — fall back to in-app menu only
     }
 
+    // External file change events from the Rust watcher.
+    try {
+      externalChangeUnlisten = await listen<ExternalChange>(
+        "file-external-change",
+        (e) => handleExternalChange(e.payload),
+      );
+    } catch {
+      // listen unavailable
+    }
+
     // Track fullscreen state so we can show filename/mode in-app exactly when
     // the OS title bar disappears. Tauri's resize event fires on the
     // fullscreen toggle (window dimensions change), and isFullscreen() reads
@@ -75,6 +115,18 @@
           isFullscreen = await win.isFullscreen();
         } catch {}
       });
+      // Confirm before discarding unsaved edits on window close (red ×, ⌘Q,
+      // taskbar close, etc.). preventDefault keeps the window alive until the
+      // user makes a choice; destroy() bypasses the listener on confirm.
+      closeUnlisten = await win.onCloseRequested(async (event) => {
+        if (!doc.dirty) return;
+        event.preventDefault();
+        const ok = await confirm(
+          "There are unsaved changes. Close without saving?",
+          { title: "Unsaved changes", kind: "warning", okLabel: "Discard & close", cancelLabel: "Cancel" },
+        );
+        if (ok) await win.destroy();
+      });
     } catch {
       // not in Tauri
     }
@@ -83,6 +135,11 @@
   onDestroy(() => {
     menuUnlisten?.();
     resizeUnlisten?.();
+    externalChangeUnlisten?.();
+    closeUnlisten?.();
+    // Best-effort stop; if Tauri's tear-down already killed the watcher this
+    // will just be a no-op.
+    void stopWatch().catch(() => {});
   });
 
   function handleMenuEvent(id: string) {
@@ -95,6 +152,9 @@
         break;
       case "save_as":
         saveAs();
+        break;
+      case "reload":
+        reloadFromDisk();
         break;
       case "sample":
         loadSample();
@@ -146,6 +206,97 @@
     document.documentElement.style.setProperty("--mdv-editor-font-size", `${px}px`);
   });
 
+  // (Re)attach the file watcher whenever the open path changes. Clearing the
+  // path (back to the untitled buffer) stops the watcher so we're not holding
+  // an fd or directory subscription for a file that's not actually open.
+  $effect(() => {
+    const p = doc.path;
+    // Any prior banner refers to the old file — drop it on file swap.
+    externalChange = null;
+    if (!p) {
+      void stopWatch().catch(() => {});
+      return;
+    }
+    void startWatch(p).catch((e) => {
+      console.error("[mdv] startWatch failed", e);
+    });
+  });
+
+  // Pull from disk and decide whether to silent-reload or surface a banner.
+  // Triggered by the `file-external-change` Tauri event.
+  async function handleExternalChange(payload: ExternalChange) {
+    if (!doc.path || payload.path !== doc.path) return;
+
+    if (payload.kind === "removed") {
+      externalChange = { kind: "removed" };
+      return;
+    }
+
+    let diskText: string;
+    try {
+      diskText = await readText(doc.path);
+    } catch (e) {
+      // Disk read failed — likely a transient state (mid-rename). Drop the
+      // event; if there's a real change, the next debounce window will fire.
+      console.error("[mdv] external-change read failed", e);
+      return;
+    }
+
+    // Filter out no-op events (notify can fire on mtime touches even when
+    // bytes are identical, or our self-write suppression missed an event).
+    if (diskText === doc.text) return;
+
+    if (!doc.dirty && settings.autoReload) {
+      doc.text = diskText;
+      doc.savedText = diskText;
+      reloadFlash = "File reloaded from disk";
+      setTimeout(() => {
+        if (reloadFlash === "File reloaded from disk") reloadFlash = null;
+      }, 4000);
+      return;
+    }
+    externalChange = { kind: "modified", diskText };
+  }
+
+  function applyDiskReload() {
+    if (externalChange?.kind !== "modified") return;
+    const txt = externalChange.diskText;
+    doc.text = txt;
+    doc.savedText = txt;
+    externalChange = null;
+  }
+
+  function dismissExternalChange() {
+    externalChange = null;
+  }
+
+  async function saveDeleted() {
+    // save() recreates the file at doc.path via writeFile, restoring it with
+    // the current buffer contents.
+    externalChange = null;
+    await save();
+  }
+
+  function compareWithDisk() {
+    // The "disk" base option in DiffView reads externalChange.diskText off
+    // this component when present (passed via the doc store, see below).
+    if (externalChange?.kind !== "modified") return;
+    doc.pendingDiskCompare = externalChange.diskText;
+    mode = "diff";
+  }
+
+  // Surface fullscreen state to CSS so view-specific rules (e.g. SourceView's
+  // top padding to clear the floating title overlay) can scope themselves.
+  $effect(() => {
+    if (typeof document === "undefined") return;
+    if (isFullscreen) {
+      document.documentElement.dataset.fullscreen = "true";
+    } else {
+      delete document.documentElement.dataset.fullscreen;
+    }
+  });
+
+
   // Push filename + dirty + mode into the OS window title bar (Mac top bar,
   // Win/Linux window chrome). Quiet failure when not running under Tauri.
   $effect(() => {
@@ -170,11 +321,44 @@
     closeMenu();
     error = null;
     try {
-      const loaded = await pickAndReadFile();
-      if (loaded) doc.load(loaded.path, loaded.text, loaded.gitAvailable);
+      const path = await pickFile();
+      if (!path) return;
+      await openPath(path, false);
     } catch (e) {
-      error = String(e);
+      error = humanizeError(e, "read");
     }
+  }
+
+  /** Size-checked read path. If the file exceeds the soft threshold and the
+   * user hasn't confirmed yet, surface the warning modal and return. The
+   * modal's "Open anyway" handler re-enters with `force=true`. */
+  async function openPath(path: string, force: boolean) {
+    error = null;
+    const size = await getFileSize(path);
+    if (size > HARD_CAP_BYTES) {
+      const mb = (size / 1024 / 1024).toFixed(1);
+      error = `File is ${mb} MB, exceeds the 100 MB hard limit. Refusing to open.`;
+      return;
+    }
+    if (size > LARGE_FILE_BYTES && !force) {
+      largeFilePending = { path, size };
+      return;
+    }
+    const loaded = await readFile(path, force);
+    doc.load(loaded.path, loaded.text, loaded.gitAvailable);
+  }
+
+  function confirmLargeFile() {
+    if (!largeFilePending) return;
+    const { path } = largeFilePending;
+    largeFilePending = null;
+    void openPath(path, true).catch((e) => {
+      error = String(e);
+    });
+  }
+
+  function cancelLargeFile() {
+    largeFilePending = null;
   }
 
   async function save() {
@@ -188,7 +372,7 @@
         await saveAs();
       }
     } catch (e) {
-      error = String(e);
+      error = humanizeError(e, "write");
     }
   }
 
@@ -203,7 +387,37 @@
         doc.markSaved();
       }
     } catch (e) {
-      error = String(e);
+      error = humanizeError(e, "write");
+    }
+  }
+
+  // Discard local edits and pull the file from disk again. Used when the user
+  // wants to undo accumulated changes without losing the file context (VSCode
+  // calls this "Revert File"). Confirms first if there are unsaved changes.
+  async function reloadFromDisk() {
+    closeMenu();
+    error = null;
+    if (!doc.path) {
+      error = "No file is open to reload.";
+      return;
+    }
+    if (doc.dirty) {
+      const ok = await confirm(
+        "Discard unsaved changes and reload the file from disk?",
+        {
+          title: "Reload from disk",
+          kind: "warning",
+          okLabel: "Reload",
+          cancelLabel: "Cancel",
+        },
+      );
+      if (!ok) return;
+    }
+    try {
+      const loaded = await readPath(doc.path);
+      doc.load(loaded.path, loaded.text, loaded.gitAvailable);
+    } catch (e) {
+      error = humanizeError(e, "read");
     }
   }
 
@@ -227,7 +441,7 @@
       if (!path) return;
       await writeFile(path, renderToHtml(doc.text, exportTitle()));
     } catch (e) {
-      error = String(e);
+      error = humanizeError(e, "write");
     }
   }
 
@@ -237,7 +451,7 @@
     try {
       await printAsPdf(doc.text, exportTitle());
     } catch (e) {
-      error = String(e);
+      error = humanizeError(e, "other");
     }
   }
 
@@ -249,7 +463,7 @@
       if (!path) return;
       await writeFile(path, renderToPlainText(doc.text));
     } catch (e) {
-      error = String(e);
+      error = humanizeError(e, "write");
     }
   }
 
@@ -262,7 +476,7 @@
       const bytes = await renderToDocx(doc.text, exportTitle());
       await writeBinaryFile(path, bytes);
     } catch (e) {
-      error = String(e);
+      error = humanizeError(e, "write");
     }
   }
 
@@ -315,6 +529,16 @@
     mode = m;
   }
 
+  function setRightMode(m: Mode) {
+    if (m === "diff" && !doc.gitAvailable) return;
+    rightMode = m;
+  }
+
+  function toggleSplit() {
+    splitMode = !splitMode;
+    closeMenu();
+  }
+
   function basename(p: string | null): string {
     if (!p) return "(untitled)";
     const parts = p.split(/[\\/]/);
@@ -322,8 +546,13 @@
   }
 
   $effect(() => {
-    if (mode === "diff" && !doc.gitAvailable) {
+    // Diff mode normally requires Git, but the "Compare with disk" path
+    // doesn't — let that case stay in Diff even on non-Git files.
+    if (mode === "diff" && !doc.gitAvailable && doc.pendingDiskCompare == null) {
       mode = "source";
+    }
+    if (rightMode === "diff" && !doc.gitAvailable) {
+      rightMode = "preview";
     }
   });
 
@@ -381,9 +610,18 @@
       } else if (e.key === "s") {
         e.preventDefault();
         save();
+      } else if (e.key === "r" && e.shiftKey) {
+        // ⌘⇧R — Reload from disk (mirrors VSCode's "Revert File").
+        // Plain ⌘R is the browser refresh shortcut and we don't want
+        // to shadow it during dev.
+        e.preventDefault();
+        reloadFromDisk();
       } else if (e.key === ",") {
         e.preventDefault();
         openSettings();
+      } else if (e.key === "\\") {
+        e.preventDefault();
+        toggleSplit();
       }
     }
     window.addEventListener("keydown", onKey);
@@ -441,6 +679,11 @@
             </button>
           {/each}
           <div class="sep"></div>
+          <button role="menuitem" onclick={toggleSplit}>
+            <span>{splitMode ? "Close split" : "Split right"}</span>
+            <kbd>{MOD}\</kbd>
+          </button>
+          <div class="sep"></div>
           <button role="menuitem" onclick={open}>
             <span>Open…</span><kbd>{MOD}O</kbd>
           </button>
@@ -449,6 +692,16 @@
           </button>
           <button role="menuitem" onclick={saveAs}>
             <span>Save As…</span><kbd>{MOD}{SHIFT}S</kbd>
+          </button>
+          <button
+            role="menuitem"
+            onclick={reloadFromDisk}
+            disabled={!doc.path}
+            title={doc.path
+              ? "Discard local edits and reload the file from disk"
+              : "Open a file first"}
+          >
+            <span>Reload from disk</span><kbd>{MOD}{SHIFT}R</kbd>
           </button>
           <div class="sep"></div>
           <div class="section">Export as</div>
@@ -487,27 +740,88 @@
       <button class="dismiss" aria-label="Dismiss" onclick={() => (mdvStatus = null)}>×</button>
     </div>
   {/if}
+  {#if externalChange?.kind === "modified"}
+    <div class="banner warn">
+      <span>This file has been modified on disk.</span>
+      <div class="actions">
+        <button class="action" onclick={applyDiskReload}>Revert to disk</button>
+        <button class="action" onclick={compareWithDisk}>Compare</button>
+        <button class="action" onclick={dismissExternalChange}>Dismiss</button>
+      </div>
+    </div>
+  {/if}
+  {#if externalChange?.kind === "removed"}
+    <div class="banner error">
+      <span>This file was deleted externally.</span>
+      <div class="actions">
+        <button class="action" onclick={saveDeleted}>Save (recreate)</button>
+        <button class="action" onclick={dismissExternalChange}>Dismiss</button>
+      </div>
+    </div>
+  {/if}
+  {#if reloadFlash}
+    <div class="banner info">
+      <span>{reloadFlash}</span>
+      <button class="dismiss" aria-label="Dismiss" onclick={() => (reloadFlash = null)}>×</button>
+    </div>
+  {/if}
   {#if normalization && mode === "wysiwyg"}
     <div class="banner warn">
       <span>{normalization}</span>
       <button class="dismiss" aria-label="Dismiss" onclick={() => (normalization = null)}>×</button>
     </div>
   {/if}
-  <main>
-    {#if mode === "source"}
+  {#snippet renderView(m: Mode, withNormalizeBanner: boolean)}
+    {#if m === "source"}
       <SourceView text={doc.text} onchange={(t) => doc.setText(t)} />
-    {:else if mode === "live"}
+    {:else if m === "live"}
       <LivePreviewView text={doc.text} onchange={(t) => doc.setText(t)} />
-    {:else if mode === "wysiwyg"}
+    {:else if m === "wysiwyg"}
       <WysiwygView
         text={doc.text}
         onchange={(t) => doc.setText(t)}
-        onnormalize={handleNormalize}
+        onnormalize={withNormalizeBanner ? handleNormalize : () => {}}
       />
-    {:else if mode === "preview"}
+    {:else if m === "preview"}
       <PreviewView text={doc.text} />
     {:else}
       <DiffView />
+    {/if}
+  {/snippet}
+
+  <main class:split={splitMode}>
+    <section class="pane">
+      {@render renderView(mode, true)}
+    </section>
+    {#if splitMode}
+      <section class="pane right">
+        <div class="pane-mode-bar" role="tablist" aria-label="Right pane mode">
+          {#each MODE_ENTRIES as m}
+            {@const disabled = m.requiresGit && !doc.gitAvailable}
+            <button
+              role="tab"
+              aria-selected={rightMode === m.id}
+              class:active={rightMode === m.id}
+              {disabled}
+              onclick={() => setRightMode(m.id)}
+              title={disabled ? "Requires a Git-managed file" : m.label}
+            >
+              {m.label}
+            </button>
+          {/each}
+          <button
+            class="close-split"
+            onclick={toggleSplit}
+            aria-label="Close split"
+            title="Close split"
+          >
+            ×
+          </button>
+        </div>
+        <div class="pane-view">
+          {@render renderView(rightMode, false)}
+        </div>
+      </section>
     {/if}
   </main>
 
@@ -521,6 +835,14 @@
   {/if}
   {#if settingsOpen}
     <SettingsDialog onClose={() => (settingsOpen = false)} />
+  {/if}
+  {#if largeFilePending}
+    <LargeFileWarning
+      path={largeFilePending.path}
+      sizeBytes={largeFilePending.size}
+      onConfirm={confirmLargeFile}
+      onCancel={cancelLargeFile}
+    />
   {/if}
 </div>
 
@@ -577,6 +899,20 @@
     --mdv-info-border:  light-dark(#bcd8fa, #2a3a55);
 
     --mdv-shadow:       light-dark(rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.5));
+
+    /* Syntax highlight colors (Source view). Based on GitHub Primer so
+       light and dark feel familiar to anyone who reads code on GitHub. */
+    --mdv-syntax-heading: light-dark(#0550ae, #79c0ff);
+    --mdv-syntax-code:    light-dark(#cf222e, #ff7b72);
+    --mdv-syntax-link:    light-dark(#0969da, #58a6ff);
+    --mdv-syntax-quote:   light-dark(#57606a, #8b949e);
+    --mdv-syntax-punct:   light-dark(#8c959f, #6e7681);
+    --mdv-syntax-meta:    light-dark(#6f42c1, #d2a8ff);
+
+    /* Single source of truth for the Source view's active-line tint.
+       Used by mdvCmTheme (inside cm-editor) AND .source::before (the
+       extension strip that reaches into the right padding). */
+    --mdv-active-line-bg: color-mix(in srgb, var(--mdv-accent) 6%, transparent);
 
     --mdv-editor-font-size: 14px;
 
@@ -774,6 +1110,26 @@
     cursor: pointer;
     padding: 0 0.3em;
   }
+  .banner .actions {
+    margin-left: auto;
+    display: inline-flex;
+    gap: 0.4rem;
+    align-items: center;
+  }
+  .banner .action {
+    background: transparent;
+    border: 1px solid currentColor;
+    border-radius: 4px;
+    padding: 0.15rem 0.55rem;
+    font: inherit;
+    font-size: 0.82rem;
+    color: inherit;
+    cursor: pointer;
+    opacity: 0.85;
+  }
+  .banner .action:hover {
+    opacity: 1;
+  }
 
   /* ---------- Mobile ---------- */
   @media (max-width: 640px) {
@@ -792,5 +1148,68 @@
        but use the same token, so they read as one continuous surface. */
     background: var(--mdv-bg);
     color: var(--mdv-text);
+    display: flex;
+    flex-direction: column;
+  }
+  main.split {
+    flex-direction: row;
+  }
+  main > .pane {
+    flex: 1 1 100%;
+    min-width: 0;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  main.split > .pane {
+    flex-basis: 50%;
+  }
+  main.split > .pane + .pane {
+    border-left: 1px solid var(--mdv-border);
+  }
+  .pane-mode-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.3rem 0.5rem;
+    border-bottom: 1px solid var(--mdv-border);
+    background: var(--mdv-surface);
+    font-size: 0.78rem;
+    flex-shrink: 0;
+  }
+  .pane-mode-bar button {
+    background: transparent;
+    border: 0;
+    color: var(--mdv-text-mute);
+    padding: 0.22rem 0.55rem;
+    border-radius: 3px;
+    font: inherit;
+    cursor: pointer;
+  }
+  .pane-mode-bar button:hover:not(:disabled) {
+    background: var(--mdv-surface-hi);
+    color: var(--mdv-text);
+  }
+  .pane-mode-bar button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+  .pane-mode-bar button.active {
+    background: var(--mdv-accent-bg);
+    color: var(--mdv-accent-fg);
+  }
+  .pane-mode-bar .close-split {
+    margin-left: auto;
+    font-size: 1rem;
+    line-height: 1;
+    padding: 0.1rem 0.45rem;
+  }
+  .pane-view {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
   }
 </style>
