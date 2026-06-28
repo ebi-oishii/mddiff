@@ -1,14 +1,14 @@
 import { invoke } from "@tauri-apps/api/core";
 import { open as openDialog, save as saveDialog } from "@tauri-apps/plugin-dialog";
 import { gitIsRepo } from "./git";
-import { mdvExtractBody } from "./mdv";
+import { mddiffExtractBody } from "./mddiff";
 
-const MD_FILTER = { name: "Markdown", extensions: ["md", "markdown", "mdv"] };
+const MD_FILTER = { name: "Markdown", extensions: ["md", "markdown", "mddiff"] };
 
-/** Mirror of mdv_core::fs::MAX_OPEN_BYTES. Files above this size trigger
+/** Mirror of mddiff_core::fs::MAX_OPEN_BYTES. Files above this size trigger
  * the large-file warning modal. Keep in sync with Rust. */
 export const LARGE_FILE_BYTES = 5 * 1024 * 1024;
-/** Mirror of mdv_core::fs::HARD_CAP_BYTES. Files above this size are refused
+/** Mirror of mddiff_core::fs::HARD_CAP_BYTES. Files above this size are refused
  * outright — even `force=true` won't open them. */
 export const HARD_CAP_BYTES = 100 * 1024 * 1024;
 
@@ -26,12 +26,12 @@ export async function pickFile(): Promise<string | null> {
  * the user has confirmed the large-file warning. */
 export async function readFile(path: string, force = false): Promise<LoadedFile> {
   const raw = await invoke<string>("read_text_file", { path, force });
-  // `.mdv` files carry a trailing `<!-- mdv:v1 ... -->` package block. Strip it
+  // `.mddiff` files carry a trailing `<!-- mddiff:v1 ... -->` package block. Strip it
   // before handing to the editor so the user sees plain Markdown. The history
   // bundle is intentionally discarded — per the design, import doesn't merge
   // back into Git.
-  const text = path.toLowerCase().endsWith(".mdv")
-    ? await mdvExtractBody(raw)
+  const text = path.toLowerCase().endsWith(".mddiff")
+    ? await mddiffExtractBody(raw)
     : raw;
   const gitAvailable = await gitIsRepo(path);
   return { path, text, gitAvailable };
@@ -54,13 +54,13 @@ export async function writeFile(path: string, text: string): Promise<void> {
 
 /**
  * Read an already-known path. Skips the open dialog (used by Reload from
- * disk, where we already have a path from `doc.path`). `.mdv` bundles get
+ * disk, where we already have a path from `doc.path`). `.mddiff` bundles get
  * the same trailing-comment strip as `pickAndReadFile`.
  */
 export async function readPath(path: string): Promise<LoadedFile> {
   const raw = await invoke<string>("read_text_file", { path });
-  const text = path.toLowerCase().endsWith(".mdv")
-    ? await mdvExtractBody(raw)
+  const text = path.toLowerCase().endsWith(".mddiff")
+    ? await mddiffExtractBody(raw)
     : raw;
   const gitAvailable = await gitIsRepo(path);
   return { path, text, gitAvailable };

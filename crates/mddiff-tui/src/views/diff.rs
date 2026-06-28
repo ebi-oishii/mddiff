@@ -1,5 +1,5 @@
-use mdv_core::diff::{DiffLine, HunkKind, HunkSummary};
-use mdv_core::git::SideBySidePayload;
+use mddiff_core::diff::{DiffLine, HunkKind, HunkSummary};
+use mddiff_core::git::SideBySidePayload;
 use ratatui::layout::{Constraint, Direction, Layout, Rect};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};

@@ -22,7 +22,7 @@ Cargo ワークスペースで Rust コードを 3 つの crate に分割し、G
 
 ```
 ┌────────────────────────────────────────────────────────────────────┐
-│  mdv-core (Rust library, no UI deps)                                │
+│  mddiff-core (Rust library, no UI deps)                                │
 │  - File I/O 抽象                                                     │
 │  - Git diff (git2 + similar)                                        │
 │  - Markdown 解析（pulldown-cmark, AST レベルの操作が必要な場合）       │
@@ -32,11 +32,11 @@ Cargo ワークスペースで Rust コードを 3 つの crate に分割し、G
             │ depends on                               │ depends on
             │                                          │
 ┌──────────────────────────────┐    ┌──────────────────────────────┐
-│  mdv-gui (= src-tauri/)       │    │  mdv-tui                      │
+│  mddiff-gui (= src-tauri/)       │    │  mddiff-tui                      │
 │  Tauri 2 シェル                │    │  ratatui + crossterm          │
 │  - IPC commands               │    │  - 直接ターミナル描画           │
 │  - WebView (SvelteKit SPA)    │    │  - キーボード操作               │
-│    が UI を担う                │    │  - mdv-core を直呼びする        │
+│    が UI を担う                │    │  - mddiff-core を直呼びする        │
 └──────────────────────────────┘    └──────────────────────────────┘
             │
             │ IPC commands / events
@@ -67,8 +67,8 @@ Cargo ワークスペースで Rust コードを 3 つの crate に分割し、G
 ```
 
 ### 単一情報源の原則
-編集中のテキストは GUI 側は `DocStore.text`、TUI 側は `mdv_tui::AppState.text` が真実。
-両者とも背後の **mdv-core** が提供する `DocState` 型を保持し、Markdown パース・差分計算結果・Git コンテキストは crate 共通の型で表現される。
+編集中のテキストは GUI 側は `DocStore.text`、TUI 側は `mddiff_tui::AppState.text` が真実。
+両者とも背後の **mddiff-core** が提供する `DocState` 型を保持し、Markdown パース・差分計算結果・Git コンテキストは crate 共通の型で表現される。
 
 GUI 側の View 同期：
 - SourceView は CodeMirror の状態と DocStore.text を双方向バインド
@@ -123,7 +123,7 @@ GUI 側の View 同期：
 GUI：
 - 左ペイン = HEAD ブロブをそのまま markdown-it で HTML 化
 - 右ペイン = 現在のエディタバッファを HTML 化
-- 各ペインで **変更されたブロック**（段落・見出し・コードブロック等）に `mdv-changed-{added|removed|modified}` クラスを注入し、CSS で背景色を付ける
+- 各ペインで **変更されたブロック**（段落・見出し・コードブロック等）に `mddiff-changed-{added|removed|modified}` クラスを注入し、CSS で背景色を付ける
 - スクロールはまず**独立**（Phase 2.5 MVP）。両ペイン同期は Phase 5 で再検討
 
 TUI：
@@ -138,7 +138,7 @@ TUI：
 
 1. `md.parse(text, env)` でトークン列を取得（各トークンの `token.map = [start_line, end_line]` あり）
 2. トップレベルトークン（block_open 系）を走査し、map がハンクの行範囲と重なるかチェック
-3. 重なる場合 `token.attrJoin("class", "mdv-changed-{kind}")` でクラスを追加
+3. 重なる場合 `token.attrJoin("class", "mddiff-changed-{kind}")` でクラスを追加
 4. `md.renderer.render(tokens, md.options, env)` で HTML 化
 
 長所：
@@ -176,7 +176,7 @@ pub struct HunkSummary {
 既存の Highlight Only / Full もこの新型から派生する。
 
 #### 差分計算
-- `mdv-core` で `similar` crate を使い行ベース diff、`git2` で HEAD ツリーを取得
+- `mddiff-core` で `similar` crate を使い行ベース diff、`git2` で HEAD ツリーを取得
 - 結果は `HunkSummary` のリスト
 - GUI: IPC で渡し、Highlight Only は CSS 色帯、Full は 4 カラム描画、Side-by-Side は markdown-it token.map 経由でクラス注入
 - TUI: 同じ型を ratatui で描画
@@ -189,13 +189,13 @@ pub struct HunkSummary {
 
 | コマンド | 挙動 |
 |---|---|
-| `mdv` | GUI 起動（ファイル未指定） |
-| `mdv path/to/file.md` | GUI でそのファイルを開く |
-| `mdv-tui` | TUI 起動、カレントディレクトリのファイル選択 |
-| `mdv-tui path/to/file.md` | TUI でそのファイルを開く |
-| `mdv-tui --mode preview file.md` | 初期モードを指定（source / preview / diff） |
-| `mdv-tui --read-only file.md` | 読み取り専用 |
-| `mdv-tui --diff-base HEAD~1 file.md` | 差分基準を指定 |
+| `mddiff` | GUI 起動（ファイル未指定） |
+| `mddiff path/to/file.md` | GUI でそのファイルを開く |
+| `mddiff-tui` | TUI 起動、カレントディレクトリのファイル選択 |
+| `mddiff-tui path/to/file.md` | TUI でそのファイルを開く |
+| `mddiff-tui --mode preview file.md` | 初期モードを指定（source / preview / diff） |
+| `mddiff-tui --read-only file.md` | 読み取り専用 |
+| `mddiff-tui --diff-base HEAD~1 file.md` | 差分基準を指定 |
 
 ### TUI Diff サブモード
 
@@ -208,7 +208,7 @@ GUI と同じ Diff サブモードを Tab / Ctrl+D で巡回：
 ### TUI レイアウト
 
 ```
-┌─ mdv-tui  README.md  [modified]  ─────────────────────────────┐
+┌─ mddiff-tui  README.md  [modified]  ─────────────────────────────┐
 │ Mode: [Source] Preview Diff(Full|Highlight)         q: quit   │
 ├───────────────────────────────────────────────────────────────┤
 │  1 │ # Title                                                  │
@@ -256,7 +256,7 @@ Vim 完全互換は非目標、視覚的な操作感の借用に留める。
 | バイナリサイズ（リリース） | < 5MB（strip & lto 後） |
 | アイドル時 CPU | 実質ゼロ（イベントドリブン） |
 
-GUI に比べて非常に軽い起動が可能なので、`grep -l "TODO" *.md | xargs mdv-tui` のような使い方が現実的。
+GUI に比べて非常に軽い起動が可能なので、`grep -l "TODO" *.md | xargs mddiff-tui` のような使い方が現実的。
 
 ---
 
@@ -272,7 +272,7 @@ GUI に比べて非常に軽い起動が可能なので、`grep -l "TODO" *.md |
 - IME（日本語入力）と CodeMirror の相性は実機検証必須
 - ファイル選択は OS のドキュメントプロバイダ経由（Tauri mobile の plugin-fs）
 - Git 操作はモバイルでは **読み取り（差分表示）のみ** を v1 のスコープに。コミット等は将来
-- mdv-tui バイナリはモバイルでは配布しない（端末という前提が成り立たないため）
+- mddiff-tui バイナリはモバイルでは配布しない（端末という前提が成り立たないため）
 
 ---
 
@@ -298,10 +298,10 @@ GUI に比べて非常に軽い起動が可能なので、`grep -l "TODO" *.md |
 Cargo ワークスペースとして Rust コードを 3 crate に分割。Tauri 既存の `src-tauri/` は名前を保ったままワークスペースの 1 メンバとする（Tauri ツーリングの慣習を壊さないため）。
 
 ```
-mdv/
+mddiff/
 ├── Cargo.toml                     # ワークスペースルート
-├── src-tauri/                     # ワークスペースメンバ（= mdv-gui）
-│   ├── Cargo.toml                 # name = "mdv"
+├── src-tauri/                     # ワークスペースメンバ（= mddiff-gui）
+│   ├── Cargo.toml                 # name = "mddiff"
 │   ├── src/
 │   │   ├── main.rs
 │   │   ├── lib.rs
@@ -311,15 +311,15 @@ mdv/
 │   ├── capabilities/
 │   └── tauri.conf.json
 ├── crates/
-│   ├── mdv-core/                  # UI 非依存の純粋ロジック
+│   ├── mddiff-core/                  # UI 非依存の純粋ロジック
 │   │   ├── Cargo.toml
 │   │   └── src/
 │   │       ├── lib.rs
 │   │       ├── doc.rs             # DocState 型
 │   │       ├── diff.rs            # similar + HunkSummary
 │   │       └── git.rs             # git2 ラッパ
-│   └── mdv-tui/                   # TUI バイナリ
-│       ├── Cargo.toml             # name = "mdv-tui"
+│   └── mddiff-tui/                   # TUI バイナリ
+│       ├── Cargo.toml             # name = "mddiff-tui"
 │       └── src/
 │           ├── main.rs            # clap で引数解析
 │           ├── app.rs             # AppState, イベントループ
@@ -344,8 +344,8 @@ mdv/
 ```
 
 ワークスペース化の利点：
-- `mdv-core` を共通の型・ロジックの単一情報源にできる
-- `cargo build -p mdv-tui --release` で TUI だけ単独配布可能（cargo install / Homebrew formula）
+- `mddiff-core` を共通の型・ロジックの単一情報源にできる
+- `cargo build -p mddiff-tui --release` で TUI だけ単独配布可能（cargo install / Homebrew formula）
 - CI で個別にテスト・ビルド可
 
 ---
@@ -360,6 +360,6 @@ mdv/
 | CodeMirror 6 + 日本語 IME の挙動 | 初期段階でモバイル含め実機テスト |
 | 大きな Git リポジトリでの diff 計算が遅い | git2 のフックを使い変更ファイルのみ対象に絞る |
 | TUI 編集ウィジェット（edtui 等）の日本語幅計算が壊れがち | 早期に CJK + 絵文字テストを書き、必要なら自作にフォールバック |
-| GUI と TUI で挙動・キーバインドの一貫性を保つコスト | `mdv-core` を介し共通ロジックは 100% 共有、UI 固有はモード単位で実装方針を別途定める |
+| GUI と TUI で挙動・キーバインドの一貫性を保つコスト | `mddiff-core` を介し共通ロジックは 100% 共有、UI 固有はモード単位で実装方針を別途定める |
 | Side-by-Side のブロック単位ハイライトが「段落内の一字違い」を段落全体で塗ってしまう | Phase 5 で文字単位 inline diff のオプションを検討。MVP では許容 |
 | Side-by-Side の HunkSummary API 拡張が既存 Highlight Only / Full の実装に波及 | Phase 2.5 の最初に diff モジュールを集中改修、テストで全 3 サブモードを検証 |

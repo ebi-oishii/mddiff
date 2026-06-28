@@ -1,6 +1,6 @@
 <script lang="ts">
   import { gitListBases } from "$lib/ipc/git";
-  import { mdvPack } from "$lib/ipc/mdv";
+  import { mddiffPack } from "$lib/ipc/mddiff";
   import { pickSavePath, writeFile } from "$lib/ipc/fs";
   import { humanizeError } from "$lib/errors";
   import type { BaseKind, BaseOption } from "$lib/types";
@@ -44,15 +44,15 @@
     loading = true;
     error = null;
     try {
-      const out = await pickSavePath("mdv", "mdv package", path);
+      const out = await pickSavePath("mddiff", "mddiff package", path);
       if (!out) {
         loading = false;
         return;
       }
-      const packed = await mdvPack(path, currentText, selected);
+      const packed = await mddiffPack(path, currentText, selected);
       await writeFile(out, packed.content);
       onSaved(
-        `.mdv saved: ${packed.commit_count} commits, ${packed.snapshot_count} snapshots, ${formatBytes(packed.bundle_bytes)} compressed`,
+        `.mddiff saved: ${packed.commit_count} commits, ${packed.snapshot_count} snapshots, ${formatBytes(packed.bundle_bytes)} compressed`,
       );
     } catch (e) {
       error = humanizeError(e, "write");
@@ -74,14 +74,14 @@
     role="dialog"
     tabindex="-1"
     aria-modal="true"
-    aria-labelledby="mdv-export-title"
+    aria-labelledby="mddiff-export-title"
     onclick={(e) => e.stopPropagation()}
     onkeydown={(e) => e.key === "Escape" && onCancel()}
   >
-    <h2 id="mdv-export-title">Export .mdv with history</h2>
+    <h2 id="mddiff-export-title">Export .mddiff with history</h2>
     <p class="help">
       Bundle the file's history from the chosen base up to the current buffer into a
-      self-contained <code>.mdv</code>. The receiver can read it as plain Markdown,
+      self-contained <code>.mddiff</code>. The receiver can read it as plain Markdown,
       and your local Git stays untouched.
     </p>
 
@@ -124,7 +124,7 @@
     <div class="actions">
       <button type="button" onclick={onCancel} disabled={loading}>Cancel</button>
       <button type="button" class="primary" onclick={save} disabled={loading}>
-        {loading ? "Packing…" : "Save .mdv"}
+        {loading ? "Packing…" : "Save .mddiff"}
       </button>
     </div>
   </div>
@@ -142,14 +142,14 @@
     padding: 1rem;
   }
   .modal {
-    background: var(--mdv-surface-pop);
-    color: var(--mdv-text);
-    border: 1px solid var(--mdv-border);
+    background: var(--mddiff-surface-pop);
+    color: var(--mddiff-text);
+    border: 1px solid var(--mddiff-border);
     border-radius: 8px;
     padding: 1.25rem 1.5rem;
     max-width: 36em;
     width: 100%;
-    box-shadow: 0 12px 40px var(--mdv-shadow);
+    box-shadow: 0 12px 40px var(--mddiff-shadow);
   }
   h2 {
     margin: 0 0 0.5rem;
@@ -158,14 +158,14 @@
   .help {
     margin: 0 0 1rem;
     font-size: 0.88rem;
-    color: var(--mdv-text-mute);
+    color: var(--mddiff-text-mute);
     line-height: 1.5;
   }
   .help code {
     font-family: ui-monospace, "SF Mono", Menlo, monospace;
     font-size: 0.92em;
     padding: 0 0.25em;
-    background: var(--mdv-surface-hi);
+    background: var(--mddiff-surface-hi);
     border-radius: 3px;
   }
   .row {
@@ -182,16 +182,16 @@
     flex: 1;
     font: inherit;
     padding: 0.3rem 0.5rem;
-    background: var(--mdv-bg);
-    color: var(--mdv-text);
-    border: 1px solid var(--mdv-border);
+    background: var(--mddiff-bg);
+    color: var(--mddiff-text);
+    border: 1px solid var(--mddiff-border);
     border-radius: 4px;
   }
   .error {
     padding: 0.5rem 0.7rem;
-    background: var(--mdv-danger-bg);
-    color: var(--mdv-danger-fg);
-    border: 1px solid var(--mdv-danger-border);
+    background: var(--mddiff-danger-bg);
+    color: var(--mddiff-danger-fg);
+    border: 1px solid var(--mddiff-danger-border);
     border-radius: 4px;
     font-size: 0.85rem;
     margin: 0.5rem 0;
@@ -204,18 +204,18 @@
   }
   .actions button {
     background: transparent;
-    border: 1px solid var(--mdv-border);
+    border: 1px solid var(--mddiff-border);
     border-radius: 5px;
     padding: 0.4rem 1rem;
     font: inherit;
-    color: var(--mdv-text);
+    color: var(--mddiff-text);
     cursor: pointer;
   }
   .actions button:hover:not(:disabled) {
-    background: var(--mdv-surface-hi);
+    background: var(--mddiff-surface-hi);
   }
   .actions button.primary {
-    background: var(--mdv-accent);
+    background: var(--mddiff-accent);
     color: #fff;
     border-color: transparent;
   }

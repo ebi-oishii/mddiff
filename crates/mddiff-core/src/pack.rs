@@ -1,11 +1,11 @@
-//! `.mdv` package format v1: pack a Markdown file plus its Git history into
+//! `.mddiff` package format v1: pack a Markdown file plus its Git history into
 //! a single self-contained document.
 //!
-//! See `docs/mdv-protocol.md` for the on-disk format. This module implements:
+//! See `docs/mddiff-protocol.md` for the on-disk format. This module implements:
 //! - `pack`: take a file's current text + a base commit, walk Git from HEAD
 //!   down to base (inclusive), bundle all touched snapshots + commits + the
 //!   current text as a virtual head, zstd-compress, base64-encode, wrap in a
-//!   `<!-- mdv:v1 ... -->` HTML comment and append to the body.
+//!   `<!-- mddiff:v1 ... -->` HTML comment and append to the body.
 //! - `extract_body`: strip the package block back out so the body can be
 //!   loaded as plain Markdown on import.
 //!
@@ -28,10 +28,10 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use thiserror::Error;
 
-const FORMAT: &str = "mdv-bundle";
+const FORMAT: &str = "mddiff-bundle";
 const VERSION: u32 = 1;
-const COMMIT_HASH_PREFIX: &[u8] = b"mdv.commit.v1\0";
-const PACKAGE_OPEN: &str = "<!-- mdv:v1";
+const COMMIT_HASH_PREFIX: &[u8] = b"mddiff.commit.v1\0";
+const PACKAGE_OPEN: &str = "<!-- mddiff:v1";
 const PACKAGE_CLOSE: &str = "-->";
 
 #[derive(Debug, Error)]
@@ -96,7 +96,7 @@ pub struct SnapshotNode {
     pub text: String,
 }
 
-/// Result of a pack call: the full `.mdv` content (markdown body + package
+/// Result of a pack call: the full `.mddiff` content (markdown body + package
 /// block) and a small set of stats for the UI.
 #[derive(Debug)]
 pub struct PackResult {
@@ -158,7 +158,7 @@ fn repo_id_for(file_abs: &Path) -> String {
 }
 
 /// Pack the file's Git history (or a slice of it, anchored at `base_revspec`)
-/// plus the current buffer contents into a `.mdv` bundle.
+/// plus the current buffer contents into a `.mddiff` bundle.
 ///
 /// The synthetic "Packaged" commit that represents the current buffer carries
 /// `author_name` / `author_email` in its metadata so receivers can see who
@@ -262,7 +262,7 @@ pub fn pack(
             created_at,
             message: commit.summary().unwrap_or("").to_string(),
             source: SourceInfo {
-                app: "mdv".into(),
+                app: "mddiff".into(),
                 version: env!("CARGO_PKG_VERSION").to_string(),
             },
             signatures: Vec::new(),
@@ -296,7 +296,7 @@ pub fn pack(
         created_at: Utc::now().to_rfc3339(),
         message: "Packaged".into(),
         source: SourceInfo {
-            app: "mdv".into(),
+            app: "mddiff".into(),
             version: env!("CARGO_PKG_VERSION").to_string(),
         },
         signatures: Vec::new(),
@@ -353,7 +353,7 @@ fn wrap_base64(s: &str, width: usize) -> String {
     out
 }
 
-/// Returns the markdown body with any trailing `<!-- mdv:v1 ... -->` package
+/// Returns the markdown body with any trailing `<!-- mddiff:v1 ... -->` package
 /// block stripped. If no package block is found, returns the input unchanged.
 pub fn extract_body(content: &str) -> String {
     let Some(start) = content.rfind(PACKAGE_OPEN) else {
@@ -377,7 +377,7 @@ mod tests {
 
     #[test]
     fn extract_body_strips_trailing_package() {
-        let input = "# Hello\n\nbody\n\n<!-- mdv:v1\ncodec: x\npayload:\nAAAA\n-->\n";
+        let input = "# Hello\n\nbody\n\n<!-- mddiff:v1\ncodec: x\npayload:\nAAAA\n-->\n";
         let out = extract_body(input);
         assert_eq!(out, "# Hello\n\nbody\n");
     }
@@ -390,7 +390,7 @@ mod tests {
 
     #[test]
     fn extract_body_handles_no_trailing_newline() {
-        let input = "x\n<!-- mdv:v1\npayload:\nAAA\n-->";
+        let input = "x\n<!-- mddiff:v1\npayload:\nAAA\n-->";
         let out = extract_body(input);
         assert_eq!(out, "x\n");
     }

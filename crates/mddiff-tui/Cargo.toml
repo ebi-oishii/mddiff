@@ -1,17 +1,17 @@
 [package]
-name = "mdv-tui"
+name = "mddiff-tui"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
-description = "Terminal UI for mdv."
+description = "Terminal UI for mddiff."
 
 [[bin]]
-name = "mdv-tui"
+name = "mddiff-tui"
 path = "src/main.rs"
 
 [dependencies]
-mdv-core = { path = "../mdv-core" }
+mddiff-core = { path = "../mddiff-core" }
 ratatui = "0.29"
 crossterm = "0.28"
 clap = { version = "4", features = ["derive"] }

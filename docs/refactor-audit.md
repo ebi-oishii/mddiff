@@ -18,7 +18,7 @@ The 5 highest-leverage moves all reduce friction for the **next three features**
 4. **MODE_ENTRIES dispatch consolidation** — 3 sites to 1; bonus: closes the `mode=diff` guard inconsistency.
 5. **`humanizeError` on the 4 leaking catches** — user-visible quality fix; 4-line mechanical change.
 
-We defer: the external-change watcher store extraction (real but no near-term feature pulls on it), the SettingsDialog schema-driven rewrite (working code, risky rewrite, no pressure), and the Rust mdv-core decomposition (clean wins but modest risk on hot paths with no third consumer yet).
+We defer: the external-change watcher store extraction (real but no near-term feature pulls on it), the SettingsDialog schema-driven rewrite (working code, risky rewrite, no pressure), and the Rust mddiff-core decomposition (clean wins but modest risk on hot paths with no third consumer yet).
 
 ---
 
@@ -50,7 +50,7 @@ We defer: the external-change watcher store extraction (real but no near-term fe
 | CM6 EditorView mount/teardown + lastEmitted echo gate: Source + LivePreview | med | M | med | Later (echo-gate invariants need care) |
 | FindState wiring duplicated in 7 views | med | M | low | **Now (PR 1)** |
 | `$effect` for find refresh × 7 | low | S | low | **Now (PR 1, subsumed)** |
-| data-mdv-line markdown-it pipeline: Preview + SideBySide + Wysiwyg | med | M | low | **Now (PR 3)** |
+| data-mddiff-line markdown-it pipeline: Preview + SideBySide + Wysiwyg | med | M | low | **Now (PR 3)** |
 | Compartment dispatch effects in SourceView: 3 near-identical `$effect`s | low | S | low | Later (local-only cleanup) |
 | Fullscreen 2.5rem top-padding × 5 | low | S | low | **Leave** — selectors differ, value-only consolidation |
 | Preview-block CSS rules × 3 | low | M | med | **Leave** — dimensions diverge legitimately |
@@ -124,7 +124,7 @@ We defer: the external-change watcher store extraction (real but no near-term fe
 
 ---
 
-## mdv-core library
+## mddiff-core library
 
 | Title | Sev | Eff | Risk | Decision |
 |---|---|---|---|---|
@@ -139,7 +139,7 @@ We defer: the external-change watcher store extraction (real but no near-term fe
 | `DiffMarker::Unknown` doc and behavior disagree | low | S | low | **Now (PR 7)** |
 | `git.rs` public API has no rustdoc | med | M | low | Later |
 
-**Notes.** The hardcoded author leak is a real bug shipping to every `.mdv` file — fix before more users adopt the format. The DiffMarker doc fix is trivial and can ride with any git.rs touch. The bigger Rust reorganization (RepoError, git split, pack split) is a clean wins-pile but no third consumer (CLI/LSP) is pulling on it.
+**Notes.** The hardcoded author leak is a real bug shipping to every `.mddiff` file — fix before more users adopt the format. The DiffMarker doc fix is trivial and can ride with any git.rs touch. The bigger Rust reorganization (RepoError, git split, pack split) is a clean wins-pile but no third consumer (CLI/LSP) is pulling on it.
 
 ---
 
@@ -165,9 +165,9 @@ We defer: the external-change watcher store extraction (real but no near-term fe
 | ModeBar.svelte fully orphaned — delete it | med | S | low | **Now (PR 5)** |
 | `addedCount()` in types.ts never called — delete | low | S | low | **Now (PR 5)** |
 | Duplicate `.row input[type="checkbox"]` CSS rule | low | S | low | **Now (PR 5)** |
-| Indirection-only `label()` helper in MdvExportDialog | low | S | low | Later |
+| Indirection-only `label()` helper in MddiffExportDialog | low | S | low | Later |
 
-**Notes.** Three trivial deletions to ride in PR 5. The MdvExportDialog `label()` indirection is so trivial it can wait — and might earn its keep if a marker glyph gets added like DiffView's `optionLabel`.
+**Notes.** Three trivial deletions to ride in PR 5. The MddiffExportDialog `label()` indirection is so trivial it can wait — and might earn its keep if a marker glyph gets added like DiffView's `optionLabel`.
 
 ---
 
@@ -180,7 +180,7 @@ We defer: the external-change watcher store extraction (real but no near-term fe
 | 3 | `chore/markdown-render-factory` | M | low | Single MarkdownIt config seam (ready for Mermaid) |
 | 4 | `chore/mode-registry-dispatch` | S | low | Menu + shortcuts driven from MODE_ENTRIES |
 | 5 | `chore/quick-cleanups` | S | low | humanizeError + DOM finder fixes + dead code + small bugs |
-| 6 | `chore/mdv-pack-author` | S | low | Real bug fix: no more hardcoded maintainer name |
+| 6 | `chore/mddiff-pack-author` | S | low | Real bug fix: no more hardcoded maintainer name |
 | 7 | `chore/diff-marker-doc` | S | low | Trivial doc alignment |
 
 After PR 1-3 the next features (image paste, TOC, Mermaid) have a much cleaner runway. Stop here unless one of the "later" items becomes a blocker.
@@ -214,7 +214,7 @@ Run these as **separate PRs** in the order below. Each is a single-purpose chang
 
 ### PR 3 — `chore/markdown-render-factory` (effort: M, risk: low)
 1. Create `src/lib/views/markdown-render.ts` with `createPreviewMd()` and `renderWithLineMap(md, text, perTokenHook?)`.
-2. PreviewView consumes the factory directly. SideBySideView passes a per-token hook that injects `mdv-changed` for hunk overlap. WysiwygView's `lineMapMd` uses the configured parser instance only.
+2. PreviewView consumes the factory directly. SideBySideView passes a per-token hook that injects `mddiff-changed` for hunk overlap. WysiwygView's `lineMapMd` uses the configured parser instance only.
 3. Visual regression test: take screenshots of the same file in Preview/SideBySide/Wysiwyg before and after, confirm byte-identical render.
 
 ### PR 4 — `chore/mode-registry-dispatch` (effort: S, risk: low)
@@ -235,10 +235,10 @@ Batch all small mechanical fixes into one PR with clear sub-commits:
 8. Fix ExternalChange race — capture `expectedPath` before await and re-check.
 9. Add `reloadFromDisk(text)` and `setPath(path, gitAvailable)` methods to DocStore. Migrate the 3 direct-mutation sites.
 
-### PR 6 — `chore/mdv-pack-author` (effort: S, risk: low)
-1. Add `author_name: &str` (and optionally email) to `pack()`'s signature in `crates/mdv-core/src/pack.rs`.
-2. Tauri command (`src-tauri/src/commands/mdv.rs`) reads user.name/user.email from git config, with fallback to "Unknown" — **never** the hardcoded `ebi-oishii`.
-3. Wire through the JS-side `mdvPack` IPC if the signature requires it.
+### PR 6 — `chore/mddiff-pack-author` (effort: S, risk: low)
+1. Add `author_name: &str` (and optionally email) to `pack()`'s signature in `crates/mddiff-core/src/pack.rs`.
+2. Tauri command (`src-tauri/src/commands/mddiff.rs`) reads user.name/user.email from git config, with fallback to "Unknown" — **never** the hardcoded `ebi-oishii`.
+3. Wire through the JS-side `mddiffPack` IPC if the signature requires it.
 4. Add a small unit test that pack() output's `author.name` matches what was passed in.
 
 ### PR 7 — `chore/diff-marker-doc` (effort: S, risk: low)
@@ -248,7 +248,7 @@ Pick the doc-fix option for `DiffMarker::Unknown` in `git.rs:33-34`: update the 
 
 - **External-change watcher store extraction**: real refactor but ~90 lines, mode-coupling needs care, no test coverage, no near-term feature pulls on it. Revisit if/when watcher gains a third reason-to-change (e.g. project-level watching for image paste).
 - **Settings store consolidation (single `values` object)**: pairs with type-safety fix. ~30 LOC win but touches an actively-edited surface and SettingsDialog rewrite is risky. Defer until the dialog crosses 15 settings or a Lua-hook config story (MEMORY note) starts landing.
-- **Rust mdv-core decomposition (git split, RepoError, pack split)**: clean theoretical wins with real-but-modest risk on hot paths. No CLI/LSP consumer pulling on it yet. Defer.
+- **Rust mddiff-core decomposition (git split, RepoError, pack split)**: clean theoretical wins with real-but-modest risk on hot paths. No CLI/LSP consumer pulling on it yet. Defer.
 - **CSS dimension consolidation**: already correctly flagged as low-priority — the dimensions genuinely differ. Wait for a theme/contrast pass to force the issue.
 
 ## After each PR

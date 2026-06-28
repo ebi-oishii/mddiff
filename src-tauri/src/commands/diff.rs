@@ -1,5 +1,5 @@
-use mdv_core::diff::{line_diff, full_diff, DiffLine, HunkSummary};
-use mdv_core::git::SideBySidePayload;
+use mddiff_core::diff::{line_diff, full_diff, DiffLine, HunkSummary};
+use mddiff_core::git::SideBySidePayload;
 
 /// Diff two text blobs directly, no Git involvement. Used for the "Compare
 /// with disk" path triggered from the external-change banner.

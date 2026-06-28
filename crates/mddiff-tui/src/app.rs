@@ -3,8 +3,8 @@ use std::path::PathBuf;
 
 use anyhow::Result;
 use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
-use mdv_core::diff::DiffLine;
-use mdv_core::git::SideBySidePayload;
+use mddiff_core::diff::DiffLine;
+use mddiff_core::git::SideBySidePayload;
 use ratatui::layout::{Constraint, Direction, Layout};
 use ratatui::style::{Color, Style};
 use ratatui::widgets::Paragraph;
@@ -301,11 +301,11 @@ impl App {
             return;
         }
         let Some(path) = self.path.clone() else {
-            self.status = Some("no file to save (open with `mdv-tui <path>`)".into());
+            self.status = Some("no file to save (open with `mddiff-tui <path>`)".into());
             return;
         };
         let text = self.source.text();
-        match mdv_core::fs::write_text_file(&path, &text) {
+        match mddiff_core::fs::write_text_file(&path, &text) {
             Ok(_) => {
                 self.saved_text = text;
                 self.status = Some(format!("saved: {}", path.display()));
@@ -358,7 +358,7 @@ impl App {
             Submode::Highlight | Submode::SideBySide => {
                 if self.diff_cache.sbs.is_none() {
                     self.diff_cache.sbs = Some(
-                        mdv_core::git::side_by_side_against_base(&path, &text, &self.diff_base)
+                        mddiff_core::git::side_by_side_against_base(&path, &text, &self.diff_base)
                             .map_err(|e| e.to_string()),
                     );
                 }
@@ -376,7 +376,7 @@ impl App {
             Submode::Full => {
                 if self.diff_cache.full.is_none() {
                     self.diff_cache.full = Some(
-                        mdv_core::git::full_diff_against_base(&path, &text, &self.diff_base)
+                        mddiff_core::git::full_diff_against_base(&path, &text, &self.diff_base)
                             .map_err(|e| e.to_string()),
                     );
                 }
@@ -394,7 +394,7 @@ impl App {
             None => "(untitled)".into(),
         };
         let dirty = if self.dirty() { " ●" } else { "" };
-        let header = format!(" mdv-tui  {}{}", file, dirty);
+        let header = format!(" mddiff-tui  {}{}", file, dirty);
         frame.render_widget(
             Paragraph::new(header).style(Style::default().fg(Color::Cyan)),
             area,

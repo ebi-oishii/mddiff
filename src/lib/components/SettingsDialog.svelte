@@ -213,14 +213,14 @@
     padding: 1rem;
   }
   .modal {
-    background: var(--mdv-surface-pop);
-    color: var(--mdv-text);
-    border: 1px solid var(--mdv-border);
+    background: var(--mddiff-surface-pop);
+    color: var(--mddiff-text);
+    border: 1px solid var(--mddiff-border);
     border-radius: 8px;
     padding: 1.25rem 1.5rem;
     max-width: 28em;
     width: 100%;
-    box-shadow: 0 12px 40px var(--mdv-shadow);
+    box-shadow: 0 12px 40px var(--mddiff-shadow);
     max-height: calc(100vh - 2rem);
     overflow-y: auto;
   }
@@ -233,8 +233,8 @@
     font-size: 0.72rem;
     text-transform: uppercase;
     letter-spacing: 0.06em;
-    color: var(--mdv-text-mute);
-    border-top: 1px solid var(--mdv-border-mute);
+    color: var(--mddiff-text-mute);
+    border-top: 1px solid var(--mddiff-border-mute);
     padding-top: 0.7rem;
   }
   .section-title:first-of-type {
@@ -255,9 +255,9 @@
   .row select {
     font: inherit;
     padding: 0.3rem 0.5rem;
-    background: var(--mdv-bg);
-    color: var(--mdv-text);
-    border: 1px solid var(--mdv-border);
+    background: var(--mddiff-bg);
+    color: var(--mddiff-text);
+    border: 1px solid var(--mddiff-border);
     border-radius: 4px;
     min-width: 12em;
   }
@@ -269,12 +269,12 @@
   .hint {
     margin: 1rem 0 0;
     font-size: 0.8rem;
-    color: var(--mdv-text-mute);
+    color: var(--mddiff-text-mute);
   }
   .row-hint {
     margin: -0.3rem 0 0.6rem;
     font-size: 0.78rem;
-    color: var(--mdv-text-mute);
+    color: var(--mddiff-text-mute);
     line-height: 1.4;
   }
   .actions {
@@ -285,18 +285,18 @@
   }
   .actions button {
     background: transparent;
-    border: 1px solid var(--mdv-border);
+    border: 1px solid var(--mddiff-border);
     border-radius: 5px;
     padding: 0.4rem 1rem;
     font: inherit;
-    color: var(--mdv-text);
+    color: var(--mddiff-text);
     cursor: pointer;
   }
   .actions button:hover {
-    background: var(--mdv-surface-hi);
+    background: var(--mddiff-surface-hi);
   }
   .actions button.primary {
-    background: var(--mdv-accent);
+    background: var(--mddiff-accent);
     color: #fff;
     border-color: transparent;
   }
@@ -305,7 +305,7 @@
   }
   .actions button.link {
     border: 0;
-    color: var(--mdv-accent);
+    color: var(--mddiff-accent);
     padding: 0.4rem 0;
   }
   .actions button.link:hover {

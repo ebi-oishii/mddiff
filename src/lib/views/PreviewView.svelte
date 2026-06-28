@@ -21,15 +21,15 @@
     // reports zero — bail to avoid clobbering currentLine with line 1.
     if (rect.width === 0 && rect.height === 0) return null;
     const top = rect.top;
-    const blocks = scroller.querySelectorAll<HTMLElement>("[data-mdv-line]");
+    const blocks = scroller.querySelectorAll<HTMLElement>("[data-mddiff-line]");
     let last: number | null = null;
     for (const block of blocks) {
       const br = block.getBoundingClientRect();
       if (br.top >= top - 2) {
-        const n = Number(block.dataset.mdvLine);
+        const n = Number(block.dataset.mddiffLine);
         return Number.isFinite(n) ? n : last;
       }
-      const n = Number(block.dataset.mdvLine);
+      const n = Number(block.dataset.mddiffLine);
       if (Number.isFinite(n)) last = n;
     }
     return last;
@@ -38,13 +38,13 @@
   function scrollToLine(line: number) {
     if (!scroller) return;
     const blocks = Array.from(
-      scroller.querySelectorAll<HTMLElement>("[data-mdv-line]"),
+      scroller.querySelectorAll<HTMLElement>("[data-mddiff-line]"),
     );
     if (blocks.length === 0) return;
-    // Find the block whose data-mdv-line is the largest value <= `line`.
+    // Find the block whose data-mddiff-line is the largest value <= `line`.
     let target: HTMLElement = blocks[0];
     for (const block of blocks) {
-      const n = Number(block.dataset.mdvLine);
+      const n = Number(block.dataset.mddiffLine);
       if (Number.isFinite(n) && n <= line) target = block;
       else break;
     }

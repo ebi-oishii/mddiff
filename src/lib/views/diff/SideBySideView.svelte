@@ -62,7 +62,7 @@
     scroller: HTMLDivElement,
   ): { line: number; fraction: number } | null {
     const topY = scroller.getBoundingClientRect().top;
-    const blocks = scroller.querySelectorAll<HTMLElement>("[data-mdv-line]");
+    const blocks = scroller.querySelectorAll<HTMLElement>("[data-mddiff-line]");
     let active: HTMLElement | null = null;
     for (const block of blocks) {
       const rect = block.getBoundingClientRect();
@@ -76,7 +76,7 @@
     }
     if (!active) return null;
     const rect = active.getBoundingClientRect();
-    const line = Number(active.dataset.mdvLine);
+    const line = Number(active.dataset.mddiffLine);
     if (!Number.isFinite(line)) return null;
     const fraction =
       rect.height > 0
@@ -97,12 +97,12 @@
     fraction: number,
   ) {
     const blocks = Array.from(
-      scroller.querySelectorAll<HTMLElement>("[data-mdv-line]"),
+      scroller.querySelectorAll<HTMLElement>("[data-mddiff-line]"),
     );
     if (blocks.length === 0) return;
     let target = blocks[0];
     for (const block of blocks) {
-      const n = Number(block.dataset.mdvLine);
+      const n = Number(block.dataset.mddiffLine);
       if (Number.isFinite(n) && n <= line) target = block;
       else break;
     }
@@ -209,8 +209,8 @@
   }
 
   /**
-   * Render a side of the diff with `data-mdv-line` for scroll sync and a
-   * `mdv-changed mdv-changed-{kind}` class on each block whose source range
+   * Render a side of the diff with `data-mddiff-line` for scroll sync and a
+   * `mddiff-changed mddiff-changed-{kind}` class on each block whose source range
    * overlaps a visible hunk. The `removed` hunks only paint on the old side
    * and the `added` hunks only on the new side — that pairing is what gives
    * the colored gutter its directional meaning.
@@ -234,7 +234,7 @@
           hEnd = h.old_end;
         }
         if (rangeOverlaps(tStart, tEnd, hStart, hEnd)) {
-          token.attrJoin("class", `mdv-changed mdv-changed-${h.kind}`);
+          token.attrJoin("class", `mddiff-changed mddiff-changed-${h.kind}`);
           break;
         }
       }
@@ -314,16 +314,16 @@
     width: 38px;
     height: 38px;
     border-radius: 999px;
-    border: 1px solid var(--mdv-border);
-    background: var(--mdv-surface-pop);
-    color: var(--mdv-text-mute);
+    border: 1px solid var(--mddiff-border);
+    background: var(--mddiff-surface-pop);
+    color: var(--mddiff-text-mute);
     cursor: pointer;
     font-size: 1.05rem;
     line-height: 1;
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 2px 8px var(--mdv-shadow);
+    box-shadow: 0 2px 8px var(--mddiff-shadow);
     transition:
       background-color 0.12s,
       color 0.12s,
@@ -333,8 +333,8 @@
     transform: translate(-50%, -50%) scale(1.06);
   }
   .sync-toggle.on {
-    background: var(--mdv-accent-bg);
-    color: var(--mdv-accent-fg);
+    background: var(--mddiff-accent-bg);
+    color: var(--mddiff-accent-fg);
     border-color: transparent;
   }
   .pane {
@@ -461,20 +461,20 @@
   }
 
   /* Highlight overlays injected by the markdown-it pipeline. */
-  .preview :global(.mdv-changed) {
+  .preview :global(.mddiff-changed) {
     border-left: 3px solid transparent;
     padding-left: 0.6rem;
     margin-left: -0.9rem;
   }
-  .preview :global(.mdv-changed-added) {
+  .preview :global(.mddiff-changed-added) {
     border-left-color: #2ea043;
     background: light-dark(#e6ffec, rgba(46, 160, 67, 0.12));
   }
-  .preview :global(.mdv-changed-modified) {
+  .preview :global(.mddiff-changed-modified) {
     border-left-color: #d29922;
     background: light-dark(#fff8c5, rgba(210, 153, 34, 0.12));
   }
-  .preview :global(.mdv-changed-removed) {
+  .preview :global(.mddiff-changed-removed) {
     border-left-color: #cf222e;
     background: light-dark(#ffebe9, rgba(207, 34, 46, 0.12));
   }

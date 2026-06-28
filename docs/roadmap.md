@@ -9,9 +9,9 @@
 
 ## Phase 0.5 — ワークスペース化 ✓ 完了
 - [x] ルート `Cargo.toml` でワークスペース定義
-- [x] `crates/mdv-core/` を新設し型と共通ロジックを配置
-- [x] `src-tauri/` から `mdv-core` を path 依存
-- [x] `crates/mdv-tui/` のスケルトン（clap + ratatui Hello）
+- [x] `crates/mddiff-core/` を新設し型と共通ロジックを配置
+- [x] `src-tauri/` から `mddiff-core` を path 依存
+- [x] `crates/mddiff-tui/` のスケルトン（clap + ratatui Hello）
 - [x] `cargo build --workspace` 成功、CI を workspace 対応
 
 ## Phase 1 — Source / Preview / 切替 ✓ 完了
@@ -31,7 +31,7 @@
 - [ ] `:w` `:q` コマンドモード — Phase 5 へ先送り
 
 ## Phase 2 — Diff モード（Highlight Only / Full） ✓ 完了
-- [x] `mdv-core` に `line_diff` / `full_diff` / git ラッパ
+- [x] `mddiff-core` に `line_diff` / `full_diff` / git ラッパ
 - [x] GUI DiffView（Highlight Only と Full、debounce 自動更新）
 - [x] TUI DiffView（同上、ratatui で色付け）
 - [x] ModeBar に Diff タブ、Git 配下でないと disabled
@@ -45,9 +45,9 @@
 - [x] テスト追加（Added/Modified/Removed の両側行範囲、複数行置換を検証）
 
 ### GUI Side-by-Side ✓
-- [x] `mdv-core::git::side_by_side_against_base` で 1 IPC ラウンドにまとめ
+- [x] `mddiff-core::git::side_by_side_against_base` で 1 IPC ラウンドにまとめ
 - [x] Tauri command `git_side_by_side`
-- [x] markdown-it の token.map をフックして `mdv-changed-{kind}` クラスを注入
+- [x] markdown-it の token.map をフックして `mddiff-changed-{kind}` クラスを注入
 - [x] `views/diff/SideBySideView.svelte`：2 ペイン、独立スクロール、
   PreviewView と統一感のあるスタイル + 変更ブロック背景色
 - [x] DiffView サブトグルに「Side-by-Side」追加
@@ -111,23 +111,23 @@ Live Preview と WYSIWYG は両方入れる。ただし役割を分ける。
 
 未対応の細かい項目は [docs/issues.md](issues.md) に集約
 
-## Phase 7 — `.mdv` パッケージ入出力 ✓ 完了（MVP）
+## Phase 7 — `.mddiff` パッケージ入出力 ✓ 完了（MVP）
 
-仕様: [`docs/mdv-protocol.md`](mdv-protocol.md)
+仕様: [`docs/mddiff-protocol.md`](mddiff-protocol.md)
 
-- [x] `mdv-core::pack::pack(file, current_text, base)`：HEAD → base の
+- [x] `mddiff-core::pack::pack(file, current_text, base)`：HEAD → base の
   履歴を bundle 化、現在テキストを virtual head として追加、
   zstd+base64 で HTML コメント包装
-- [x] `mdv-core::pack::extract_body`：受信側で trailing package block を剥がす
-- [x] Tauri command `mdv_pack` / `mdv_extract_body`
-- [x] GUI: MdvExportDialog で base picker + Save .mdv、Export ▾ から起動
-- [x] 受信: `.mdv` を Open すると自動で本文だけを表示（履歴 bundle は破棄）
-- [x] ファイル名フィルタに `.mdv` を追加
+- [x] `mddiff-core::pack::extract_body`：受信側で trailing package block を剥がす
+- [x] Tauri command `mddiff_pack` / `mddiff_extract_body`
+- [x] GUI: MddiffExportDialog で base picker + Save .mddiff、Export ▾ から起動
+- [x] 受信: `.mddiff` を Open すると自動で本文だけを表示（履歴 bundle は破棄）
+- [x] ファイル名フィルタに `.mddiff` を追加
 
 未対応 (後続候補):
 - [ ] 厳密 JCS 準拠（現在は serde_json + BTreeMap で sorted keys）
-- [ ] received `.mdv` の履歴を「versions」ビューで閲覧
-- [ ] 2 つの `.mdv` の bundle マージ（同一 repo_id）
+- [ ] received `.mddiff` の履歴を「versions」ビューで閲覧
+- [ ] 2 つの `.mddiff` の bundle マージ（同一 repo_id）
 - [ ] checkpoint / sidecar 履歴の永続化
 - [ ] TUI からの pack/extract
 

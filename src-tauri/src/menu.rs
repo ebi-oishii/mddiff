@@ -10,12 +10,12 @@ use tauri::{AppHandle, Wry};
 
 pub fn build(app: &AppHandle) -> tauri::Result<Menu<Wry>> {
     let about = AboutMetadata {
-        name: Some("mdv".into()),
+        name: Some("mddiff".into()),
         version: Some(env!("CARGO_PKG_VERSION").into()),
         ..Default::default()
     };
 
-    let app_menu = SubmenuBuilder::new(app, "mdv")
+    let app_menu = SubmenuBuilder::new(app, "mddiff")
         .about(Some(about))
         .separator()
         .item(&MenuItem::with_id(
@@ -40,8 +40,8 @@ pub fn build(app: &AppHandle) -> tauri::Result<Menu<Wry>> {
         .item(&MenuItem::with_id(app, "export_docx", "DOCX", true, None::<&str>)?)
         .item(&MenuItem::with_id(
             app,
-            "export_mdv",
-            ".mdv (with history)",
+            "export_mddiff",
+            ".mddiff (with history)",
             true,
             None::<&str>,
         )?)

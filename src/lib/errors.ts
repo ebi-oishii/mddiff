@@ -14,7 +14,7 @@ export type Op = "read" | "write" | "other";
 export function humanizeError(e: unknown, op: Op = "other"): string {
   const raw = String(e);
 
-  // mdv-core large-file errors are already human-friendly, just pass through.
+  // mddiff-core large-file errors are already human-friendly, just pass through.
   if (raw.includes("exceeds the") && raw.includes("warning threshold")) {
     return raw;
   }
@@ -45,7 +45,7 @@ export function humanizeError(e: unknown, op: Op = "other"): string {
     return "The destination is on a read-only file system.";
   }
   if (/InvalidData|stream did not contain valid UTF-8/.test(raw)) {
-    return "This file isn't valid UTF-8 text. mdv only supports text files.";
+    return "This file isn't valid UTF-8 text. mddiff only supports text files.";
   }
   if (/Interrupted/.test(raw)) {
     return "The operation was interrupted. Try again.";
@@ -57,7 +57,7 @@ export function humanizeError(e: unknown, op: Op = "other"): string {
     return capitalize(osMessage[1]);
   }
 
-  // mdv-core "io error: …" wrapper — recurse on the inner message.
+  // mddiff-core "io error: …" wrapper — recurse on the inner message.
   const ioWrapped = raw.match(/^io error:\s*(.+)$/);
   if (ioWrapped) return humanizeError(ioWrapped[1], op);
 

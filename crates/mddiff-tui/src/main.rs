@@ -18,7 +18,7 @@ use ratatui::Terminal;
 use app::{App, Mode};
 
 #[derive(Parser, Debug)]
-#[command(name = "mdv-tui", version, about = "Terminal UI for mdv")]
+#[command(name = "mddiff-tui", version, about = "Terminal UI for mddiff")]
 struct Args {
     /// Markdown file to open.
     file: Option<PathBuf>,
@@ -59,9 +59,9 @@ fn main() -> Result<()> {
 
     let (initial_text, path) = match &args.file {
         Some(p) => {
-            let text = match mdv_core::fs::read_text_file_with(p, args.force) {
+            let text = match mddiff_core::fs::read_text_file_with(p, args.force) {
                 Ok(t) => t,
-                Err(mdv_core::fs::ReadError::TooLarge { actual, limit }) => {
+                Err(mddiff_core::fs::ReadError::TooLarge { actual, limit }) => {
                     anyhow::bail!(
                         "{p:?} is {} bytes (limit {limit}); re-run with --force to open anyway.",
                         actual
@@ -78,7 +78,7 @@ fn main() -> Result<()> {
 
     let git_available = path
         .as_ref()
-        .map(|p| mdv_core::git::is_in_repo(p))
+        .map(|p| mddiff_core::git::is_in_repo(p))
         .unwrap_or(false);
 
     let mut app = App::new(

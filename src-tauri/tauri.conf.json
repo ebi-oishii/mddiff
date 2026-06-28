@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "mdv",
+  "productName": "mddiff",
   "version": "0.1.0",
-  "identifier": "dev.ebioishii.mdv",
+  "identifier": "dev.ebioishii.mddiff",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "mdv",
+        "title": "mddiff",
         "width": 1024,
         "height": 768
       }

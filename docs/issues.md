@@ -44,15 +44,15 @@
 | F7 | TUI からの export (`:export html <path>` 等) | ★ |
 | F8 | 自動更新通知（Tauri updater） | ★ |
 
-## `.mdv` プロトコル発展
+## `.mddiff` プロトコル発展
 
 | # | 内容 | 優先 |
 |---|---|---|
-| M1 | 受信した `.mdv` の履歴を読み取る「Versions」ビュー（base picker と統合） | ★★★ |
-| M2 | 同 `repo_id` の 2 つの `.mdv` をマージ（コミット union） | ★★ |
+| M1 | 受信した `.mddiff` の履歴を読み取る「Versions」ビュー（base picker と統合） | ★★★ |
+| M2 | 同 `repo_id` の 2 つの `.mddiff` をマージ（コミット union） | ★★ |
 | M3 | 厳密 JCS (RFC 8785) 準拠の JSON 正規化 | ★ |
 | M4 | checkpoint / sidecar 履歴の永続化（連続編集の自動 commit） | ★★ |
-| ~~M5~~ | ~~`.mdv` 内ハンドルの user 設定~~ ✓ 完了（Tauri 側で repo の git config user.name / user.email を読み、未設定なら "Unknown") | ★★ |
+| ~~M5~~ | ~~`.mddiff` 内ハンドルの user 設定~~ ✓ 完了（Tauri 側で repo の git config user.name / user.email を読み、未設定なら "Unknown") | ★★ |
 | M6 | TUI から pack / extract | ★ |
 | M7 | 受信時の bundle 検証エラー UI（壊れた package block の取り扱い） | ★ |
 
@@ -79,7 +79,7 @@
 
 ## 完了済み
 
-直近の主要マイルストーン（細かい修正は [git log](https://github.com/ebi-oishii/mdv/commits) 参照）：
+直近の主要マイルストーン（細かい修正は [git log](https://github.com/ebi-oishii/mddiff/commits) 参照）：
 
 - Phase 0〜0.5: scaffold、Cargo ワークスペース化
 - Phase 1: Source / Preview（GUI + TUI）
@@ -90,5 +90,5 @@
 - Phase 4: モバイル土台（Android scaffold、レスポンシブ CSS）
 - Phase 5: 大容量ガード、TUI Diff キャッシュ、TUI コマンドモード（:w :q :wq :q!）
 - Phase 6: HTML / PDF / Plain text / DOCX エクスポート
-- Phase 7: `.mdv` パッケージ入出力（pack / extract）
+- Phase 7: `.mddiff` パッケージ入出力（pack / extract）
 - Phase 8: Settings + テーマ切替（light / dark / auto）+ font size + default mode

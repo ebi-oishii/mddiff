@@ -7,7 +7,7 @@ pub mod diff;
 pub mod git;
 
 #[cfg(not(any(target_os = "android", target_os = "ios")))]
-pub mod mdv;
+pub mod mddiff;
 
 #[cfg(not(any(target_os = "android", target_os = "ios")))]
 pub mod watcher;

@@ -233,10 +233,10 @@
     flex-direction: column;
     gap: 0.25rem;
     padding: 0.3rem 0.45rem;
-    background: var(--mdv-surface-pop);
-    border: 1px solid var(--mdv-border);
+    background: var(--mddiff-surface-pop);
+    border: 1px solid var(--mddiff-border);
     border-radius: 6px;
-    box-shadow: 0 2px 8px var(--mdv-shadow);
+    box-shadow: 0 2px 8px var(--mddiff-shadow);
     font-size: 0.82rem;
   }
   /* When the title overlay is visible (fullscreen), drop below it. */
@@ -252,19 +252,19 @@
     width: 14em;
     padding: 0.15rem 0.4rem;
     font: inherit;
-    background: var(--mdv-bg);
-    color: var(--mdv-text);
-    border: 1px solid var(--mdv-border);
+    background: var(--mddiff-bg);
+    color: var(--mddiff-text);
+    border: 1px solid var(--mddiff-border);
     border-radius: 4px;
   }
   input:focus {
-    outline: 1px solid var(--mdv-accent);
+    outline: 1px solid var(--mddiff-accent);
     outline-offset: 0;
   }
   .count {
     min-width: 4em;
     text-align: center;
-    color: var(--mdv-text-mute);
+    color: var(--mddiff-text-mute);
     font-variant-numeric: tabular-nums;
   }
   .nav,
@@ -273,14 +273,14 @@
     border: 0;
     padding: 0.1rem 0.35rem;
     font: inherit;
-    color: var(--mdv-text);
+    color: var(--mddiff-text);
     cursor: pointer;
     border-radius: 3px;
     line-height: 1;
   }
   .nav:hover:not(:disabled),
   .close:hover {
-    background: var(--mdv-surface-hi);
+    background: var(--mddiff-surface-hi);
   }
   .nav:disabled {
     opacity: 0.35;
@@ -296,15 +296,15 @@
     padding: 0.1rem 0.25rem;
     font: inherit;
     font-size: 0.7rem;
-    color: var(--mdv-text-mute);
+    color: var(--mddiff-text-mute);
     cursor: pointer;
     border-radius: 3px;
     line-height: 1;
     width: 1.2em;
   }
   .chevron:hover {
-    background: var(--mdv-surface-hi);
-    color: var(--mdv-text);
+    background: var(--mddiff-surface-hi);
+    color: var(--mddiff-text);
   }
   /* Vertical alignment of the replace row's controls under the find row's
      controls. The chevron / close are removed on row 2, but the input,
@@ -318,22 +318,22 @@
     display: inline-block;
   }
   /* Marker styles for DOM-based find (Preview / Diff / WYSIWYG). */
-  :global(mark.mdv-find-hit) {
+  :global(mark.mddiff-find-hit) {
     background: light-dark(#fde68a, #4a3a10);
     color: inherit;
     padding: 0;
     border-radius: 2px;
   }
-  :global(mark.mdv-find-current) {
+  :global(mark.mddiff-find-current) {
     background: light-dark(#fbbf24, #b97c10);
     outline: 1px solid light-dark(#b45309, #fbbf24);
   }
   /* CodeMirror find highlight (matches the DOM marks above). */
-  :global(.cm-editor .mdv-find-hit) {
+  :global(.cm-editor .mddiff-find-hit) {
     background: light-dark(#fde68a, #4a3a10);
     border-radius: 2px;
   }
-  :global(.cm-editor .mdv-find-current) {
+  :global(.cm-editor .mddiff-find-current) {
     background: light-dark(#fbbf24, #b97c10);
     outline: 1px solid light-dark(#b45309, #fbbf24);
     border-radius: 2px;
