@@ -53,6 +53,20 @@ export async function writeFile(path: string, text: string): Promise<void> {
 }
 
 /**
+ * Read an already-known path. Skips the open dialog (used by Reload from
+ * disk, where we already have a path from `doc.path`). `.mdv` bundles get
+ * the same trailing-comment strip as `pickAndReadFile`.
+ */
+export async function readPath(path: string): Promise<LoadedFile> {
+  const raw = await invoke<string>("read_text_file", { path });
+  const text = path.toLowerCase().endsWith(".mdv")
+    ? await mdvExtractBody(raw)
+    : raw;
+  const gitAvailable = await gitIsRepo(path);
+  return { path, text, gitAvailable };
+}
+
+/**
  * Read a file's text content without going through the open-dialog flow.
  * Used to reload from disk when the file changed externally.
  */

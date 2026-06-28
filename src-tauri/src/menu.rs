@@ -70,6 +70,13 @@ pub fn build(app: &AppHandle) -> tauri::Result<Menu<Wry>> {
             true,
             Some("CmdOrCtrl+Shift+S"),
         )?)
+        .item(&MenuItem::with_id(
+            app,
+            "reload",
+            "Reload from Disk",
+            true,
+            Some("CmdOrCtrl+Shift+R"),
+        )?)
         .separator()
         .item(&MenuItem::with_id(
             app,

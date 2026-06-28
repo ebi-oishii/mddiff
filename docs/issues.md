@@ -24,7 +24,7 @@
 | ~~P1~~ | ~~Source ↔ Preview ↔ Live Preview ↔ WYSIWYG の切替時にスクロール位置を維持~~ ✓ 完了 | ★★★ |
 | ~~P2~~ | ~~GUI Side-by-Side のペイン間スクロール同期~~ ✓ 完了（toggle 付き） | ★★ |
 | P3 | TUI Side-by-Side の左右ペイン独立スクロール | ★★ |
-| P4 | エラーハンドリング詳細化（ファイル消失検知、再読込ボタン） | ★★ |
+| ~~P4~~ | ~~エラーハンドリング詳細化（ファイル消失検知、再読込ボタン）~~ ✓ 完了（消失検知は P9 経由、Reload from disk + ⌘⇧R、エラー翻訳） | ★★ |
 | ~~P5~~ | ~~大容量ファイル制限を「警告 + override」に変更~~ ✓ 完了（GUI: 5MB 超でモーダル / TUI: `--force`、100MB は両方 hard cap） | ★ |
 | ~~P6~~ | ~~Preview / Live Preview / Diff にも検索（⌘F）~~ ✓ 完了（Source/Live は CodeMirror search、Preview/Diff は DOM find） | ★★ |
 | P7 | モバイル：ボトムタブ UI、左右スワイプでモード切替 | ★★ |
