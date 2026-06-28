@@ -9,6 +9,7 @@
   import { useFind } from "./use-find.svelte";
   import { attachScrollTracker, type ScrollTracker } from "./scroll-tracker";
   import { createLineMapMd } from "./markdown-render";
+  import { rewriteRelativeImageSrc } from "./image-path";
   import { doc } from "$lib/stores/doc.svelte";
 
   let {
@@ -26,6 +27,21 @@
   let lastEmitted = "";
   let ready = $state(false);
   let scrollTracker: ScrollTracker | null = null;
+  let imageObserver: MutationObserver | null = null;
+
+  /**
+   * Walk every `<img>` in the editor and rewrite relative src to Tauri's
+   * `asset://` URL. Idempotent (resolved URLs aren't relative anymore).
+   */
+  function rewriteImages() {
+    if (!container) return;
+    for (const img of container.querySelectorAll<HTMLImageElement>("img")) {
+      const src = img.getAttribute("src");
+      if (!src) continue;
+      const rewritten = rewriteRelativeImageSrc(src, doc.path);
+      if (rewritten !== src) img.setAttribute("src", rewritten);
+    }
+  }
 
   // Milkdown doesn't expose source-line positions on its rendered nodes, so we
   // reconstruct a top-level-block → source-line mapping by parsing the same
@@ -175,6 +191,22 @@
 
     container.addEventListener("click", handleTaskClick);
 
+    // Milkdown renders `<img>` with the verbatim Markdown src (a relative
+    // path for pasted images). The Tauri webview can't load `<doc-dir>/x.png`
+    // directly — it needs `convertFileSrc()`'s asset:// URL. We can't
+    // override Milkdown's image schema cleanly here, so we watch the
+    // ProseMirror DOM and rewrite img src on the fly. The rewrite is
+    // idempotent: a resolved asset:// URL is no longer "relative" so the
+    // observer's re-fire after our setAttribute is a no-op.
+    imageObserver = new MutationObserver(() => rewriteImages());
+    imageObserver.observe(container, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["src"],
+    });
+    rewriteImages();
+
     // After load, query Milkdown's own serialization of the doc to detect
     // round-trip normalization (e.g. `*foo*` <-> `_foo_`, link reference
     // expansion, trailing newline adjustment). If different from what we
@@ -215,6 +247,8 @@
 
   onDestroy(() => {
     container?.removeEventListener("click", handleTaskClick);
+    imageObserver?.disconnect();
+    imageObserver = null;
     try {
       scrollTracker?.captureNow();
     } catch {

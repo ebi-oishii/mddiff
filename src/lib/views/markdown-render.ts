@@ -2,7 +2,7 @@ import MarkdownIt from "markdown-it";
 import type Token from "markdown-it/lib/token.mjs";
 import DOMPurify from "dompurify";
 import taskLists from "markdown-it-task-lists";
-import { convertFileSrc } from "@tauri-apps/api/core";
+import { rewriteRelativeImageSrc } from "./image-path";
 
 /**
  * Create a fresh MarkdownIt instance configured the way mddiff's Preview / Diff
@@ -35,13 +35,10 @@ export function createPreviewMd(): MarkdownIt {
   md.renderer.rules.image = function (tokens, idx, options, env, self) {
     const token = tokens[idx];
     const srcIdx = token.attrIndex("src");
-    const docPath = (env as RenderEnv).docPath;
-    if (srcIdx >= 0 && token.attrs && docPath) {
+    const docPath = (env as RenderEnv).docPath ?? null;
+    if (srcIdx >= 0 && token.attrs) {
       const src = token.attrs[srcIdx][1];
-      if (isRelativePath(src)) {
-        const abs = resolveRelativeToDoc(src, docPath);
-        token.attrs[srcIdx][1] = convertFileSrc(abs);
-      }
+      token.attrs[srcIdx][1] = rewriteRelativeImageSrc(src, docPath);
     }
     return defaultImage
       ? defaultImage(tokens, idx, options, env, self)
@@ -116,25 +113,3 @@ export function renderWithLineMap(
   });
 }
 
-/**
- * Is `src` a relative path (not an absolute path and not a URL)?
- * `http:`, `https:`, `data:`, `asset:`, `file:` etc. all return false.
- * `/Users/x.png` and `C:\foo.png` return false (already absolute).
- */
-function isRelativePath(src: string): boolean {
-  if (/^[a-z][a-z0-9+.-]*:/i.test(src)) return false;
-  if (src.startsWith("/")) return false;
-  if (/^[A-Za-z]:[\\/]/.test(src)) return false;
-  return true;
-}
-
-/**
- * Resolve `rel` against the directory of `docPath`. Uses `/` as the joiner
- * even on Windows — `convertFileSrc` accepts mixed separators and Markdown
- * link paths typically use forward slashes.
- */
-function resolveRelativeToDoc(rel: string, docPath: string): string {
-  const parts = docPath.split(/[\\/]/);
-  parts.pop(); // remove filename
-  return `${parts.join("/")}/${rel}`;
-}
