@@ -29,7 +29,6 @@
   let sbs = $state<SideBySidePayload | null>(null);
   let error = $state<string | null>(null);
   let loading = $state(false);
-  let syncedScroll = $state(true);
 
   let diffTimer: ReturnType<typeof setTimeout> | null = null;
   let basesTimer: ReturnType<typeof setTimeout> | null = null;
@@ -197,20 +196,6 @@
       {/if}
     </div>
     <div class="meta">
-      {#if submode === "sidebyside"}
-        <button
-          type="button"
-          class="sync-toggle"
-          class:on={syncedScroll}
-          onclick={() => (syncedScroll = !syncedScroll)}
-          aria-pressed={syncedScroll}
-          title={syncedScroll
-            ? "Scrolling syncs between panes — click to make independent"
-            : "Panes scroll independently — click to sync"}
-        >
-          {syncedScroll ? "🔗 Synced" : "⛓ Independent"}
-        </button>
-      {/if}
       {#if loading}<span class="loading">…</span>{/if}
       {#if submode === "highlight" && !loading && !error}
         <span class="added">+{addedSum}</span>
@@ -230,7 +215,7 @@
   {:else if submode === "full"}
     <FullDiffView {lines} />
   {:else if sbs}
-    <SideBySideView payload={sbs} baseLabel={base} {syncedScroll} />
+    <SideBySideView payload={sbs} baseLabel={base} />
   {:else}
     <div class="empty">Loading…</div>
   {/if}
@@ -341,24 +326,8 @@
     gap: 0.6rem;
     font-family: ui-monospace, monospace;
   }
-  .sync-toggle {
-    background: transparent;
-    border: 1px solid var(--mdv-border);
-    border-radius: 4px;
-    padding: 0.2rem 0.55rem;
-    font: inherit;
-    font-size: 0.78rem;
-    color: var(--mdv-text-mute);
-    cursor: pointer;
-  }
-  .sync-toggle.on {
-    background: var(--mdv-accent-bg);
-    color: var(--mdv-accent-fg);
-    border-color: transparent;
-  }
-  .sync-toggle:hover:not(.on) {
-    background: var(--mdv-surface-hi);
-  }
+  /* sync toggle lives inside SideBySideView itself (floating button between
+     the two panes, Overleaf-style) */
   .added {
     color: var(--mdv-success-fg);
   }

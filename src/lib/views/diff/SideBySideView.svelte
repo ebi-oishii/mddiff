@@ -3,41 +3,85 @@
   import DOMPurify from "dompurify";
   import taskLists from "markdown-it-task-lists";
   import type { HunkSummary, SideBySidePayload } from "$lib/types";
+  import { mapNewToOld, mapOldToNew } from "./line-map";
 
   let {
     payload,
     baseLabel,
-    syncedScroll = true,
-  }: {
-    payload: SideBySidePayload;
-    baseLabel: string;
-    syncedScroll?: boolean;
-  } = $props();
+  }: { payload: SideBySidePayload; baseLabel: string } = $props();
 
   let oldScroller: HTMLDivElement;
   let newScroller: HTMLDivElement;
-  // Guard so programmatic scrollTop assignments don't echo back through the
-  // sibling pane's scroll handler and cause a feedback loop.
+  let syncedScroll = $state(true);
+  // Guard so programmatic scrollTop writes don't echo back through the sibling
+  // pane's scroll handler and create a feedback loop.
   let suppressSync = false;
 
-  function ratioSync(src: HTMLDivElement, dst: HTMLDivElement) {
+  /** Find the source line at the top of the viewport (per `data-mdv-line`). */
+  function topVisibleLine(scroller: HTMLDivElement): number | null {
+    const top = scroller.getBoundingClientRect().top;
+    const blocks = scroller.querySelectorAll<HTMLElement>("[data-mdv-line]");
+    let last: number | null = null;
+    for (const block of blocks) {
+      const rect = block.getBoundingClientRect();
+      if (rect.top >= top - 2) {
+        const n = Number(block.dataset.mdvLine);
+        return Number.isFinite(n) ? n : last;
+      }
+      const n = Number(block.dataset.mdvLine);
+      if (Number.isFinite(n)) last = n;
+    }
+    return last;
+  }
+
+  /** Scroll the pane so that the block for `line` is at the top. */
+  function scrollToLine(scroller: HTMLDivElement, line: number) {
+    const blocks = Array.from(
+      scroller.querySelectorAll<HTMLElement>("[data-mdv-line]"),
+    );
+    if (blocks.length === 0) return;
+    let target = blocks[0];
+    for (const block of blocks) {
+      const n = Number(block.dataset.mdvLine);
+      if (Number.isFinite(n) && n <= line) target = block;
+      else break;
+    }
+    scroller.scrollTop = target.offsetTop;
+  }
+
+  /** Sync `dst` to `src` using line-based mapping through the diff hunks. */
+  function syncLine(side: "old" | "new") {
     if (!syncedScroll || suppressSync) return;
-    const srcRange = Math.max(1, src.scrollHeight - src.clientHeight);
-    const dstRange = Math.max(0, dst.scrollHeight - dst.clientHeight);
-    if (dstRange === 0) return;
+    const src = side === "old" ? oldScroller : newScroller;
+    const dst = side === "old" ? newScroller : oldScroller;
+    if (!src || !dst) return;
+    const srcLine = topVisibleLine(src);
+    if (srcLine == null) return;
+    const dstLine =
+      side === "old"
+        ? mapOldToNew(srcLine, payload.hunks)
+        : mapNewToOld(srcLine, payload.hunks);
     suppressSync = true;
-    dst.scrollTop = (src.scrollTop / srcRange) * dstRange;
-    // Release after the destination's `scroll` event has fired.
+    scrollToLine(dst, dstLine);
     setTimeout(() => {
       suppressSync = false;
     }, 0);
   }
 
   function onOldScroll() {
-    if (oldScroller && newScroller) ratioSync(oldScroller, newScroller);
+    syncLine("old");
   }
   function onNewScroll() {
-    if (newScroller && oldScroller) ratioSync(newScroller, oldScroller);
+    syncLine("new");
+  }
+
+  function toggleSync() {
+    syncedScroll = !syncedScroll;
+    if (syncedScroll) {
+      // Snap the OLD pane to follow NEW right now — the user's "now" is
+      // wherever they last interacted, and NEW is the editing target.
+      syncLine("new");
+    }
   }
 
   const md = new MarkdownIt({
@@ -61,28 +105,26 @@
 
   /**
    * Two-stage markdown-it pipeline:
-   *   1. parse text into tokens (block-level tokens carry `token.map = [start, end_exclusive]`)
-   *   2. for each block_open token whose source range overlaps any hunk on
-   *      this side, inject `class="mdv-changed mdv-changed-{kind}"`
+   *   1. parse to tokens (block-level tokens carry `token.map = [start, end_exclusive]`)
+   *   2. for each block_open token: tag with `data-mdv-line` (for scroll sync)
+   *      and, if its range overlaps any visible hunk on this side, inject
+   *      `class="mdv-changed mdv-changed-{kind}"` (for the colored overlay)
    *   3. render
-   *
-   * On the "new" side we ignore pure Removed hunks (those lines aren't in
-   * the new buffer); on the "old" side we ignore pure Added hunks.
-   * For Modified hunks, the respective range applies on each side.
    */
   function highlightedHtml(
     text: string,
     hunks: HunkSummary[],
     side: Side,
   ): string {
-    // share env across parse/render so plugins like task-lists keep state
     const env: Record<string, unknown> = {};
     const tokens = md.parse(text, env);
 
     for (const token of tokens) {
       if (!token.map || !token.type.endsWith("_open")) continue;
       const tStart = token.map[0] + 1;
-      const tEnd = token.map[1]; // markdown-it's end is exclusive 0-based ≡ inclusive 1-based last line
+      const tEnd = token.map[1];
+
+      token.attrJoin("data-mdv-line", String(tStart));
 
       for (const h of hunks) {
         let hStart: number;
@@ -103,7 +145,9 @@
       }
     }
 
-    return DOMPurify.sanitize(md.renderer.render(tokens, md.options, env));
+    return DOMPurify.sanitize(md.renderer.render(tokens, md.options, env), {
+      ADD_ATTR: ["data-mdv-line"],
+    });
   }
 
   const oldHtml = $derived(
@@ -133,6 +177,19 @@
       <article class="preview">{@html newHtml}</article>
     </div>
   </div>
+  <button
+    type="button"
+    class="sync-toggle"
+    class:on={syncedScroll}
+    onclick={toggleSync}
+    aria-pressed={syncedScroll}
+    aria-label={syncedScroll ? "Disable synced scroll" : "Enable synced scroll"}
+    title={syncedScroll
+      ? "Synced scrolling — click to make panes independent"
+      : "Independent scrolling — click to sync the panes now"}
+  >
+    {syncedScroll ? "🔗" : "⛓"}
+  </button>
 </div>
 
 <style>
@@ -141,6 +198,39 @@
     grid-template-columns: 1fr 1fr;
     height: 100%;
     min-height: 0;
+    position: relative; /* anchor the sync-toggle */
+  }
+  .sync-toggle {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 5;
+    width: 38px;
+    height: 38px;
+    border-radius: 999px;
+    border: 1px solid var(--mdv-border);
+    background: var(--mdv-surface-pop);
+    color: var(--mdv-text-mute);
+    cursor: pointer;
+    font-size: 1.05rem;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 8px var(--mdv-shadow);
+    transition:
+      background-color 0.12s,
+      color 0.12s,
+      transform 0.08s;
+  }
+  .sync-toggle:hover {
+    transform: translate(-50%, -50%) scale(1.06);
+  }
+  .sync-toggle.on {
+    background: var(--mdv-accent-bg);
+    color: var(--mdv-accent-fg);
+    border-color: transparent;
   }
   .pane {
     display: flex;
