@@ -229,24 +229,31 @@
     font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
     font-size: var(--mddiff-editor-font-size, 14px);
   }
+  /* Anchor the active-line extension ::before to .source. */
+  .source {
+    position: relative;
+  }
   /* Reserve a right strip so long lines don't slide under the floating ☰
      button (top-right, 34px + 12px inset + shadow ≈ 54px).
-     Padding goes on `.source` (the outer host), NOT on cm-scroller.
-     CodeMirror computes line-wrap width from `cm-scroller.clientWidth`,
-     and clientWidth *includes* padding — so padding on cm-scroller
-     shrinks the visible box but leaves the wrap point unchanged, with
-     cm-line happily rendering past cm-content's right edge. Putting the
-     padding on `.source` makes cm-scroller itself narrower (its parent
-     now reserves space), so clientWidth is the correct (shrunken) value
-     and wrap actually fires earlier.
+     Padding goes on `.cm-content` (the inner content box), NOT on
+     `.source` or `.cm-scroller`. Reasoning:
+       - On `.cm-scroller`: clientWidth *includes* padding so CM's
+         wrap heuristic doesn't shrink the wrap point — long lines
+         still render past cm-content's right edge.
+       - On `.source` (the outer host): does correctly shrink the wrap
+         point, but it also pushes cm-scroller (the scrollbar's host)
+         3rem in from the viewport right — leaving the scrollbar
+         floating in the middle of the right strip instead of flush
+         against the window edge.
+       - On `.cm-content`: cm-line wraps within cm-content's content
+         box (excluding padding), so wrap fires 3rem early; cm-scroller
+         stays full-width so its scrollbar lands on the viewport right
+         edge.
      Skipped in fullscreen: the 2.5rem top padding already moves content
      below the title overlay, and the ☰ menu sits next to the overlay
      in the OS-title-bar-free area, not on top of text. */
-  :global(:root:not([data-fullscreen])) .source {
+  :global(:root:not([data-fullscreen]) .source .cm-content) {
     padding-right: 3rem;
-    box-sizing: border-box;
-    /* Anchor the active-line extension ::before to .source. */
-    position: relative;
   }
   /* Active-line extension: paints the highlight color across the full
      .source width (including the 3rem padding strip) at the current
