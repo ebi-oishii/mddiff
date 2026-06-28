@@ -187,43 +187,67 @@ export function renderToPlainText(text: string): string {
 }
 
 /**
- * Build the export HTML offscreen and trigger window.print() so the user
- * picks "Save as PDF" in the OS print dialog. Avoids any extra runtime
- * dependency or platform-specific PDF generator.
+ * Inject the rendered export HTML into the main document as a print-only
+ * container, then call window.print() so the user picks "Save as PDF" in the
+ * OS print dialog. @media print hides the rest of the app and reveals only
+ * the container. After printing, the container and stylesheet are removed.
+ *
+ * The earlier iframe-based approach (iframe.contentWindow.print()) is
+ * silently ignored by wry / WKWebView under Tauri — the OS print dialog
+ * never opens. Printing the main window works because Tauri proxies
+ * window.print() through to the OS-level WebView API.
  */
 export async function printAsPdf(text: string, title: string): Promise<void> {
   const html = renderToHtml(text, title);
-  const iframe = document.createElement("iframe");
-  iframe.setAttribute("aria-hidden", "true");
-  iframe.style.cssText =
-    "position:fixed; right:0; bottom:0; width:1px; height:1px; opacity:0; pointer-events:none; border:0;";
-  document.body.appendChild(iframe);
 
-  const idoc = iframe.contentDocument;
-  if (!idoc) {
-    iframe.remove();
-    throw new Error("could not create print iframe");
-  }
-  idoc.open();
-  idoc.write(html);
-  idoc.close();
+  // Pull just the body markup and the export <style> contents out of the
+  // standalone HTML document so we can inline them into the host page.
+  const parsed = new DOMParser().parseFromString(html, "text/html");
+  const bodyContent = parsed.body.innerHTML;
+  const exportStyle = parsed.querySelector("style")?.textContent ?? "";
 
-  // Wait briefly for the iframe layout / fonts to settle before printing.
+  const container = document.createElement("div");
+  container.id = "mdv-print-container";
+  container.innerHTML = bodyContent;
+
+  const styleEl = document.createElement("style");
+  styleEl.id = "mdv-print-style";
+  // Single @media print block: hide everything else, show the container,
+  // override the app's 100vh body so all content paginates. EXPORT_CSS has
+  // its own @media print inside; nested @media print resolves the same as
+  // a single one per CSS spec.
+  styleEl.textContent = `
+    #mdv-print-container { display: none; }
+    @media print {
+      html, body {
+        height: auto !important;
+        overflow: visible !important;
+      }
+      body > *:not(#mdv-print-container) { display: none !important; }
+      #mdv-print-container { display: block !important; }
+      ${exportStyle}
+    }
+  `;
+
+  document.body.appendChild(container);
+  document.head.appendChild(styleEl);
+
+  const savedTitle = document.title;
+  document.title = title;
+
+  // Wait for layout / fonts to settle before triggering the print dialog.
   await new Promise((r) => setTimeout(r, 80));
 
-  const iwin = iframe.contentWindow;
-  if (!iwin) {
-    iframe.remove();
-    throw new Error("iframe has no window");
-  }
-  iwin.focus();
-  iwin.print();
+  window.print();
 
-  // Best-effort cleanup after the print dialog closes. Different browsers fire
-  // afterprint at different points (or not at all in headless modes), so use
-  // both an event listener and a fallback timer.
-  const cleanup = () => iframe.isConnected && iframe.remove();
-  iwin.addEventListener("afterprint", cleanup, { once: true });
+  // Cleanup after the dialog closes. afterprint isn't always reliable
+  // (different platforms / headless modes), so back it up with a timer.
+  const cleanup = () => {
+    if (container.isConnected) container.remove();
+    if (styleEl.isConnected) styleEl.remove();
+    document.title = savedTitle;
+  };
+  window.addEventListener("afterprint", cleanup, { once: true });
   setTimeout(cleanup, 60_000);
 }
 

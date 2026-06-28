@@ -7,6 +7,8 @@
   import { syntaxHighlighting, defaultHighlightStyle } from "@codemirror/language";
   import { doc } from "$lib/stores/doc.svelte";
   import { mdvCmTheme } from "./cm-theme";
+  import FindBar from "$lib/components/FindBar.svelte";
+  import { CmFindState, findExtension } from "./find-cm.svelte";
 
   let {
     text,
@@ -16,6 +18,26 @@
   let container: HTMLDivElement;
   let view: EditorView | null = null;
   let lastEmitted = "";
+  let scrollTimer: ReturnType<typeof setTimeout> | null = null;
+
+  function captureTopLine() {
+    if (!view) return;
+    try {
+      const rect = view.scrollDOM.getBoundingClientRect();
+      // Detached element returns a zero rect — bail before posAtCoords maps
+      // (0, 0) to position 0 and clobbers currentLine with 1.
+      if (rect.width === 0 && rect.height === 0) return;
+      const pos = view.posAtCoords({ x: rect.left + 8, y: rect.top + 4 });
+      if (pos != null) doc.currentLine = view.state.doc.lineAt(pos).number;
+    } catch {}
+  }
+
+  function onScroll() {
+    if (scrollTimer) clearTimeout(scrollTimer);
+    scrollTimer = setTimeout(captureTopLine, 80);
+  }
+
+  const find = new CmFindState();
 
   onMount(() => {
     const state = EditorState.create({
@@ -25,6 +47,7 @@
         lineNumbers(),
         highlightActiveLine(),
         syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
+        findExtension(find.syncFromData),
         keymap.of([...defaultKeymap, ...historyKeymap]),
         markdown(),
         EditorView.lineWrapping,
@@ -40,6 +63,19 @@
     });
     view = new EditorView({ state, parent: container });
     lastEmitted = text;
+    find.bind(view);
+    window.addEventListener("keydown", find.onKeydown);
+
+    // Move focus into the editor so the caret is visible immediately on mode
+    // switch. Without this the user sees no caret on entry to the view.
+    view.focus();
+
+    // Track scroll continuously so doc.currentLine stays fresh regardless of
+    // unmount timing. Svelte 5's onDestroy can fire after the DOM has been
+    // detached, at which point getBoundingClientRect returns a zero rect and
+    // posAtCoords resolves to position 0 (line 1), silently clobbering the
+    // saved line. Continuous capture sidesteps that race.
+    view.scrollDOM.addEventListener("scroll", onScroll, { passive: true });
 
     // Restore scroll position from DocStore so mode switches stay in place.
     // Defer one frame so CodeMirror has measured the layout.
@@ -54,20 +90,13 @@
   });
 
   onDestroy(() => {
-    // Save topmost visible source line before tearing down so the next mode
-    // can scroll there. posAtCoords is more reliable than lineBlockAtHeight
-    // when the editor has padding/margins.
-    if (view) {
-      try {
-        const rect = view.scrollDOM.getBoundingClientRect();
-        const pos = view.posAtCoords({ x: rect.left + 8, y: rect.top + 4 });
-        if (pos != null) {
-          doc.currentLine = view.state.doc.lineAt(pos).number;
-        }
-      } catch {
-        // best-effort; ignore if the layout isn't available
-      }
-    }
+    window.removeEventListener("keydown", find.onKeydown);
+    find.destroy();
+    if (scrollTimer) clearTimeout(scrollTimer);
+    // Last-chance capture in case a scroll event happened in the final ~80ms
+    // and the debounce hasn't fired yet. Best-effort; guarded inside.
+    captureTopLine();
+    view?.scrollDOM.removeEventListener("scroll", onScroll);
     view?.destroy();
   });
 
@@ -79,9 +108,31 @@
       });
     }
   });
+
+  $effect(() => {
+    void find.query;
+    void find.open;
+    find.refresh();
+  });
 </script>
 
 <div bind:this={container} class="source"></div>
+{#if find.open}
+  <FindBar
+    bind:query={find.query}
+    bind:replaceQuery={find.replaceQuery}
+    bind:replaceVisible={find.replaceVisible}
+    matchCount={find.matchCount}
+    currentIndex={find.currentIndex}
+    focusVersion={find.focusVersion}
+    enableReplace={true}
+    onnext={find.next}
+    onprev={find.prev}
+    onreplace={find.replace}
+    onreplaceAll={find.replaceAll}
+    onclose={find.close}
+  />
+{/if}
 
 <style>
   .source {
@@ -94,5 +145,12 @@
   :global(.cm-editor) {
     font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
     font-size: var(--mdv-editor-font-size, 14px);
+  }
+  /* In fullscreen the floating "(filename) MODE" overlay (rendered by
+     +page.svelte at top-left) covers the first line of source because
+     CodeMirror's default content padding is only a few pixels. Live /
+     Preview / WYSIWYG have intrinsic 2rem top padding so they're fine. */
+  :global(:root[data-fullscreen] .source .cm-scroller) {
+    padding-top: 2.5rem;
   }
 </style>

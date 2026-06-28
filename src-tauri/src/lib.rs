@@ -9,6 +9,11 @@ use commands::fs::{file_size, read_text_file, write_binary_file, write_text_file
 pub fn run() {
     let builder = tauri::Builder::default().plugin(tauri_plugin_dialog::init());
 
+    // The file watcher needs shared state across commands and the watcher
+    // callback, so it's owned by Tauri's State container.
+    #[cfg(not(any(target_os = "android", target_os = "ios")))]
+    let builder = builder.manage(commands::watcher::WatcherState::default());
+
     // Native menu bar on desktop. Each item emits a "menu-event" payload
     // (its string id) that the frontend dispatches in +page.svelte.
     #[cfg(not(any(target_os = "android", target_os = "ios")))]
@@ -35,6 +40,11 @@ pub fn run() {
         commands::git::git_side_by_side,
         commands::mdv::mdv_pack,
         commands::mdv::mdv_extract_body,
+        commands::watcher::start_watch,
+        commands::watcher::stop_watch,
+        commands::diff::diff_text_hunks,
+        commands::diff::diff_text_full,
+        commands::diff::diff_text_side_by_side,
     ]);
 
     #[cfg(any(target_os = "android", target_os = "ios"))]

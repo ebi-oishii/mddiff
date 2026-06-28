@@ -4,6 +4,8 @@
   import DOMPurify from "dompurify";
   import taskLists from "markdown-it-task-lists";
   import { doc } from "$lib/stores/doc.svelte";
+  import FindBar from "$lib/components/FindBar.svelte";
+  import { FindState } from "./find.svelte";
 
   let { text }: { text: string } = $props();
 
@@ -39,16 +41,20 @@
   });
 
   let scroller: HTMLDivElement;
+  let scrollTimer: ReturnType<typeof setTimeout> | null = null;
 
   function topVisibleLine(): number | null {
     if (!scroller) return null;
-    const top = scroller.getBoundingClientRect().top;
+    const rect = scroller.getBoundingClientRect();
+    // Detached element returns a zero rect, in which case every child also
+    // reports zero — bail to avoid clobbering currentLine with line 1.
+    if (rect.width === 0 && rect.height === 0) return null;
+    const top = rect.top;
     const blocks = scroller.querySelectorAll<HTMLElement>("[data-mdv-line]");
     let last: number | null = null;
     for (const block of blocks) {
-      const rect = block.getBoundingClientRect();
-      // The first block whose top is at or below the viewport top wins.
-      if (rect.top >= top - 2) {
+      const br = block.getBoundingClientRect();
+      if (br.top >= top - 2) {
         const n = Number(block.dataset.mdvLine);
         return Number.isFinite(n) ? n : last;
       }
@@ -56,6 +62,16 @@
       if (Number.isFinite(n)) last = n;
     }
     return last;
+  }
+
+  function captureTopLine() {
+    const line = topVisibleLine();
+    if (line != null) doc.currentLine = line;
+  }
+
+  function onScroll() {
+    if (scrollTimer) clearTimeout(scrollTimer);
+    scrollTimer = setTimeout(captureTopLine, 80);
   }
 
   function scrollToLine(line: number) {
@@ -74,15 +90,37 @@
     scroller.scrollTop = target.offsetTop;
   }
 
+  const find = new FindState();
+
   onMount(() => {
+    find.bind(scroller);
+    window.addEventListener("keydown", find.onKeydown);
     // Wait one frame for the rendered HTML to land in the DOM.
     const line = doc.currentLine;
-    requestAnimationFrame(() => scrollToLine(line));
+    requestAnimationFrame(() => {
+      scrollToLine(line);
+      // Attach the scroll listener AFTER the initial restore so the very
+      // first frame of restoration scroll doesn't overwrite currentLine.
+      scroller?.addEventListener("scroll", onScroll, { passive: true });
+    });
   });
 
   onDestroy(() => {
-    const line = topVisibleLine();
-    if (line != null) doc.currentLine = line;
+    window.removeEventListener("keydown", find.onKeydown);
+    find.destroy();
+    if (scrollTimer) clearTimeout(scrollTimer);
+    captureTopLine();
+    scroller?.removeEventListener("scroll", onScroll);
+  });
+
+  // Re-apply find when query or rendered html changes (e.g. file reloaded
+  // externally — {@html ...} replaces children and the previous marks are
+  // gone with the old DOM).
+  $effect(() => {
+    void html;
+    void find.query;
+    void find.open;
+    find.refresh();
   });
 </script>
 
@@ -91,6 +129,17 @@
     {@html html}
   </article>
 </div>
+{#if find.open}
+  <FindBar
+    bind:query={find.query}
+    matchCount={find.matchCount}
+    currentIndex={find.currentIndex}
+    focusVersion={find.focusVersion}
+    onnext={find.next}
+    onprev={find.prev}
+    onclose={find.close}
+  />
+{/if}
 
 <style>
   .preview-scroller {
@@ -103,6 +152,11 @@
     padding: 2rem 3rem 4rem;
     line-height: 1.7;
     font-size: 16px;
+  }
+  /* Match SourceView / LivePreview / WYSIWYG: in fullscreen the title
+     overlay covers the top, so widen the content's top padding. */
+  :global(:root[data-fullscreen]) .preview {
+    padding-top: 2.5rem;
   }
   .preview :global(h1) {
     font-size: 2rem;

@@ -1,6 +1,10 @@
 <script lang="ts">
+  import { onMount } from "svelte";
   import { doc } from "$lib/stores/doc.svelte";
   import {
+    diffTextFull,
+    diffTextHunks,
+    diffTextSideBySide,
     gitFullDiff,
     gitHunks,
     gitListBases,
@@ -19,6 +23,10 @@
   import SideBySideView from "./diff/SideBySideView.svelte";
 
   const CUSTOM = "__custom__";
+  // Synthetic revspec for "Compare with disk". When `doc.pendingDiskCompare`
+  // is non-null we surface it as a top "Special" entry and route the diff
+  // computation through diff_text_* instead of git_*.
+  const DISK = "__disk__";
 
   let submode = $state<DiffSubmode>("sidebyside");
   let bases = $state<BaseOption[]>([]);
@@ -37,7 +45,13 @@
   let basesTimer: ReturnType<typeof setTimeout> | null = null;
 
   const isCustom = $derived(selected === CUSTOM);
+  const isDisk = $derived(selected === DISK);
   const base = $derived(isCustom ? customBase.trim() || "HEAD" : selected);
+
+  // Auto-select the disk option when arriving from "Compare with disk".
+  onMount(() => {
+    if (doc.pendingDiskCompare != null) selected = DISK;
+  });
 
   $effect(() => {
     void doc.path;
@@ -61,8 +75,10 @@
     void doc.text;
     void submode;
     void base;
+    void doc.pendingDiskCompare;
 
-    if (!doc.path || !doc.gitAvailable) return;
+    if (!doc.path) return;
+    if (!isDisk && !doc.gitAvailable) return;
     if (diffTimer) clearTimeout(diffTimer);
     diffTimer = setTimeout(load, 250);
     return () => {
@@ -75,7 +91,16 @@
     loading = true;
     error = null;
     try {
-      if (submode === "highlight") {
+      if (isDisk) {
+        const oldText = doc.pendingDiskCompare ?? "";
+        if (submode === "highlight") {
+          hunks = await diffTextHunks(oldText, doc.text);
+        } else if (submode === "full") {
+          lines = await diffTextFull(oldText, doc.text);
+        } else {
+          sbs = await diffTextSideBySide(oldText, doc.text);
+        }
+      } else if (submode === "highlight") {
         hunks = await gitHunks(doc.path, doc.text, base);
       } else if (submode === "full") {
         lines = await gitFullDiff(doc.path, doc.text, base);
@@ -164,6 +189,11 @@
           title="● = differs from current buffer · ○ = identical · (blank) = same content as a more recent commit shown above"
         >
           <optgroup label="Special">
+            {#if doc.pendingDiskCompare != null}
+              <option value={DISK} title="File on disk vs the current buffer">
+                ● Disk (current file)
+              </option>
+            {/if}
             {#each byKind("special") as b}
               <option value={b.revspec} title={b.detail ?? undefined}>{optionLabel(b)}</option>
             {/each}
@@ -234,7 +264,7 @@
 
   {#if !doc.path}
     <div class="empty">No file open.</div>
-  {:else if !doc.gitAvailable}
+  {:else if !doc.gitAvailable && !isDisk}
     <div class="empty">This file is not in a Git repository.</div>
   {:else if error}
     <div class="error">{error}</div>
@@ -243,7 +273,7 @@
   {:else if submode === "full"}
     <FullDiffView {lines} />
   {:else if sbs}
-    <SideBySideView payload={sbs} baseLabel={base} />
+    <SideBySideView payload={sbs} baseLabel={isDisk ? "disk" : base} />
   {:else}
     <div class="empty">Loading…</div>
   {/if}
@@ -267,6 +297,12 @@
     flex-shrink: 0;
     flex-wrap: wrap;
     font-size: 0.85rem;
+  }
+  /* In fullscreen the title overlay covers the top-left, hiding the
+     Highlight / Full / Side-by-Side tabs. Push the toolbar down so the
+     overlay sits in its own row above. */
+  :global(:root[data-fullscreen]) .submode-bar {
+    padding-top: 2.5rem;
   }
   .left {
     display: flex;
