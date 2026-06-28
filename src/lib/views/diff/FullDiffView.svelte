@@ -1,29 +1,20 @@
 <script lang="ts">
-  import { onDestroy, onMount } from "svelte";
+  import { onMount } from "svelte";
   import type { DiffLine } from "$lib/types";
   import FindBar from "$lib/components/FindBar.svelte";
-  import { FindState } from "../find.svelte";
+  import { useFind } from "../use-find.svelte";
 
   let { lines }: { lines: DiffLine[] } = $props();
 
   let scroller: HTMLDivElement;
-  const find = new FindState();
-
-  onMount(() => {
-    find.bind(scroller);
-    window.addEventListener("keydown", find.onKeydown);
-  });
-
-  onDestroy(() => {
-    window.removeEventListener("keydown", find.onKeydown);
-    find.destroy();
-  });
-
-  $effect(() => {
+  const find = useFind(() => {
     void lines;
     void find.query;
     void find.open;
-    find.refresh();
+  });
+
+  onMount(() => {
+    find.bind(scroller);
   });
 </script>
 

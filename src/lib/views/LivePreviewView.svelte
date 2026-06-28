@@ -8,7 +8,8 @@
   import { doc } from "$lib/stores/doc.svelte";
   import { mdvCmTheme } from "./cm-theme";
   import FindBar from "$lib/components/FindBar.svelte";
-  import { CmFindState, findExtension } from "./find-cm.svelte";
+  import { findExtension } from "./find-cm.svelte";
+  import { useCmFind } from "./use-find.svelte";
 
   let {
     text,
@@ -35,7 +36,10 @@
     scrollTimer = setTimeout(captureTopLine, 80);
   }
 
-  const find = new CmFindState();
+  const find = useCmFind(() => {
+    void find.query;
+    void find.open;
+  });
 
   onMount(() => {
     const state = EditorState.create({
@@ -61,7 +65,6 @@
     view = new EditorView({ state, parent: container });
     lastEmitted = text;
     find.bind(view);
-    window.addEventListener("keydown", find.onKeydown);
 
     // Focus on mount so the caret is visible immediately on mode switch.
     view.focus();
@@ -79,8 +82,6 @@
   });
 
   onDestroy(() => {
-    window.removeEventListener("keydown", find.onKeydown);
-    find.destroy();
     if (scrollTimer) clearTimeout(scrollTimer);
     captureTopLine();
     view?.scrollDOM.removeEventListener("scroll", onScroll);
@@ -96,11 +97,6 @@
     }
   });
 
-  $effect(() => {
-    void find.query;
-    void find.open;
-    find.refresh();
-  });
 </script>
 
 <div bind:this={container} class="live"></div>
