@@ -6,6 +6,9 @@ pub mod fs;
 pub mod git;
 
 #[cfg(not(any(target_os = "android", target_os = "ios")))]
+pub mod history;
+
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
 pub mod pack;
 
 pub use diff::{DiffLine, HunkKind, HunkSummary};

@@ -39,7 +39,14 @@ export interface SideBySidePayload {
   hunks: HunkSummary[];
 }
 
-export type BaseKind = "special" | "branch" | "tag" | "commit";
+export type BaseKind = "special" | "branch" | "tag" | "commit" | "snapshot";
+
+/** One local save-event snapshot (mirrors `mddiff_core::history::SnapshotMeta`). */
+export interface SnapshotMeta {
+  id: string;
+  timestamp_ms: number;
+  size_bytes: number;
+}
 
 /**
  * - `differs`: file at this revision differs from current buffer AND is the
