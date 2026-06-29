@@ -1,10 +1,11 @@
 <script lang="ts">
   import { onMount, onDestroy } from "svelte";
-  import { Editor, defaultValueCtx, editorViewCtx, rootCtx } from "@milkdown/kit/core";
+  import { Editor, defaultValueCtx, editorViewCtx, prosePluginsCtx, rootCtx } from "@milkdown/kit/core";
   import { commonmark } from "@milkdown/kit/preset/commonmark";
   import { gfm } from "@milkdown/kit/preset/gfm";
   import { listener, listenerCtx } from "@milkdown/kit/plugin/listener";
   import { getMarkdown, replaceAll } from "@milkdown/kit/utils";
+  import { wysiwygSpellcheckMaskPlugin } from "./wysiwyg-spellcheck-mask";
   // ProseMirror's view module logs a console warning if `white-space: pre-wrap`
   // (and a few other base styles) aren't on the contenteditable. Without
   // those styles PM degrades to a code path that may misbehave on layout
@@ -35,19 +36,6 @@
   let ready = $state(false);
   let scrollTracker: ScrollTracker | null = null;
   let imageObserver: MutationObserver | null = null;
-
-  // The previous version of this view also ran a MutationObserver that
-  // stamped `spellcheck="false"` on code / pre nodes (so prose got spell-
-  // checked but identifiers in code didn't). That triggered an interaction
-  // with ProseMirror's own DOM observer: PM treats external attribute
-  // mutations as content changes and re-renders the node, which produces
-  // childList mutations, which fires our observer again, which sets the
-  // attribute, which PM re-renders... infinite loop, freezes the main
-  // thread, breaks the entire app after WYSIWYG mounts on any non-empty
-  // doc. See <internal commit history>. For v0.2.2 we drop the mask
-  // entirely — when the user enables spellcheck, code identifiers may
-  // also get red underlines. Acceptable trade-off until we move the mask
-  // into a Milkdown plugin that owns the attribute via PM's node spec.
 
   /**
    * Walk every `<img>` in the editor and rewrite relative src to Tauri's
@@ -215,6 +203,15 @@
               console.error("[mddiff] WYSIWYG markdownUpdated handler", err);
             }
           });
+          // Stamp `spellcheck="false"` on code_block nodes and inlineCode
+          // marks via a PM decoration plugin. We can't do this with an
+          // external MutationObserver because PM's own observer would treat
+          // our setAttribute as content drift and re-render the node — see
+          // v0.2.2 (#47) for the deadlock that caused.
+          ctx.update(prosePluginsCtx, (plugins) => [
+            ...plugins,
+            wysiwygSpellcheckMaskPlugin,
+          ]);
         })
         .use(commonmark)
         .use(gfm)
@@ -274,10 +271,6 @@
     }
 
     ready = true;
-    // Note: previous versions ran a MutationObserver here to mask
-    // spellcheck="false" on code/pre as Milkdown re-rendered. It deadlocked
-    // with ProseMirror's own DOM observer (PM revert-cycles foreign attrs,
-    // we re-stamp, PM reverts...). See the comment near `imageObserver`.
 
     // Restore scroll position last so Milkdown's render has been committed
     // and lastEmitted (post-normalization) is set for an accurate line map.
