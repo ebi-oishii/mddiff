@@ -2,6 +2,7 @@ import MarkdownIt from "markdown-it";
 import type Token from "markdown-it/lib/token.mjs";
 import DOMPurify from "dompurify";
 import taskLists from "markdown-it-task-lists";
+import anchor from "markdown-it-anchor";
 import { rewriteRelativeImageSrc } from "./image-path";
 
 /**
@@ -30,6 +31,10 @@ export function createPreviewMd(): MarkdownIt {
     typographer: true,
   });
   md.use(taskLists, { enabled: false, label: false });
+  // Auto-generate `id="..."` slugs on headings so `[link](#installation)`
+  // anchor jumps work without manual id markup. Default GFM-style slugifier
+  // matches what most users expect (`Installation` → `installation`).
+  md.use(anchor, { permalink: false });
 
   const defaultImage = md.renderer.rules.image;
   md.renderer.rules.image = function (tokens, idx, options, env, self) {
@@ -102,14 +107,16 @@ export function renderWithLineMap(
   }
 
   return DOMPurify.sanitize(md.renderer.render(tokens, md.options, env), {
-    ADD_ATTR: ["data-mddiff-line"],
+    // markdown-it-anchor adds `id` to headings; keep that. data-mddiff-line
+    // is our own attribute for scroll sync.
+    ADD_ATTR: ["data-mddiff-line", "id"],
     // Default DOMPurify URI regex allows http(s)/mailto/tel/sms/cid/xmpp/ftp
     // but blocks custom schemes. Tauri's `convertFileSrc()` returns
     // `asset://localhost/...` URLs, which we need to keep so pasted images
-    // render. Extend the regex with `asset` while keeping the rest of the
-    // default safe list.
+    // render. We also want `file://` to survive so link-click can hand it
+    // off to the OS opener.
     ALLOWED_URI_REGEXP:
-      /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|sms|cid|xmpp|asset):|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i,
+      /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|sms|cid|xmpp|asset|file):|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i,
   });
 }
 

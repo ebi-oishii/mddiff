@@ -9,7 +9,8 @@ use commands::fs::{file_size, read_text_file, write_binary_file, write_text_file
 pub fn run() {
     let builder = tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
-        .plugin(tauri_plugin_clipboard_manager::init());
+        .plugin(tauri_plugin_clipboard_manager::init())
+        .plugin(tauri_plugin_opener::init());
 
     // The file watcher needs shared state across commands and the watcher
     // callback, so it's owned by Tauri's State container.

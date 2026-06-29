@@ -10,6 +10,7 @@
   import { attachScrollTracker, type ScrollTracker } from "./scroll-tracker";
   import { createLineMapMd } from "./markdown-render";
   import { rewriteRelativeImageSrc } from "./image-path";
+  import { handleLinkClick } from "./link-click";
   import { doc } from "$lib/stores/doc.svelte";
 
   let {
@@ -126,6 +127,19 @@
   // its left edge) toggles the task's checked state on the underlying
   // ProseMirror node. The markdown-updated listener propagates the change
   // to doc.text and the dirty flag.
+  function handleWysiwygLinkClick(e: MouseEvent) {
+    handleLinkClick(e, {
+      getDocPath: () => doc.path,
+      // WYSIWYG is an editor — plain clicks must place the caret so users
+      // can edit link text. Require ⌘/Ctrl to navigate, matching VSCode /
+      // Typora / JetBrains conventions.
+      requireModifier: true,
+      // No in-view anchor scroll for WYSIWYG yet — Milkdown's editor view
+      // doesn't expose heading ids in the rendered DOM the same way
+      // markdown-it does. `#anchor` clicks become no-ops here.
+    });
+  }
+
   function handleTaskClick(e: MouseEvent) {
     if (!editor) return;
     const target = e.target as HTMLElement;
@@ -191,6 +205,12 @@
 
     container.addEventListener("click", handleTaskClick);
 
+    // Link click delegation. ProseMirror also handles link clicks internally
+    // (positions the caret) — we listen at the container so we fire before
+    // bubbling reaches PM, and `event.preventDefault` blocks PM from
+    // following the link inside the editor view.
+    container.addEventListener("click", handleWysiwygLinkClick);
+
     // Milkdown renders `<img>` with the verbatim Markdown src (a relative
     // path for pasted images). The Tauri webview can't load `<doc-dir>/x.png`
     // directly — it needs `convertFileSrc()`'s asset:// URL. We can't
@@ -247,6 +267,7 @@
 
   onDestroy(() => {
     container?.removeEventListener("click", handleTaskClick);
+    container?.removeEventListener("click", handleWysiwygLinkClick);
     imageObserver?.disconnect();
     imageObserver = null;
     try {

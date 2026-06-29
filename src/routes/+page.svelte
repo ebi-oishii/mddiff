@@ -22,6 +22,7 @@
   } from "$lib/ipc/fs";
   import { humanizeError } from "$lib/errors";
   import { i18n } from "$lib/i18n/index.svelte";
+  import { useModifierCursorTracking } from "$lib/views/modifier-cursor.svelte";
   import LargeFileWarning from "$lib/components/LargeFileWarning.svelte";
   import { gitIsRepo } from "$lib/ipc/git";
   import {
@@ -79,11 +80,28 @@
   let closeUnlisten: UnlistenFn | null = null;
   let isFullscreen = $state(false);
 
+  // Toggle root `.mddiff-modifier-down` while ⌘ / Ctrl is held so editable
+  // views can show pointer cursor over links.
+  useModifierCursorTracking();
+
   onMount(async () => {
     settings.hydrate();
     i18n.hydrate();
     if (!doc.path && !doc.text) {
       mode = settings.defaultMode;
+    }
+
+    // When this window was spawned from a link click in another mddiff
+    // window, the URL carries `?file=/abs/path.md`. Read + load before the
+    // user sees anything so the open document is the one they clicked.
+    try {
+      const fileParam = new URL(window.location.href).searchParams.get("file");
+      if (fileParam) {
+        const loaded = await readPath(fileParam);
+        doc.load(loaded.path, loaded.text, loaded.gitAvailable);
+      }
+    } catch (e) {
+      error = humanizeError(e, "read");
     }
     // Native OS menu (desktop only). The Rust side emits a `menu-event`
     // with the item id; route it back into the existing handlers so the
@@ -1236,5 +1254,19 @@
   }
   main.split > .pane + .pane {
     border-left: 1px solid var(--mddiff-border);
+  }
+
+  /* Show the "follow link" affordance while the user is holding ⌘ / Ctrl.
+     Applied to every view that has interactive links — Preview's plain-click
+     already opens, but the pointer-on-modifier still helps confirm the link
+     is live. Live Preview's link decoration is the `mddiff-lp-link` span.
+     Source view's plain link text isn't decorated, so no cursor change there
+     (would require a custom CM mark — TODO). */
+  :global(:root.mddiff-modifier-down) :global(.preview a),
+  :global(:root.mddiff-modifier-down) :global(.wys a),
+  :global(:root.mddiff-modifier-down) :global(.sbs a),
+  :global(:root.mddiff-modifier-down) :global(.mddiff-lp-link),
+  :global(:root.mddiff-modifier-down) :global(.mddiff-cm-link) {
+    cursor: pointer;
   }
 </style>

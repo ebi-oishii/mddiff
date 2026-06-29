@@ -5,11 +5,29 @@
   import { useFind } from "./use-find.svelte";
   import { attachScrollTracker, type ScrollTracker } from "./scroll-tracker";
   import { createPreviewMd, renderWithLineMap } from "./markdown-render";
+  import { handleLinkClick } from "./link-click";
 
   let { text }: { text: string } = $props();
 
   const md = createPreviewMd();
   const html = $derived(renderWithLineMap(md, text, doc.path));
+
+  /**
+   * Click delegation for any `<a>` in the rendered article. Routes external
+   * URLs to the OS opener, anchor links to in-view scroll, and local
+   * markdown files to a new mddiff window. See `link-click.ts` for the full
+   * dispatch table.
+   */
+  function onArticleClick(event: MouseEvent) {
+    handleLinkClick(event, {
+      getDocPath: () => doc.path,
+      onScrollAnchor: (id) => {
+        if (!scroller) return;
+        const el = scroller.querySelector(`#${CSS.escape(id)}`);
+        el?.scrollIntoView({ behavior: "smooth", block: "start" });
+      },
+    });
+  }
 
   let scroller: HTMLDivElement;
   let scrollTracker: ScrollTracker | null = null;
@@ -80,7 +98,7 @@
 </script>
 
 <div class="preview-scroller" bind:this={scroller}>
-  <article class="preview">
+  <article class="preview" onclick={onArticleClick} role="presentation">
     {@html html}
   </article>
 </div>

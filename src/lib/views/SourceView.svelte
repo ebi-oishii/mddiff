@@ -15,6 +15,7 @@
   import { attachScrollTracker, type ScrollTracker } from "./scroll-tracker";
   import { restoreCmToLine } from "./cm-editor";
   import { imagePaste } from "./image-paste";
+  import { linkClickCmExtension } from "./link-click-cm";
 
   let {
     text,
@@ -111,6 +112,7 @@
         syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
         findExtension(find.syncFromData),
         imagePaste((msg) => onerror?.(msg)),
+        linkClickCmExtension({ getDocPath: () => doc.path }),
         keymap.of([...defaultKeymap, ...historyKeymap]),
         markdown(),
         wrapComp.of(settings.softWrap ? EditorView.lineWrapping : []),
