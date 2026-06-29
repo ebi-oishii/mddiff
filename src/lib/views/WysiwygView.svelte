@@ -287,6 +287,20 @@
     }
   });
 
+  // Outline sidebar jumps surface as `doc.pendingScrollLine`. Defer to next
+  // frame so any pending Milkdown re-render is committed before scrollToLine
+  // queries .ProseMirror children.
+  $effect(() => {
+    const line = doc.pendingScrollLine;
+    if (line == null || !ready) return;
+    requestAnimationFrame(() => {
+      try {
+        scrollToLine(line);
+      } catch {}
+      doc.pendingScrollLine = null;
+    });
+  });
+
 </script>
 
 <div bind:this={container} class="wys"></div>

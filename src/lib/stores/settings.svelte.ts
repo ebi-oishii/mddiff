@@ -31,6 +31,8 @@ export interface Settings {
    * Source view's markdown highlighting. Doesn't touch editor background
    * or text color so it stays consistent with the app's light/dark mode. */
   editorTheme: EditorTheme;
+  /** Show the outline sidebar (TOC) on the right. Toggled by ⌘⇧O. */
+  outlineOpen: boolean;
 }
 
 const STORAGE_KEY = "mddiff-settings-v1";
@@ -46,6 +48,7 @@ const DEFAULTS: Settings = {
   diffDebounceMs: 250,
   diffDefaultSubmode: "sidebyside",
   editorTheme: "github",
+  outlineOpen: false,
 };
 
 function load(): Settings {
@@ -71,6 +74,7 @@ class SettingsStore {
   diffDebounceMs = $state<number>(DEFAULTS.diffDebounceMs);
   diffDefaultSubmode = $state<DiffSubmode>(DEFAULTS.diffDefaultSubmode);
   editorTheme = $state<EditorTheme>(DEFAULTS.editorTheme);
+  outlineOpen = $state<boolean>(DEFAULTS.outlineOpen);
 
   /** Hydrate from localStorage. Call once at app mount on the client. */
   hydrate() {
@@ -85,6 +89,7 @@ class SettingsStore {
     this.diffDebounceMs = s.diffDebounceMs;
     this.diffDefaultSubmode = s.diffDefaultSubmode;
     this.editorTheme = s.editorTheme;
+    this.outlineOpen = s.outlineOpen;
   }
 
   persist() {
@@ -100,6 +105,7 @@ class SettingsStore {
       diffDebounceMs: this.diffDebounceMs,
       diffDefaultSubmode: this.diffDefaultSubmode,
       editorTheme: this.editorTheme,
+      outlineOpen: this.outlineOpen,
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot));
   }
@@ -115,6 +121,7 @@ class SettingsStore {
     this.diffDebounceMs = DEFAULTS.diffDebounceMs;
     this.diffDefaultSubmode = DEFAULTS.diffDefaultSubmode;
     this.editorTheme = DEFAULTS.editorTheme;
+    this.outlineOpen = DEFAULTS.outlineOpen;
     this.persist();
   }
 }

@@ -174,6 +174,15 @@
     }
   });
 
+  // Outline sidebar jumps surface as `doc.pendingScrollLine`. Honor it once,
+  // then clear so we don't re-scroll on every doc.text mutation.
+  $effect(() => {
+    const line = doc.pendingScrollLine;
+    if (line == null || !view) return;
+    restoreCmToLine(view, line);
+    doc.pendingScrollLine = null;
+  });
+
   // Reactively re-configure the CM compartments when their settings change,
   // so toggling Soft wrap / Line numbers / Tab width takes effect live.
   $effect(() => {

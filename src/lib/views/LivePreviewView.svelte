@@ -101,6 +101,14 @@
     }
   });
 
+  // Outline sidebar jumps surface as `doc.pendingScrollLine`.
+  $effect(() => {
+    const line = doc.pendingScrollLine;
+    if (line == null || !view) return;
+    restoreCmToLine(view, line);
+    doc.pendingScrollLine = null;
+  });
+
 </script>
 
 <div bind:this={container} class="live"></div>

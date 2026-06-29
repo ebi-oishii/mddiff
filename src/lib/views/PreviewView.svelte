@@ -95,6 +95,18 @@
     scrollTracker?.captureNow();
     scrollTracker?.detach();
   });
+
+  // Outline sidebar jumps surface as `doc.pendingScrollLine`. Honor it
+  // after a microtask so any pending re-render of the [data-mddiff-line]
+  // anchors has settled.
+  $effect(() => {
+    const line = doc.pendingScrollLine;
+    if (line == null) return;
+    requestAnimationFrame(() => {
+      scrollToLine(line);
+      doc.pendingScrollLine = null;
+    });
+  });
 </script>
 
 <div class="preview-scroller" bind:this={scroller}>

@@ -33,6 +33,8 @@
   } from "$lib/export";
   import MddiffExportDialog from "$lib/components/MddiffExportDialog.svelte";
   import SettingsDialog from "$lib/components/SettingsDialog.svelte";
+  import OutlineSidebar from "$lib/components/OutlineSidebar.svelte";
+  import { extractHeadings, activeHeadingIndex } from "$lib/views/outline";
   import { settings, FONT_SIZE_PX } from "$lib/stores/settings.svelte";
   import SourceView from "$lib/views/SourceView.svelte";
   import LivePreviewView from "$lib/views/LivePreviewView.svelte";
@@ -65,6 +67,13 @@
   // modes. Common case: Source on the left, Preview on the right.
   let splitMode = $state(false);
   let rightMode = $state<Mode>("preview");
+
+  // Outline sidebar: re-extract headings on every doc.text change. Cheap
+  // because extractHeadings only parses (no rendering / sanitization).
+  const outlineHeadings = $derived(extractHeadings(doc.text));
+  const outlineActiveIdx = $derived(
+    activeHeadingIndex(outlineHeadings, doc.currentLine),
+  );
 
   // Detect Mac at runtime for shortcut hint glyphs. Non-Mac users see "Ctrl+"
   // instead of ⌘ so the menu hint actually matches the key they need to press.
@@ -652,6 +661,13 @@
       } else if (e.key === "\\") {
         e.preventDefault();
         toggleSplit();
+      } else if (e.key === "O" && e.shiftKey) {
+        // ⌘⇧O — toggle the outline sidebar. Mirrors VS Code's
+        // "Show Outline" shortcut. Note key is uppercase "O" because
+        // shiftKey is also set.
+        e.preventDefault();
+        settings.outlineOpen = !settings.outlineOpen;
+        settings.persist();
       }
       // Export shortcuts: ⌘⇧ + initial of the format. Kept on Shift+letter
       // since the menu items are inherently destination-of-export "Save As X"
@@ -757,6 +773,17 @@
               </button>
             {/each}
           {/if}
+          <button
+            role="menuitem"
+            onclick={() => {
+              settings.outlineOpen = !settings.outlineOpen;
+              settings.persist();
+              closeMenu();
+            }}
+          >
+            <span>{i18n.t("outline.toggle")}</span>
+            <kbd>{MOD}{SHIFT}O</kbd>
+          </button>
           <div class="sep"></div>
           <button role="menuitem" onclick={open}>
             <span>{i18n.t("menu.open")}</span><kbd>{MOD}O</kbd>
@@ -853,7 +880,8 @@
       <button class="dismiss" aria-label={i18n.t("banner.dismiss")} onclick={() => (normalization = null)}>×</button>
     </div>
   {/if}
-  <main class:split={splitMode}>
+  <main>
+    <div class="workspace" class:split={splitMode}>
     <section class="pane">
       {@render titlePill(mode)}
       {#if mode === "source"}
@@ -907,6 +935,18 @@
           <DiffView />
         {/if}
       </section>
+    {/if}
+    </div>
+    {#if settings.outlineOpen}
+      <OutlineSidebar
+        headings={outlineHeadings}
+        activeIndex={outlineActiveIdx}
+        onJump={(line) => doc.jumpToLine(line)}
+        onClose={() => {
+          settings.outlineOpen = false;
+          settings.persist();
+        }}
+      />
     {/if}
   </main>
 
@@ -1262,12 +1302,24 @@
     background: var(--mddiff-bg);
     color: var(--mddiff-text);
     display: flex;
-    flex-direction: column;
-  }
-  main.split {
     flex-direction: row;
   }
-  main > .pane {
+  /* Inner workspace owns the pane(s). Default is single-pane column; split
+     mode flips to row so left/right panes sit side-by-side. The outline
+     sidebar lives as a sibling of .workspace inside main so it docks to the
+     right regardless of split state. */
+  .workspace {
+    flex: 1;
+    min-width: 0;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .workspace.split {
+    flex-direction: row;
+  }
+  .workspace > .pane {
     flex: 1 1 100%;
     min-width: 0;
     min-height: 0;
@@ -1277,10 +1329,10 @@
     /* Anchors the per-pane fullscreen title pill (absolute) to this pane. */
     position: relative;
   }
-  main.split > .pane {
+  .workspace.split > .pane {
     flex-basis: 50%;
   }
-  main.split > .pane + .pane {
+  .workspace.split > .pane + .pane {
     border-left: 1px solid var(--mddiff-border);
   }
 

@@ -134,6 +134,12 @@ export const en = {
     save: "Save .mddiff",
     cancel: "Cancel",
   },
+  outline: {
+    title: "Outline",
+    empty: "(no headings)",
+    close: "Close outline",
+    toggle: "Toggle outline",
+  },
   diff: {
     loading: "Computing diff…",
     base: "Base",

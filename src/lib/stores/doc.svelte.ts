@@ -20,6 +20,20 @@ class DocStore {
    */
   currentLine = $state(1);
 
+  /**
+   * One-shot signal for the outline sidebar (and future TOC consumers) to
+   * tell the active view "scroll to this line now". Each view subscribes via
+   * `$effect`, performs its native scroll-to-line, and resets the signal
+   * back to `null`. Distinct from `currentLine` (which is OUTPUT of scroll
+   * tracking) so we don't fight the scroll tracker.
+   */
+  pendingScrollLine = $state<number | null>(null);
+
+  /** Request the active view to scroll to a 1-based source line. */
+  jumpToLine(line: number) {
+    this.pendingScrollLine = line;
+  }
+
   get dirty() {
     return this.text !== this.savedText;
   }
