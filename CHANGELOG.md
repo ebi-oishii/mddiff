@@ -2,6 +2,17 @@
 
 All notable changes to mddiff go here. Format roughly follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.2.2-alpha.1] — 2026-06-29
+
+Critical fix: opening any non-empty document in WYSIWYG mode could lock up the entire app (menu unresponsive, view switches ignored). All v0.2.x users should update.
+
+### Fixed
+
+- **WYSIWYG deadlock on non-empty docs** — Switching to WYSIWYG with a loaded file froze the app completely (only native scroll kept working). Root cause: the spellcheck-mask `MutationObserver` introduced in v0.2.0 fought with ProseMirror's internal DOM observer: PM treated our `spellcheck="false"` attribute writes on code/pre as external edits and re-rendered the nodes, which fired our observer, which re-stamped the attribute, which made PM re-render again — infinite loop on the main thread. The mask is removed; editor-level spellcheck (toggleable in Settings) still works, with the trade-off that identifiers inside code blocks may get red underlines when spellcheck is on. (#47)
+
+[0.2.2-alpha.1]: https://github.com/ebi-oishii/mddiff/releases/tag/v0.2.2-alpha.1
+[#47]: https://github.com/ebi-oishii/mddiff/pull/47
+
 ## [0.2.1-alpha.1] — 2026-06-29
 
 OS integration phase 1: `.md` / `.markdown` / `.mdown` / `.mkd` / `.mddiff` are now recognized file types on every platform.
