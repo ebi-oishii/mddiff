@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount, onDestroy } from "svelte";
+  import { invoke } from "@tauri-apps/api/core";
   import { listen, type UnlistenFn } from "@tauri-apps/api/event";
   import { getCurrentWindow } from "@tauri-apps/api/window";
   import { confirm } from "@tauri-apps/plugin-dialog";
@@ -89,6 +90,7 @@
   let resizeUnlisten: UnlistenFn | null = null;
   let externalChangeUnlisten: UnlistenFn | null = null;
   let closeUnlisten: UnlistenFn | null = null;
+  let fileOpenUnlisten: UnlistenFn | null = null;
   let isFullscreen = $state(false);
 
   // Toggle root `.mddiff-modifier-down` while ⌘ / Ctrl is held so editable
@@ -102,17 +104,48 @@
       mode = settings.defaultMode;
     }
 
-    // When this window was spawned from a link click in another mddiff
-    // window, the URL carries `?file=/abs/path.md`. Read + load before the
-    // user sees anything so the open document is the one they clicked.
+    // Resolve the initial file in priority order:
+    //   1. `?file=/abs/path.md` query — link-click spawn from another window
+    //   2. `pending_file_open` Tauri command — OS handed us a file on launch
+    //      (argv on Windows/Linux, RunEvent::Opened on macOS) and the Rust
+    //      side queued it for us
+    //
+    // Either source produces an absolute path; both go through `readPath`
+    // so the Git availability and content load identically.
     try {
       const fileParam = new URL(window.location.href).searchParams.get("file");
-      if (fileParam) {
-        const loaded = await readPath(fileParam);
+      let initialPath = fileParam;
+      if (!initialPath) {
+        try {
+          initialPath = await invoke<string | null>("pending_file_open");
+        } catch {
+          // Command unavailable (mobile build / browser preview) — fine.
+        }
+      }
+      if (initialPath) {
+        const loaded = await readPath(initialPath);
         doc.load(loaded.path, loaded.text, loaded.gitAvailable);
       }
     } catch (e) {
       error = humanizeError(e, "read");
+    }
+
+    // Runtime "Open With" — macOS Finder can send file-open events to an
+    // already-running app via RunEvent::Opened. The Rust side bridges those
+    // into a `file-open` event with the path payload.
+    try {
+      fileOpenUnlisten = await listen<string>("file-open", async (e) => {
+        const path = e.payload;
+        if (!path) return;
+        try {
+          const loaded = await readPath(path);
+          doc.load(loaded.path, loaded.text, loaded.gitAvailable);
+        } catch (err) {
+          error = humanizeError(err, "read");
+        }
+      });
+    } catch {
+      // listen unavailable — fine
     }
     // Native OS menu (desktop only). The Rust side emits a `menu-event`
     // with the item id; route it back into the existing handlers so the
@@ -171,6 +204,7 @@
     resizeUnlisten?.();
     externalChangeUnlisten?.();
     closeUnlisten?.();
+    fileOpenUnlisten?.();
     // Best-effort stop; if Tauri's tear-down already killed the watcher this
     // will just be a no-op.
     void stopWatch().catch(() => {});

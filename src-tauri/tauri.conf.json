@@ -39,6 +39,22 @@
       "wix": {
         "version": "0.2.0.1"
       }
-    }
+    },
+    "fileAssociations": [
+      {
+        "ext": ["md", "markdown", "mdown", "mkd"],
+        "name": "Markdown Document",
+        "description": "Markdown text file",
+        "role": "Editor",
+        "mimeType": "text/markdown"
+      },
+      {
+        "ext": ["mddiff"],
+        "name": "mddiff package",
+        "description": "mddiff portable package with embedded Git history",
+        "role": "Editor",
+        "mimeType": "application/x-mddiff"
+      }
+    ]
   }
 }
