@@ -7,7 +7,9 @@ use commands::fs::{file_size, read_text_file, write_binary_file, write_text_file
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    let builder = tauri::Builder::default().plugin(tauri_plugin_dialog::init());
+    let builder = tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_clipboard_manager::init());
 
     // The file watcher needs shared state across commands and the watcher
     // callback, so it's owned by Tauri's State container.
@@ -45,6 +47,7 @@ pub fn run() {
         commands::diff::diff_text_hunks,
         commands::diff::diff_text_full,
         commands::diff::diff_text_side_by_side,
+        commands::clipboard::paste_image,
     ]);
 
     #[cfg(any(target_os = "android", target_os = "ios"))]

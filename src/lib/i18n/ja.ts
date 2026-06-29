@@ -155,5 +155,6 @@ export const ja: Dictionary = {
     interrupted: "操作が中断されました。もう一度試してください。",
     tooLarge: "このファイルは大きすぎて開けません（100 MB 超）。",
     noFileOpen: "再読込対象のファイルが開かれていません。",
+    saveFirstForImage: "画像を貼り付けるには先にファイルを保存してください。",
   },
 };

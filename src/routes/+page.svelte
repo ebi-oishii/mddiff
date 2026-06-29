@@ -763,9 +763,17 @@
   {/if}
   {#snippet renderView(m: Mode, withNormalizeBanner: boolean)}
     {#if m === "source"}
-      <SourceView text={doc.text} onchange={(t) => doc.setText(t)} />
+      <SourceView
+        text={doc.text}
+        onchange={(t) => doc.setText(t)}
+        onerror={(msg) => (error = msg)}
+      />
     {:else if m === "live"}
-      <LivePreviewView text={doc.text} onchange={(t) => doc.setText(t)} />
+      <LivePreviewView
+        text={doc.text}
+        onchange={(t) => doc.setText(t)}
+        onerror={(msg) => (error = msg)}
+      />
     {:else if m === "wysiwyg"}
       <WysiwygView
         text={doc.text}

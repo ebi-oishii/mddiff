@@ -9,6 +9,8 @@
     "core:window:allow-is-fullscreen",
     "core:window:allow-destroy",
     "core:webview:allow-print",
-    "dialog:default"
+    "dialog:default",
+    "clipboard-manager:default",
+    "clipboard-manager:allow-read-image"
   ]
 }

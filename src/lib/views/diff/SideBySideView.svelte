@@ -2,6 +2,7 @@
   import { onMount } from "svelte";
   import type { HunkSummary, SideBySidePayload } from "$lib/types";
   import { mapNewToOld, mapOldToNew } from "./line-map";
+  import { doc } from "$lib/stores/doc.svelte";
   import FindBar from "$lib/components/FindBar.svelte";
   import { useFind } from "../use-find.svelte";
   import { createPreviewMd, renderWithLineMap } from "../markdown-render";
@@ -220,7 +221,7 @@
     hunks: HunkSummary[],
     side: Side,
   ): string {
-    return renderWithLineMap(md, text, (token, tStart, tEnd) => {
+    return renderWithLineMap(md, text, doc.path, (token, tStart, tEnd) => {
       for (const h of hunks) {
         let hStart: number;
         let hEnd: number;

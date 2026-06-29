@@ -9,7 +9,7 @@
   let { text }: { text: string } = $props();
 
   const md = createPreviewMd();
-  const html = $derived(renderWithLineMap(md, text));
+  const html = $derived(renderWithLineMap(md, text, doc.path));
 
   let scroller: HTMLDivElement;
   let scrollTracker: ScrollTracker | null = null;

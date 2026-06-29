@@ -156,6 +156,7 @@ export const en = {
     interrupted: "The operation was interrupted. Try again.",
     tooLarge: "This file is too large to open (over 100 MB).",
     noFileOpen: "No file is open to reload.",
+    saveFirstForImage: "Save the file first to paste images.",
   },
 };
 

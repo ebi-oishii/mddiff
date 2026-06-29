@@ -6,6 +6,7 @@ import {
   EditorView,
   ViewPlugin,
   type ViewUpdate,
+  WidgetType,
 } from "@codemirror/view";
 
 /**
@@ -46,6 +47,38 @@ function isActive(
 }
 
 const HIDDEN = Decoration.replace({});
+
+/**
+ * Placeholder pill shown in place of `![alt](src)` when the cursor isn't on
+ * that line. Live Preview is CodeMirror-based and doesn't actually render
+ * images inline — but a pill that names the file at least tells the user
+ * "there's an image here" and what was inserted. Switch to Preview to view
+ * the rendered image.
+ */
+class ImagePillWidget extends WidgetType {
+  constructor(readonly label: string) {
+    super();
+  }
+  eq(other: ImagePillWidget) {
+    return other.label === this.label;
+  }
+  toDOM() {
+    const span = document.createElement("span");
+    span.className = "mddiff-lp-image-pill";
+    span.textContent = `🖼 ${this.label}`;
+    return span;
+  }
+  ignoreEvent() {
+    return false;
+  }
+}
+
+function pillLabelFor(src: string): string {
+  // Strip any query/fragment and pull just the filename. Falls back to "image"
+  // if the src is somehow empty.
+  const clean = src.split(/[?#]/)[0];
+  return clean.split(/[/\\]/).pop() || "image";
+}
 
 function buildDecorations(state: EditorState): DecorationSet {
   const ranges: Range<Decoration>[] = [];
@@ -104,6 +137,33 @@ function buildDecorations(state: EditorState): DecorationSet {
           ranges.push(
             Decoration.mark({ class: "mddiff-lp-link" }).range(node.from, node.to),
           );
+          return;
+        }
+        // Image: `![alt](src)`. Inactive → swap the whole span for an icon
+        // pill so the user can see *something* exists at that position, even
+        // though Live Preview doesn't render the actual <img>. Active → just
+        // tint the syntax so it's distinguishable from other links.
+        case "Image": {
+          if (!active) {
+            // Pull src out of `![alt](src "title")`. The Lezer Image node
+            // covers the whole expression including marks, so slicing is the
+            // simplest extraction.
+            const text = state.doc.sliceString(node.from, node.to);
+            const m = text.match(/!\[[^\]]*\]\(([^\s)]+)/);
+            const src = m ? m[1] : "";
+            ranges.push(
+              Decoration.replace({
+                widget: new ImagePillWidget(pillLabelFor(src)),
+              }).range(node.from, node.to),
+            );
+          } else {
+            ranges.push(
+              Decoration.mark({ class: "mddiff-lp-image" }).range(
+                node.from,
+                node.to,
+              ),
+            );
+          }
           return;
         }
 

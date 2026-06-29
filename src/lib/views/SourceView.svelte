@@ -14,11 +14,18 @@
   import { useCmFind } from "./use-find.svelte";
   import { attachScrollTracker, type ScrollTracker } from "./scroll-tracker";
   import { restoreCmToLine } from "./cm-editor";
+  import { imagePaste } from "./image-paste";
 
   let {
     text,
     onchange,
-  }: { text: string; onchange: (t: string) => void } = $props();
+    onerror,
+  }: {
+    text: string;
+    onchange: (t: string) => void;
+    /** Surface image-paste failures to the host's error banner. */
+    onerror?: (msg: string) => void;
+  } = $props();
 
   let container: HTMLDivElement;
   let view: EditorView | null = null;
@@ -103,6 +110,7 @@
         mddiffSyntaxHighlighting,
         syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
         findExtension(find.syncFromData),
+        imagePaste((msg) => onerror?.(msg)),
         keymap.of([...defaultKeymap, ...historyKeymap]),
         markdown(),
         wrapComp.of(settings.softWrap ? EditorView.lineWrapping : []),
