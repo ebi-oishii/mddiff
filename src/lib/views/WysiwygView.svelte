@@ -249,19 +249,19 @@
     // ProseMirror DOM and rewrite img src on the fly. The rewrite is
     // idempotent: a resolved asset:// URL is no longer "relative" so the
     // observer's re-fire after our setAttribute is a no-op.
-    console.log("[mddiff] WYS mount: imageObserver DISABLED for diagnosis", performance.now());
-    // imageObserver = new MutationObserver(() => {
-    //   try { rewriteImages(); } catch (err) {
-    //     console.error("[mddiff] WYSIWYG rewriteImages", err);
-    //   }
-    // });
-    // imageObserver.observe(container, {
-    //   childList: true,
-    //   subtree: true,
-    //   attributes: true,
-    //   attributeFilter: ["src"],
-    // });
-    // rewriteImages();
+    console.log("[mddiff] WYS mount: imageObserver ENABLED", performance.now());
+    imageObserver = new MutationObserver(() => {
+      try { rewriteImages(); } catch (err) {
+        console.error("[mddiff] WYSIWYG rewriteImages", err);
+      }
+    });
+    imageObserver.observe(container, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["src"],
+    });
+    rewriteImages();
 
     // After load, query Milkdown's own serialization of the doc to detect
     // round-trip normalization (e.g. `*foo*` <-> `_foo_`, link reference
