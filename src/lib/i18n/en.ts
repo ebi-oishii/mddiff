@@ -141,6 +141,7 @@ export const en = {
     toggle: "Toggle outline",
   },
   history: {
+    savesGroup: "Recent local saves",
     viewAt: "View at this version",
     bannerReadonly: "Viewing read-only at",
     prev: "Older version",

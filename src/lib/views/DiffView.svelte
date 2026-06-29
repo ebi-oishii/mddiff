@@ -13,6 +13,7 @@
     gitReadAt,
     gitSideBySide,
   } from "$lib/ipc/git";
+  import { snapshotList, snapshotRead } from "$lib/ipc/history";
   import { i18n } from "$lib/i18n/index.svelte";
   import type {
     BaseKind,
@@ -21,6 +22,7 @@
     DiffSubmode,
     HunkSummary,
     SideBySidePayload,
+    SnapshotMeta,
   } from "$lib/types";
   import HighlightView from "./diff/HighlightView.svelte";
   import FullDiffView from "./diff/FullDiffView.svelte";
@@ -31,6 +33,10 @@
   // is non-null we surface it as a top "Special" entry and route the diff
   // computation through diff_text_* instead of git_*.
   const DISK = "__disk__";
+  // Prefix marking a synthetic revspec that points to a local snapshot.
+  // The rest is the snapshot id; we read the body via `snapshotRead`
+  // instead of going through Git.
+  const SNAP_PREFIX = "snap:";
 
   // Initial sub-mode comes from settings; once the view is mounted the user
   // can switch freely with the tabs without affecting the stored default.
@@ -52,7 +58,21 @@
 
   const isCustom = $derived(selected === CUSTOM);
   const isDisk = $derived(selected === DISK);
+  const isSnap = $derived(selected.startsWith(SNAP_PREFIX));
   const base = $derived(isCustom ? customBase.trim() || "HEAD" : selected);
+
+  // Local save-event snapshots — refreshed when `doc.snapshotsVersion` bumps
+  // (after every save). Independent of `bases` so a snapshot can appear in
+  // the picker even when the file isn't in a Git repo.
+  let snapshots = $state<SnapshotMeta[]>([]);
+  function formatSnapshotLabel(s: SnapshotMeta): string {
+    const d = new Date(s.timestamp_ms);
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
+  function snapshotRevspec(s: SnapshotMeta): string {
+    return `${SNAP_PREFIX}${s.id}`;
+  }
 
   // When history view is active, the diff's "current" side is the pinned
   // historical content — not the live buffer. Everything (list_bases marker
@@ -82,15 +102,31 @@
     };
   });
 
+  // Refresh local snapshots whenever the path changes or a new snapshot
+  // lands (doc.snapshotsVersion bumps after each successful save).
+  $effect(() => {
+    void doc.path;
+    void doc.snapshotsVersion;
+    if (!doc.path) {
+      snapshots = [];
+      return;
+    }
+    const path = doc.path;
+    snapshotList(path).then((s) => {
+      snapshots = s;
+    });
+  });
+
   $effect(() => {
     void doc.path;
     void currentText;
     void submode;
     void base;
     void doc.pendingDiskCompare;
+    void doc.snapshotsVersion;
 
     if (!doc.path) return;
-    if (!isDisk && !doc.gitAvailable) return;
+    if (!isDisk && !isSnap && !doc.gitAvailable) return;
     if (diffTimer) clearTimeout(diffTimer);
     diffTimer = setTimeout(load, settings.diffDebounceMs);
     return () => {
@@ -105,13 +141,13 @@
     try {
       if (isDisk) {
         const oldText = doc.pendingDiskCompare ?? "";
-        if (submode === "highlight") {
-          hunks = await diffTextHunks(oldText, currentText);
-        } else if (submode === "full") {
-          lines = await diffTextFull(oldText, currentText);
-        } else {
-          sbs = await diffTextSideBySide(oldText, currentText);
-        }
+        await applyTextDiff(oldText);
+      } else if (isSnap) {
+        // Snapshot diffs sidestep Git — read the body locally then diff as
+        // text-vs-text. Same code path as the disk-compare branch.
+        const id = selected.slice(SNAP_PREFIX.length);
+        const oldText = await snapshotRead(doc.path, id);
+        await applyTextDiff(oldText);
       } else if (submode === "highlight") {
         hunks = await gitHunks(doc.path, currentText, base);
       } else if (submode === "full") {
@@ -123,6 +159,16 @@
       error = humanizeError(e, "read");
     } finally {
       loading = false;
+    }
+  }
+
+  async function applyTextDiff(oldText: string) {
+    if (submode === "highlight") {
+      hunks = await diffTextHunks(oldText, currentText);
+    } else if (submode === "full") {
+      lines = await diffTextFull(oldText, currentText);
+    } else {
+      sbs = await diffTextSideBySide(oldText, currentText);
     }
   }
 
@@ -161,8 +207,18 @@
   async function openHistoryView() {
     if (!doc.path || isDisk) return;
     const targetRevspec = base;
-    const targetLabel =
-      bases.find((b) => b.revspec === targetRevspec)?.label ?? targetRevspec;
+    const path = doc.path;
+    // Look up the label. For snapshots the label isn't in `bases` (different
+    // source), so fall back to formatting the snapshot timestamp.
+    const targetLabel = isSnap
+      ? formatSnapshotLabel(
+          snapshots.find((s) => snapshotRevspec(s) === targetRevspec) ?? {
+            id: targetRevspec.slice(SNAP_PREFIX.length),
+            timestamp_ms: 0,
+            size_bytes: 0,
+          },
+        )
+      : bases.find((b) => b.revspec === targetRevspec)?.label ?? targetRevspec;
     const walk = bases
       .filter((b) => b.kind === "commit" && b.file_changed)
       .map((b) => ({ revspec: b.revspec, label: b.label }));
@@ -172,7 +228,9 @@
       index = 0;
     }
     try {
-      const content = await gitReadAt(doc.path, targetRevspec);
+      const content = isSnap
+        ? await snapshotRead(path, targetRevspec.slice(SNAP_PREFIX.length))
+        : await gitReadAt(path, targetRevspec);
       doc.enterHistory(targetRevspec, targetLabel, content, walk, index);
     } catch (e) {
       error = humanizeError(e, "read");
@@ -253,6 +311,15 @@
               {/each}
             </optgroup>
           {/if}
+          {#if snapshots.length > 0}
+            <optgroup label={i18n.t("history.savesGroup")}>
+              {#each snapshots as s}
+                <option value={snapshotRevspec(s)} title={s.id}>
+                  ◷ {formatSnapshotLabel(s)}
+                </option>
+              {/each}
+            </optgroup>
+          {/if}
           {#if byKind("commit").length > 0}
             <optgroup
               label={showAllCommits
@@ -293,7 +360,7 @@
           <button type="submit">Apply</button>
         </form>
       {/if}
-      {#if !isDisk && doc.gitAvailable}
+      {#if !isDisk && (doc.gitAvailable || isSnap)}
         <button
           type="button"
           class="view-at"
@@ -313,7 +380,7 @@
 
   {#if !doc.path}
     <div class="empty">No file open.</div>
-  {:else if !doc.gitAvailable && !isDisk}
+  {:else if !doc.gitAvailable && !isDisk && !isSnap}
     <div class="empty">This file is not in a Git repository.</div>
   {:else if error}
     <div class="error">{error}</div>

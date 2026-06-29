@@ -46,9 +46,21 @@ class DocStore {
    */
   pendingScrollLine = $state<number | null>(null);
 
+  /**
+   * Bumped each time a new local save-event snapshot lands. DiffView's
+   * picker depends on this so the "Recent saves" group refreshes on save
+   * without polling.
+   */
+  snapshotsVersion = $state(0);
+
   /** Request the active view to scroll to a 1-based source line. */
   jumpToLine(line: number) {
     this.pendingScrollLine = line;
+  }
+
+  /** Called after a successful snapshot write — increments the version. */
+  noteSnapshotSaved() {
+    this.snapshotsVersion += 1;
   }
 
   /**

@@ -140,6 +140,7 @@ export const ja: Dictionary = {
     toggle: "アウトラインの表示切替",
   },
   history: {
+    savesGroup: "最近のローカル保存",
     viewAt: "この版を見る",
     bannerReadonly: "履歴表示中（読み取り専用）:",
     prev: "古い版",

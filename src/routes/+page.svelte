@@ -25,6 +25,7 @@
   import { useModifierCursorTracking } from "$lib/views/modifier-cursor.svelte";
   import LargeFileWarning from "$lib/components/LargeFileWarning.svelte";
   import { gitIsRepo } from "$lib/ipc/git";
+  import { snapshotSave } from "$lib/ipc/history";
   import {
     printAsPdf,
     renderToDocx,
@@ -388,6 +389,14 @@
     largeFilePending = null;
   }
 
+  // Drop a local save-event snapshot after a successful disk write.
+  // Fire-and-forget on purpose — snapshot writes are best-effort housekeeping;
+  // the save itself already completed.
+  async function captureSnapshot(path: string, text: string) {
+    const meta = await snapshotSave(path, text);
+    if (meta) doc.noteSnapshotSaved();
+  }
+
   async function save() {
     closeMenu();
     error = null;
@@ -395,6 +404,7 @@
       if (doc.path) {
         await writeFile(doc.path, doc.text);
         doc.markSaved();
+        void captureSnapshot(doc.path, doc.text);
       } else {
         await saveAs();
       }
@@ -411,6 +421,7 @@
       if (path) {
         doc.setPath(path, await gitIsRepo(path));
         doc.markSaved();
+        void captureSnapshot(path, doc.text);
       }
     } catch (e) {
       error = humanizeError(e, "write");
