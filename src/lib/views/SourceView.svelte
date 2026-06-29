@@ -231,41 +231,52 @@
     font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
     font-size: var(--mddiff-editor-font-size, 14px);
   }
+  /* Anchor the active-line extension ::before to .source. */
+  .source {
+    position: relative;
+  }
   /* Reserve a right strip so long lines don't slide under the floating ☰
      button (top-right, 34px + 12px inset + shadow ≈ 54px).
-     Padding goes on `.source` (the outer host), NOT on cm-scroller.
-     CodeMirror computes line-wrap width from `cm-scroller.clientWidth`,
-     and clientWidth *includes* padding — so padding on cm-scroller
-     shrinks the visible box but leaves the wrap point unchanged, with
-     cm-line happily rendering past cm-content's right edge. Putting the
-     padding on `.source` makes cm-scroller itself narrower (its parent
-     now reserves space), so clientWidth is the correct (shrunken) value
-     and wrap actually fires earlier.
+     Padding goes on `.cm-content` (the inner content box), NOT on
+     `.source` or `.cm-scroller`. Reasoning:
+       - On `.cm-scroller`: clientWidth *includes* padding so CM's
+         wrap heuristic doesn't shrink the wrap point — long lines
+         still render past cm-content's right edge.
+       - On `.source` (the outer host): does correctly shrink the wrap
+         point, but it also pushes cm-scroller (the scrollbar's host)
+         3rem in from the viewport right — leaving the scrollbar
+         floating in the middle of the right strip instead of flush
+         against the window edge.
+       - On `.cm-content`: cm-line wraps within cm-content's content
+         box (excluding padding), so wrap fires 3rem early; cm-scroller
+         stays full-width so its scrollbar lands on the viewport right
+         edge.
      Skipped in fullscreen: the 2.5rem top padding already moves content
      below the title overlay, and the ☰ menu sits next to the overlay
      in the OS-title-bar-free area, not on top of text. */
-  :global(:root:not([data-fullscreen])) .source {
+  :global(:root:not([data-fullscreen]) .source .cm-content) {
     padding-right: 3rem;
-    box-sizing: border-box;
-    /* Anchor the active-line extension ::before to .source. */
-    position: relative;
   }
-  /* Active-line extension: paints the highlight color across the full
-     .source width (including the 3rem padding strip) at the current
-     line's y. CM's own .cm-activeLine still paints inside cm-editor,
-     and cm-editor's solid background sits *above* this ::before (later
-     in document order, same stacking context), so the bar is visible
-     only where cm-editor doesn't cover — i.e. the right 3rem strip.
+  /* Active-line extension: paints the highlight color into the right
+     3rem strip (where cm-content's padding lives) at the current line's
+     y. CM's own .cm-activeLine handles the cm-line area, so this only
+     needs to cover the gap.
+     cm-editor's solid background fills that padding region too, and is
+     rendered after ::before in document order — so we lift ::before
+     with z-index:1 to actually be visible over it.
+     The strip uses the same translucent `--mddiff-active-line-bg`
+     token; visually identical to cm-activeLine on the same row.
      Position vars are written by updateActiveLine() in the script. */
   :global(:root:not([data-fullscreen])) .source::before {
     content: "";
     position: absolute;
-    left: 0;
     right: 0;
+    width: 3rem;
     top: var(--mddiff-source-active-y, -9999px);
     height: var(--mddiff-source-active-h, 0);
     background: var(--mddiff-active-line-bg);
     pointer-events: none;
+    z-index: 1;
   }
   /* In fullscreen the floating "(filename) MODE" overlay (rendered by
      +page.svelte at top-left) covers the first line of source because
