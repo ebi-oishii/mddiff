@@ -5,6 +5,11 @@
   import { gfm } from "@milkdown/kit/preset/gfm";
   import { listener, listenerCtx } from "@milkdown/kit/plugin/listener";
   import { getMarkdown, replaceAll } from "@milkdown/kit/utils";
+  // ProseMirror's view module logs a console warning if `white-space: pre-wrap`
+  // (and a few other base styles) aren't on the contenteditable. Without
+  // those styles PM degrades to a code path that may misbehave on layout
+  // edges. Importing the stylesheet adds the rules globally.
+  import "prosemirror-view/style/prosemirror.css";
   import FindBar from "$lib/components/FindBar.svelte";
   import { useFind } from "./use-find.svelte";
   import { attachScrollTracker, type ScrollTracker } from "./scroll-tracker";
@@ -337,13 +342,24 @@
     scrollTracker?.detach();
     scrollTracker = null;
 
-    // Milkdown.destroy can throw if the editor's already in a half-disposed
-    // state (rare, but observed during fast mode-switching). Swallow so the
-    // unmount completes cleanly.
-    try {
-      editor?.destroy();
-    } catch {}
+    // Milkdown's editor.destroy() walks every plugin's dispose hook and
+    // tears down ProseMirror — observed to block the main thread on certain
+    // doc states during fast mode-switching (symptom: menu and the next
+    // view's mount don't respond afterward). Defer it to the next event
+    // loop tick (not just a microtask) so the outgoing view's unmount + the
+    // incoming view's onMount + first paint all run first; the user sees
+    // the new view immediately even if the disposal takes time.
+    const e = editor;
     editor = null;
+    if (e) {
+      setTimeout(() => {
+        try {
+          e.destroy();
+        } catch (err) {
+          console.error("[mddiff] WYSIWYG editor.destroy", err);
+        }
+      }, 0);
+    }
   });
 
   $effect(() => {
