@@ -342,24 +342,18 @@
     scrollTracker?.detach();
     scrollTracker = null;
 
-    // Milkdown's editor.destroy() walks every plugin's dispose hook and
-    // tears down ProseMirror — observed to block the main thread on certain
-    // doc states during fast mode-switching (symptom: menu and the next
-    // view's mount don't respond afterward). Defer it to the next event
-    // loop tick (not just a microtask) so the outgoing view's unmount + the
-    // incoming view's onMount + first paint all run first; the user sees
-    // the new view immediately even if the disposal takes time.
+    // DIAGNOSTIC (temporary): Milkdown's editor.destroy() has been observed
+    // to block the main thread on non-empty docs, leaving menu / next-view
+    // mount unresponsive. Skip destroy entirely as a probe — the editor
+    // instance leaks (its DOM node is gone because Svelte already tore down
+    // the container) but the UI thread stays free. Logs surface in DevTools
+    // so we can confirm the diagnosis.
+    console.log("[mddiff] WYSIWYG onDestroy start", performance.now());
     const e = editor;
     editor = null;
-    if (e) {
-      setTimeout(() => {
-        try {
-          e.destroy();
-        } catch (err) {
-          console.error("[mddiff] WYSIWYG editor.destroy", err);
-        }
-      }, 0);
-    }
+    // Intentionally NOT calling e.destroy() — see comment above.
+    void e; // suppress unused warning
+    console.log("[mddiff] WYSIWYG onDestroy end (destroy skipped)", performance.now());
   });
 
   $effect(() => {
