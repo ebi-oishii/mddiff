@@ -1196,7 +1196,10 @@
     display: flex;
     align-items: center;
     gap: 0.25rem;
-    padding: 0.3rem 0.5rem;
+    /* Right padding clears the floating ☰ menu (34px + 0.75rem right offset
+       ≈ 3rem). Without this the close × sits underneath the menu trigger
+       and can't be clicked. */
+    padding: 0.3rem 3rem 0.3rem 0.5rem;
     border-bottom: 1px solid var(--mddiff-border);
     background: var(--mddiff-surface);
     font-size: 0.78rem;
