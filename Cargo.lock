@@ -2372,7 +2372,7 @@ dependencies = [
 
 [[package]]
 name = "mddiff"
-version = "0.2.0-alpha.1"
+version = "0.2.1-alpha.1"
 dependencies = [
  "base64 0.22.1",
  "chrono",
@@ -2390,7 +2390,7 @@ dependencies = [
 
 [[package]]
 name = "mddiff-core"
-version = "0.2.0-alpha.1"
+version = "0.2.1-alpha.1"
 dependencies = [
  "base64 0.22.1",
  "chrono",
@@ -2405,7 +2405,7 @@ dependencies = [
 
 [[package]]
 name = "mddiff-tui"
-version = "0.2.0-alpha.1"
+version = "0.2.1-alpha.1"
 dependencies = [
  "anyhow",
  "clap",

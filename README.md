@@ -1,6 +1,6 @@
 # mddiff
 
-> **Alpha · v0.2.0-alpha** — APIs / file format / settings may still change before v1. Feedback welcome via issues.
+> **Alpha · v0.2.1-alpha** — APIs / file format / settings may still change before v1. Feedback welcome via issues.
 
 **A Markdown editor with first-class Git diff and time-travel.** Like Typora, but with `git diff` and `git checkout` living next to your text.
 
@@ -69,11 +69,11 @@ Grab the latest from [Releases](https://github.com/ebi-oishii/mddiff/releases):
 
 | Platform | File |
 |---|---|
-| macOS (Apple Silicon) | `mddiff_0.2.0_aarch64.dmg` |
-| macOS (Intel) | `mddiff_0.2.0_x64.dmg` |
-| Windows | `mddiff_0.2.0_x64-setup.msi` |
-| Linux | `mddiff_0.2.0_amd64.AppImage` |
-| TUI (any platform) | `mddiff-tui_0.2.0_<target>` |
+| macOS (Apple Silicon) | `mddiff_0.2.1_aarch64.dmg` |
+| macOS (Intel) | `mddiff_0.2.1_x64.dmg` |
+| Windows | `mddiff_0.2.1_x64-setup.msi` |
+| Linux | `mddiff_0.2.1_amd64.AppImage` |
+| TUI (any platform) | `mddiff-tui_0.2.1_<target>` |
 
 ### From source
 

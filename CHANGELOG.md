@@ -2,6 +2,18 @@
 
 All notable changes to mddiff go here. Format roughly follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.2.1-alpha.1] — 2026-06-29
+
+OS integration phase 1: `.md` / `.markdown` / `.mdown` / `.mkd` / `.mddiff` are now recognized file types on every platform.
+
+### Added
+
+- **File associations** — Installing the bundled dmg / msi / deb / AppImage registers mddiff as a handler for Markdown files. Finder's "Open With" menu, Windows Explorer's "Open With", and Linux's default-app pickers now offer mddiff. (#45)
+- **Open-from-OS** — Double-clicking a `.md` file (or `open foo.md` / `xdg-open foo.md` / `mddiff foo.md` from the CLI) opens it in mddiff with the file already loaded. macOS "Open With" on a running mddiff also swaps the buffer to the new file live (via `RunEvent::Opened`). Windows / Linux runtime forwarding still spawns a new window — single-instance plugin is the Phase 2 follow-up.
+
+[0.2.1-alpha.1]: https://github.com/ebi-oishii/mddiff/releases/tag/v0.2.1-alpha.1
+[#45]: https://github.com/ebi-oishii/mddiff/pull/45
+
 ## [0.2.0-alpha.1] — 2026-06-29
 
 The headline of this release: **diff → time-travel + local fine-grained history + blame**. v0.1 was "a markdown editor with first-class diff"; v0.2 lets you walk through past versions, see your own save-by-save history between commits, and read per-line authorship.
