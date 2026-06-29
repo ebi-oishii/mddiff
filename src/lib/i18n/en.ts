@@ -15,6 +15,8 @@ export const en = {
     wysiwyg: "WYSIWYG",
     preview: "Preview",
     diff: "Diff",
+    section: "View",
+    toggleSub: "Toggle sub-mode",
   },
   menu: {
     label: "Menu",

@@ -125,41 +125,45 @@ pub fn build(app: &AppHandle) -> tauri::Result<Menu<Wry>> {
         .item(&PredefinedMenuItem::select_all(app, None)?)
         .build()?;
 
+    // Grouped View menu: Live Preview / WYSIWYG / Diff are the 3 top-level
+    // modes; Source / Preview are sub-modes reached via ⌘⇧1 / ⌘⇧2 (toggle).
     let view_menu = SubmenuBuilder::new(app, "View")
-        .item(&MenuItem::with_id(
-            app,
-            "mode_source",
-            "Source",
-            true,
-            Some("CmdOrCtrl+1"),
-        )?)
         .item(&MenuItem::with_id(
             app,
             "mode_live",
             "Live Preview",
             true,
-            Some("CmdOrCtrl+2"),
+            Some("CmdOrCtrl+1"),
         )?)
+        .item(&MenuItem::with_id(
+            app,
+            "mode_source",
+            "    Source",
+            true,
+            Some("CmdOrCtrl+Shift+1"),
+        )?)
+        .separator()
         .item(&MenuItem::with_id(
             app,
             "mode_wysiwyg",
             "WYSIWYG",
             true,
-            Some("CmdOrCtrl+3"),
+            Some("CmdOrCtrl+2"),
         )?)
         .item(&MenuItem::with_id(
             app,
             "mode_preview",
-            "Preview",
+            "    Preview",
             true,
-            Some("CmdOrCtrl+4"),
+            Some("CmdOrCtrl+Shift+2"),
         )?)
+        .separator()
         .item(&MenuItem::with_id(
             app,
             "mode_diff",
             "Diff",
             true,
-            Some("CmdOrCtrl+5"),
+            Some("CmdOrCtrl+3"),
         )?)
         .build()?;
 

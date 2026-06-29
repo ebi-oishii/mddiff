@@ -14,6 +14,8 @@ export const ja: Dictionary = {
     wysiwyg: "WYSIWYG",
     preview: "プレビュー",
     diff: "差分",
+    section: "ビュー",
+    toggleSub: "サブモード切替",
   },
   menu: {
     label: "メニュー",
