@@ -1,57 +1,44 @@
 //! Per-line blame across Git history + local save snapshots.
 //!
 //! For each line of the current buffer, identify whether it was last touched
-//! by a Git commit (we hand back sha / author / date / summary), by a local
-//! save snapshot (author = "local", date = latest snapshot timestamp), or by
-//! the live buffer only (no commit, no snapshot — "unsaved").
+//! by a Git commit (we hand back sha / author / date / summary) or by the
+//! buffer's local edits (author = "local", date = latest snapshot timestamp
+//! if any).
 //!
-//! Implementation uses git2's `blame_buffer`: it takes a HEAD blame and an
-//! in-memory buffer, returning a new blame where lines that differ from
-//! HEAD are attributed to a NULL commit. Those NULL-commit lines are then
-//! relabelled as Local / Buffer depending on whether snapshots exist for
-//! this file.
-//!
-//! Caveats:
-//! - We don't (yet) attribute each "local" line to a SPECIFIC snapshot —
-//!   v1 just stamps the latest snapshot's timestamp. Per-snapshot
-//!   attribution would mean re-running diffs against each snapshot.
-//! - The "base" is always HEAD. Blaming at an arbitrary revspec isn't
-//!   wired through yet (DiffView's base picker doesn't affect blame).
+//! Implementation history:
+//! - v1 (v0.2.0): used git2's `blame_buffer` to get a single blame that
+//!   covered HEAD-derived lines and buffer-only lines in one pass.
+//! - v2 (v0.2.3): SEGV reports on certain real files (e.g. CRLF line endings
+//!   in HEAD blob, large drift between HEAD and buffer). `blame_buffer` is a
+//!   thin wrapper around libgit2's notoriously crashy `git_blame_buffer`.
+//!   We now do the alignment ourselves: `blame_file(HEAD)` for canonical
+//!   blame, then `full_diff(head_blob, current)` to map current lines back
+//!   to HEAD lines, falling through to Local/Buffer for the rest.
 
 use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
+use crate::diff::{full_diff, DiffLine};
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum BlameOrigin {
-    /// Line content matches HEAD (modulo snapshot lineage) and Git has a
-    /// real commit for it.
     Git,
-    /// Line differs from HEAD but the file has saved snapshots. We
-    /// optimistically attribute the line to the latest snapshot.
     Local,
-    /// Line differs from HEAD and no snapshots exist (or no snapshot
-    /// contains this content) — purely an in-buffer addition.
     Buffer,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BlameLine {
-    /// 1-based line number into `current_text`.
     pub line_no: u32,
     pub origin: BlameOrigin,
-    /// Full SHA when origin is Git, else None.
     pub sha: Option<String>,
-    /// 8-char abbreviation when origin is Git, else None.
     pub short_sha: Option<String>,
-    /// `"<name>"` for Git lines, literally `"local"` for Local / Buffer.
     pub author: String,
     pub email: Option<String>,
-    /// Unix seconds. 0 when unknown (buffer, no snapshot).
     pub date_ts: i64,
-    /// First line of the commit message, for Git lines.
     pub summary: Option<String>,
 }
 
@@ -67,10 +54,6 @@ pub enum BlameError {
     OutsideRepo,
 }
 
-/// `latest_snapshot_ts_ms` — unix-MILLISECONDS of the most recent local
-/// snapshot for this file, if any. Lines that aren't in HEAD get attributed
-/// to that timestamp (origin=Local). If `None`, those lines are marked as
-/// Buffer (live in-buffer addition, never saved).
 pub fn compute(
     file: &Path,
     current_text: &str,
@@ -90,32 +73,66 @@ pub fn compute(
         return Ok(Vec::new());
     }
 
-    // Empty repo / file not in HEAD yet → everything is local / buffer.
+    // HEAD blame (canonical per-line attribution for the HEAD blob).
     let head_blame = match repo.blame_file(rel, None) {
         Ok(b) => b,
         Err(_) => return Ok(all_local(line_count, latest_snapshot_ts_ms)),
     };
 
-    let buffer_blame = head_blame.blame_buffer(current_text.as_bytes())?;
+    // HEAD blob content. If the file isn't in HEAD's tree at all, the blame
+    // came back empty and we already fell through above — but be defensive.
+    let head_text = match read_head_blob(&repo, rel) {
+        Ok(t) => t,
+        Err(_) => return Ok(all_local(line_count, latest_snapshot_ts_ms)),
+    };
+    // Normalize line endings so `full_diff` aligns CRLF blobs against LF
+    // buffers (and vice versa). Without this, every line of a CRLF blob
+    // would diff as "different" and the blame would collapse to all-local.
+    let head_text = normalize_lf(&head_text);
+    let current_norm = normalize_lf(current_text);
+
+    let diff = full_diff(&head_text, &current_norm);
 
     let mut result = Vec::with_capacity(line_count);
-    for line_idx in 0..line_count {
-        let line_no = (line_idx + 1) as u32;
-        let hunk = buffer_blame.get_line(line_idx + 1);
-        match hunk {
-            Some(hunk) => {
-                let oid = hunk.final_commit_id();
-                if oid.is_zero() {
-                    result.push(local_line(line_no, latest_snapshot_ts_ms));
+    for dl in diff {
+        match dl {
+            DiffLine::Equal { old_no, new_no, .. } => {
+                let line_no = new_no as u32;
+                if let Some(hunk) = head_blame.get_line(old_no) {
+                    result.push(git_line(&repo, line_no, hunk.final_commit_id(), &hunk));
                 } else {
-                    result.push(git_line(&repo, line_no, oid, &hunk));
+                    // Unexpected: blame didn't cover this HEAD line.
+                    // Fall back to local rather than panic.
+                    result.push(local_line(line_no, latest_snapshot_ts_ms));
                 }
             }
-            None => result.push(local_line(line_no, latest_snapshot_ts_ms)),
+            DiffLine::Added { new_no, .. } => {
+                result.push(local_line(new_no as u32, latest_snapshot_ts_ms));
+            }
+            DiffLine::Removed { .. } => {
+                // Line removed from HEAD; not in current. Skip.
+            }
         }
     }
 
     Ok(result)
+}
+
+fn read_head_blob(
+    repo: &git2::Repository,
+    rel: &Path,
+) -> Result<String, git2::Error> {
+    let head = repo.head()?.peel_to_tree()?;
+    let entry = head.get_path(rel)?;
+    let blob = repo.find_blob(entry.id())?;
+    // Lossy conversion is OK for blame alignment — the diff just needs
+    // stable line boundaries, not byte-exact content. Non-UTF-8 source
+    // would have crashed `blame_buffer`; here we degrade gracefully.
+    Ok(String::from_utf8_lossy(blob.content()).into_owned())
+}
+
+fn normalize_lf(s: &str) -> String {
+    s.replace("\r\n", "\n").replace('\r', "\n")
 }
 
 fn git_line(
@@ -124,6 +141,22 @@ fn git_line(
     oid: git2::Oid,
     hunk: &git2::BlameHunk<'_>,
 ) -> BlameLine {
+    if oid.is_zero() {
+        // Defensive: in theory HEAD blame should never have null commits
+        // (those only appear from blame_buffer's working-tree overlay),
+        // but if they do, treat as local instead of building a BlameLine
+        // with empty sha.
+        return BlameLine {
+            line_no,
+            origin: BlameOrigin::Buffer,
+            sha: None,
+            short_sha: None,
+            author: "local".to_string(),
+            email: None,
+            date_ts: 0,
+            summary: None,
+        };
+    }
     let sig = hunk.final_signature();
     let author = sig.name().unwrap_or("").to_string();
     let email = sig.email().map(|s| s.to_string());
@@ -169,8 +202,6 @@ fn all_local(count: usize, latest_snapshot_ts_ms: Option<i64>) -> Vec<BlameLine>
         .collect()
 }
 
-/// Git's blame numbering matches what `str::lines()` produces — the trailing
-/// newline doesn't add a phantom line. Empty text → 0 lines.
 fn count_lines(text: &str) -> usize {
     if text.is_empty() {
         0

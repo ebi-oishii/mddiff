@@ -62,6 +62,10 @@ pub async fn git_read_at(path: PathBuf, revspec: String) -> Result<String, Strin
 /// Per-line blame across Git + local save snapshots. The snapshot timestamp
 /// is sourced from the app data dir (see commands::history) so the blame
 /// view can attribute non-HEAD lines to a "local · <date>" entry.
+///
+/// Wrapped in `catch_unwind`: blame walks libgit2 internals and a panic
+/// there would otherwise tear down the whole webview process. The frontend
+/// shows the error string instead.
 #[tauri::command]
 pub async fn git_blame<R: Runtime>(
     app: AppHandle<R>,
@@ -74,6 +78,18 @@ pub async fn git_blame<R: Runtime>(
         .ok()
         .and_then(|dir| mddiff_core::history::list(&dir, &path).ok())
         .and_then(|snaps| snaps.first().map(|m| m.timestamp_ms));
-    mddiff_core::blame::compute(&path, &current_text, latest_ts_ms)
-        .map_err(|e| e.to_string())
+    let path_clone = path.clone();
+    std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        mddiff_core::blame::compute(&path_clone, &current_text, latest_ts_ms)
+    }))
+    .map_err(|p| {
+        // Best-effort message extraction; panic payloads are most often &str / String.
+        let msg = p
+            .downcast_ref::<&str>()
+            .map(|s| s.to_string())
+            .or_else(|| p.downcast_ref::<String>().cloned())
+            .unwrap_or_else(|| "blame panicked".to_string());
+        format!("blame computation panicked: {msg}")
+    })?
+    .map_err(|e| e.to_string())
 }
