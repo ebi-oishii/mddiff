@@ -32,6 +32,7 @@ export const en = {
     preferences: "Preferences…",
     splitOpen: "Split right",
     splitClose: "Close split",
+    rightPaneMode: "Right pane mode",
     requiresGit: "Requires a Git-managed file",
     requiresMddiff: "Bundle history into a .mddiff package",
     reloadDisabled: "Open a file first",
