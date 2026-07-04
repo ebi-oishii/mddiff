@@ -39,6 +39,10 @@
   import HistoryBanner from "$lib/components/HistoryBanner.svelte";
   import { extractHeadings, activeHeadingIndex } from "$lib/views/outline";
   import { settings, FONT_SIZE_PX } from "$lib/stores/settings.svelte";
+  import {
+    applyHighlightTheme,
+    loadExtraLanguages,
+  } from "$lib/views/highlight.svelte";
   import SourceView from "$lib/views/SourceView.svelte";
   import LivePreviewView from "$lib/views/LivePreviewView.svelte";
   import WysiwygView from "$lib/views/WysiwygView.svelte";
@@ -244,6 +248,39 @@
   $effect(() => {
     if (typeof document === "undefined") return;
     document.documentElement.dataset.editorTheme = settings.editorTheme;
+  });
+
+  // OS light/dark preference tracked reactively so hljs theme swap
+  // follows the system when settings.theme is "auto".
+  let osPrefersDark = $state(false);
+  $effect(() => {
+    if (typeof window === "undefined" || !window.matchMedia) return;
+    const mql = window.matchMedia("(prefers-color-scheme: dark)");
+    osPrefersDark = mql.matches;
+    const onChange = (e: MediaQueryListEvent) => {
+      osPrefersDark = e.matches;
+    };
+    mql.addEventListener("change", onChange);
+    return () => mql.removeEventListener("change", onChange);
+  });
+
+  // Apply the appropriate highlight.js theme CSS (light or dark) based
+  // on the effective theme. `applyHighlightTheme` idempotently updates a
+  // single style tag in the document head.
+  $effect(() => {
+    const isDark =
+      settings.theme === "dark" ||
+      (settings.theme === "auto" && osPrefersDark);
+    applyHighlightTheme(
+      isDark ? settings.codeHighlightThemeDark : settings.codeHighlightThemeLight,
+    );
+  });
+
+  // Kick off dynamic load of any extra highlight.js languages once
+  // settings have been hydrated. Each extra becomes its own lazy chunk
+  // via import.meta.glob, so unset extras cost nothing.
+  $effect(() => {
+    void loadExtraLanguages(settings.codeHighlightExtras);
   });
 
   $effect(() => {
