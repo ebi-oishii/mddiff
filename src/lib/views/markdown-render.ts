@@ -4,6 +4,7 @@ import DOMPurify from "dompurify";
 import taskLists from "markdown-it-task-lists";
 import anchor from "markdown-it-anchor";
 import { rewriteRelativeImageSrc } from "./image-path";
+import { hljs } from "./highlight.svelte";
 
 /**
  * Create a fresh MarkdownIt instance configured the way mddiff's Preview / Diff
@@ -24,11 +25,35 @@ import { rewriteRelativeImageSrc } from "./image-path";
  * returned instance before passing it to {@link renderWithLineMap}.
  */
 export function createPreviewMd(): MarkdownIt {
-  const md = new MarkdownIt({
+  // Explicit type annotation is required because `highlight` below closes
+  // over `md` to reach `md.utils.escapeHtml`, and TS would otherwise fail
+  // to infer the type due to the circular self-reference.
+  const md: MarkdownIt = new MarkdownIt({
     html: true,
     linkify: true,
     breaks: false,
     typographer: true,
+    // Fenced code blocks with a language tag get run through highlight.js.
+    // Unknown languages (or missing tag) fall back to escaped plain text
+    // wrapped in the same `.hljs` class so the theme's background /
+    // foreground still apply — this way every code block gets consistent
+    // styling regardless of language coverage.
+    highlight: (str, lang): string => {
+      if (lang && hljs.getLanguage(lang)) {
+        try {
+          return (
+            '<pre class="hljs"><code>' +
+            hljs.highlight(str, { language: lang, ignoreIllegals: true }).value +
+            "</code></pre>"
+          );
+        } catch {
+          // Fall through to plain rendering on any parser error.
+        }
+      }
+      return (
+        '<pre class="hljs"><code>' + md.utils.escapeHtml(str) + "</code></pre>"
+      );
+    },
   });
   md.use(taskLists, { enabled: false, label: false });
   // Auto-generate `id="..."` slugs on headings so `[link](#installation)`

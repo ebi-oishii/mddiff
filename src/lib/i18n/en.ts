@@ -71,6 +71,7 @@ export const en = {
     sectionLanguage: "Language",
     sectionFile: "File",
     sectionSource: "Source view",
+    sectionCodeHighlight: "Code syntax highlighting",
     sectionDiff: "Diff view",
     theme: "Theme",
     themeAuto: "Auto (follow OS)",
@@ -90,6 +91,15 @@ export const en = {
     spellcheck: "Spell check",
     spellcheckHint:
       "Uses the OS / browser dictionary. Underlines unrecognized words in the editable views (Source / Live Preview / WYSIWYG); right-click for suggestions. No effect on Preview / Diff.",
+    codeHighlightThemeLight: "Code theme (light mode)",
+    codeHighlightThemeDark: "Code theme (dark mode)",
+    codeHighlightThemeHint:
+      "Themes apply to fenced code blocks in Preview and Live Preview. The light/dark pair is selected automatically based on the effective app theme.",
+    codeHighlightExtras: "Additional languages",
+    codeHighlightExtrasNone: "None selected",
+    codeHighlightExtrasCount: "{n} selected",
+    codeHighlightExtrasHint:
+      "The common set (~35 languages: JS/TS/Python/Rust/Go/C/C++/Java/Bash/JSON/YAML/HTML/CSS/SQL/etc.) is always loaded. Enable extras for less-common languages; each is loaded lazily on first use.",
     tabWidth: "Tab width",
     tab2: "2 spaces",
     tab4: "4 spaces",

@@ -4,6 +4,11 @@ export type Theme = "auto" | "light" | "dark";
 export type FontSize = "small" | "medium" | "large";
 export type TabWidth = 2 | 4 | 8;
 export type EditorTheme = "github" | "solarized" | "dracula";
+/** highlight.js theme name (matches filenames under
+ * `highlight.js/styles/*.css`). The registry of shipped themes lives in
+ * `src/lib/views/highlight.svelte.ts` — keep this string typed loosely so
+ * we can extend the registry without threading the type through here. */
+export type CodeHighlightTheme = string;
 
 export interface Settings {
   theme: Theme;
@@ -38,6 +43,16 @@ export interface Settings {
    * on view (re)mount — we don't reconfigure CM's contentAttributes
    * dynamically. */
   spellcheck: boolean;
+  /** highlight.js theme applied to fenced code blocks when the app is in
+   * light mode. Matches a filename under `highlight.js/styles/`. */
+  codeHighlightThemeLight: CodeHighlightTheme;
+  /** Same, but for dark mode. Swapped automatically based on the effective
+   * light/dark state (auto follows OS). */
+  codeHighlightThemeDark: CodeHighlightTheme;
+  /** Names of highlight.js languages loaded in addition to the built-in
+   * "common" set (~35 languages). Each name is loaded lazily via dynamic
+   * import at startup, so shipping default = [] costs zero extra bundle. */
+  codeHighlightExtras: string[];
 }
 
 const STORAGE_KEY = "mddiff-settings-v1";
@@ -55,6 +70,9 @@ const DEFAULTS: Settings = {
   editorTheme: "github",
   outlineOpen: false,
   spellcheck: false,
+  codeHighlightThemeLight: "github",
+  codeHighlightThemeDark: "github-dark",
+  codeHighlightExtras: [],
 };
 
 function load(): Settings {
@@ -82,6 +100,13 @@ class SettingsStore {
   editorTheme = $state<EditorTheme>(DEFAULTS.editorTheme);
   outlineOpen = $state<boolean>(DEFAULTS.outlineOpen);
   spellcheck = $state<boolean>(DEFAULTS.spellcheck);
+  codeHighlightThemeLight = $state<CodeHighlightTheme>(
+    DEFAULTS.codeHighlightThemeLight,
+  );
+  codeHighlightThemeDark = $state<CodeHighlightTheme>(
+    DEFAULTS.codeHighlightThemeDark,
+  );
+  codeHighlightExtras = $state<string[]>([...DEFAULTS.codeHighlightExtras]);
 
   /** Hydrate from localStorage. Call once at app mount on the client. */
   hydrate() {
@@ -98,6 +123,9 @@ class SettingsStore {
     this.editorTheme = s.editorTheme;
     this.outlineOpen = s.outlineOpen;
     this.spellcheck = s.spellcheck;
+    this.codeHighlightThemeLight = s.codeHighlightThemeLight;
+    this.codeHighlightThemeDark = s.codeHighlightThemeDark;
+    this.codeHighlightExtras = [...s.codeHighlightExtras];
   }
 
   persist() {
@@ -115,6 +143,9 @@ class SettingsStore {
       editorTheme: this.editorTheme,
       outlineOpen: this.outlineOpen,
       spellcheck: this.spellcheck,
+      codeHighlightThemeLight: this.codeHighlightThemeLight,
+      codeHighlightThemeDark: this.codeHighlightThemeDark,
+      codeHighlightExtras: [...this.codeHighlightExtras],
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot));
   }
@@ -132,6 +163,9 @@ class SettingsStore {
     this.editorTheme = DEFAULTS.editorTheme;
     this.outlineOpen = DEFAULTS.outlineOpen;
     this.spellcheck = DEFAULTS.spellcheck;
+    this.codeHighlightThemeLight = DEFAULTS.codeHighlightThemeLight;
+    this.codeHighlightThemeDark = DEFAULTS.codeHighlightThemeDark;
+    this.codeHighlightExtras = [...DEFAULTS.codeHighlightExtras];
     this.persist();
   }
 }
