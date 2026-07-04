@@ -6,6 +6,7 @@
   import FindBar from "$lib/components/FindBar.svelte";
   import { useFind } from "../use-find.svelte";
   import { createPreviewMd, renderWithLineMap } from "../markdown-render";
+  import { renderPlaceholders as renderMermaidPlaceholders } from "../mermaid.svelte";
   import { handleLinkClick } from "../link-click";
 
   function onArticleClick(event: MouseEvent) {
@@ -261,6 +262,18 @@
   const newHtml = $derived(
     highlightedHtml(payload.new_text, payload.hunks, "new"),
   );
+
+  // Upgrade mermaid placeholders on both panes after each html swap.
+  // Diff SBS renders the same pipeline as Preview so both sides may
+  // contain diagrams. Deferred a frame so {@html} has flushed.
+  $effect(() => {
+    void oldHtml;
+    void newHtml;
+    requestAnimationFrame(() => {
+      void renderMermaidPlaceholders(oldScroller ?? null);
+      void renderMermaidPlaceholders(newScroller ?? null);
+    });
+  });
 </script>
 
 <div class="sbs" bind:this={sbsWrap}>
@@ -491,5 +504,34 @@
   .preview :global(.mddiff-changed-removed) {
     border-left-color: #cf222e;
     background: light-dark(#ffebe9, rgba(207, 34, 46, 0.12));
+  }
+
+  /* Mermaid placeholder / rendered SVG frame — see PreviewView for the
+     detailed rationale. Duplicated here so Diff SBS matches without
+     coupling the two components' style. */
+  .preview :global(.mddiff-mermaid) {
+    display: block;
+    margin: 1em auto;
+    text-align: center;
+    max-width: 100%;
+    overflow-x: auto;
+  }
+  .preview :global(.mddiff-mermaid svg) {
+    max-width: 100%;
+    height: auto;
+  }
+  .preview :global(.mddiff-mermaid-error) {
+    text-align: left;
+    border: 1px solid light-dark(#f5a5a5, #7a3a3a);
+    background: light-dark(#fff5f5, #2a1717);
+    border-radius: 6px;
+    padding: 0.75em 1em;
+  }
+  .preview :global(.mddiff-mermaid-error-msg) {
+    margin: 0;
+    color: light-dark(#a02020, #ff9b9b);
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 0.85em;
+    white-space: pre-wrap;
   }
 </style>
