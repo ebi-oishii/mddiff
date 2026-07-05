@@ -3,8 +3,14 @@ import type Token from "markdown-it/lib/token.mjs";
 import DOMPurify from "dompurify";
 import taskLists from "markdown-it-task-lists";
 import anchor from "markdown-it-anchor";
+import katex from "@vscode/markdown-it-katex";
 import { rewriteRelativeImageSrc } from "./image-path";
 import { hljs } from "./highlight.svelte";
+// KaTeX ships its own stylesheet that positions the rendered math and
+// declares @font-face for the KaTeX_* fonts. Importing it as a side
+// effect lets Vite bundle the CSS + the WOFF/WOFF2 font files with the
+// rest of the app assets — no manual `<link>` or font copying needed.
+import "katex/dist/katex.min.css";
 
 /**
  * Create a fresh MarkdownIt instance configured the way mddiff's Preview / Diff
@@ -60,6 +66,16 @@ export function createPreviewMd(): MarkdownIt {
   // anchor jumps work without manual id markup. Default GFM-style slugifier
   // matches what most users expect (`Installation` → `installation`).
   md.use(anchor, { permalink: false });
+  // LaTeX math: `$...$` inline, `$$...$$` block. `\begin{env}...\end{env}`
+  // outside of `$$` needs `enableBareBlocks: true` to be recognized; leave
+  // it off for now to keep dollar-heavy prose (currency etc.) matching
+  // upstream markdown semantics — users can escape with `\$` when needed.
+  md.use(katex, {
+    throwOnError: false,
+    // Emit an error node inline rather than aborting the render for
+    // syntactically invalid math. Matches the mermaid error UX.
+    errorColor: "#a02020",
+  });
 
   // Intercept ```mermaid ... ``` fences before the highlight option would
   // emit a plain-text fallback. We swap in a placeholder div carrying
@@ -162,6 +178,10 @@ export function renderWithLineMap(
     // off to the OS opener.
     ALLOWED_URI_REGEXP:
       /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|sms|cid|xmpp|asset|file):|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i,
+    // Also allow the MathML profile so KaTeX's <math>...<mrow>... output
+    // survives sanitization. KaTeX also emits an SVG fallback for legacy
+    // browsers; keep the SVG profile enabled too.
+    USE_PROFILES: { html: true, mathMl: true, svg: true },
   });
 }
 

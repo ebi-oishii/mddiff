@@ -103,11 +103,49 @@ echo "==> Bundling highlight.js common set (esbuild)"
   --outfile="$APPEX/Contents/Resources/highlight.min.js" >/dev/null)
 rm -f "$HLJS_ENTRY"
 
-echo "==> Composing preview.css (base + light/dark hljs themes)"
+# --------------------------------------------------------------------
+# KaTeX + @vscode/markdown-it-katex bundle + WOFF2 fonts.
+# --------------------------------------------------------------------
+KATEX_DIR="$REPO/node_modules/katex/dist"
+if [ ! -d "$KATEX_DIR" ]; then
+  echo "!! katex not found in node_modules." >&2
+  echo "   Run 'npm install' in the repo root first." >&2
+  exit 1
+fi
+
+KATEX_ENTRY="$BUILD_DIR/.katex-entry.mjs"
+cat > "$KATEX_ENTRY" <<'EOF'
+import katex from "katex";
+import katexPlugin from "@vscode/markdown-it-katex";
+window.katex = katex;
+// Handle both `export default` and `module.exports = fn` shapes;
+// @vscode/markdown-it-katex ships a CJS default that esbuild may
+// wrap under `.default`.
+window.markdownItKatex = katexPlugin.default ?? katexPlugin;
+EOF
+
+echo "==> Bundling KaTeX + markdown-it-katex (esbuild)"
+(cd "$REPO" && npx --no-install esbuild "$KATEX_ENTRY" \
+  --bundle --minify --format=iife \
+  --outfile="$APPEX/Contents/Resources/katex-bundle.js" >/dev/null)
+rm -f "$KATEX_ENTRY"
+
+echo "==> Copying KaTeX WOFF2 fonts"
+mkdir -p "$APPEX/Contents/Resources/fonts"
+# WOFF2 only — WKWebView supports it and dropping WOFF/TTF fallbacks
+# saves ~875KB inside the extension. The KaTeX CSS lists WOFF2 first
+# in each src: rule so the browser picks it up before failing over
+# to the (missing) legacy fonts, and the failed fetches are silent
+# in the QuickLook popover.
+cp "$KATEX_DIR/fonts"/*.woff2 "$APPEX/Contents/Resources/fonts/"
+
+echo "==> Composing preview.css (base + light/dark hljs themes + KaTeX)"
 # Preview base + hljs themes wrapped in prefers-color-scheme media
 # queries so the QL popover follows the system light/dark preference
 # (QL extensions are isolated processes and can't read the app's own
 # theme preference, so following the OS is the sane default here).
+# KaTeX CSS is appended verbatim; it references fonts via `url(fonts/...)`
+# relative paths which resolve against Resources/fonts/.
 PREVIEW_CSS="$APPEX/Contents/Resources/preview.css"
 {
   cat "$HERE/resources/preview.css"
@@ -118,6 +156,8 @@ PREVIEW_CSS="$APPEX/Contents/Resources/preview.css"
   printf '\n@media (prefers-color-scheme: dark) {\n'
   cat "$HLJS_STYLES_DIR/github-dark.css"
   printf '\n}\n'
+  printf '\n\n/* --- KaTeX --- */\n'
+  cat "$KATEX_DIR/katex.min.css"
 } > "$PREVIEW_CSS"
 
 echo "==> Codesigning (identity: $IDENTITY)"

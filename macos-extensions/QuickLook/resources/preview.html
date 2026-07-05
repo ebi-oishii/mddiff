@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet" href="preview.css">
   <script src="highlight.min.js"></script>
+  <script src="katex-bundle.js"></script>
   <script src="markdown-it.min.js"></script>
 </head>
 <body>
@@ -12,6 +13,7 @@
   <script>
     (function () {
       var hljs = window.hljs;
+      var markdownItKatex = window.markdownItKatex;
       var md = window.markdownit({
         html: false,
         linkify: true,
@@ -33,6 +35,9 @@
           return '<pre class="hljs"><code>' + md.utils.escapeHtml(str) + '</code></pre>';
         },
       });
+      if (markdownItKatex) {
+        md.use(markdownItKatex, { throwOnError: false, errorColor: '#a02020' });
+      }
       // Injected by the Swift host as a JSON-encoded string literal so all
       // escaping (quotes, backslashes, non-ASCII) rides on JSONEncoder's
       // guarantees rather than fragile string substitution.
