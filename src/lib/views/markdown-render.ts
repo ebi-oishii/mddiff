@@ -61,6 +61,25 @@ export function createPreviewMd(): MarkdownIt {
   // matches what most users expect (`Installation` → `installation`).
   md.use(anchor, { permalink: false });
 
+  // Intercept ```mermaid ... ``` fences before the highlight option would
+  // emit a plain-text fallback. We swap in a placeholder div carrying
+  // the raw source in a data-* attribute; the async mermaid module (see
+  // `mermaid.svelte.ts`) walks the rendered DOM later and replaces
+  // placeholders with the rendered SVG. Doing the swap here (rather
+  // than post-processing the whole HTML) keeps the pipeline single-pass
+  // and lets the sanitizer see (and preserve) the placeholder attributes.
+  const defaultFence = md.renderer.rules.fence;
+  md.renderer.rules.fence = function (tokens, idx, options, env, self) {
+    const info = tokens[idx].info.trim().toLowerCase();
+    if (info === "mermaid") {
+      const source = md.utils.escapeHtml(tokens[idx].content);
+      return `<div class="mddiff-mermaid" data-mermaid-source="${source}"></div>`;
+    }
+    return defaultFence
+      ? defaultFence(tokens, idx, options, env, self)
+      : self.renderToken(tokens, idx, options);
+  };
+
   const defaultImage = md.renderer.rules.image;
   md.renderer.rules.image = function (tokens, idx, options, env, self) {
     const token = tokens[idx];
@@ -133,8 +152,9 @@ export function renderWithLineMap(
 
   return DOMPurify.sanitize(md.renderer.render(tokens, md.options, env), {
     // markdown-it-anchor adds `id` to headings; keep that. data-mddiff-line
-    // is our own attribute for scroll sync.
-    ADD_ATTR: ["data-mddiff-line", "id"],
+    // is our own attribute for scroll sync. data-mermaid-source carries
+    // the raw diagram body for the client-side renderer to pick up.
+    ADD_ATTR: ["data-mddiff-line", "data-mermaid-source", "id"],
     // Default DOMPurify URI regex allows http(s)/mailto/tel/sms/cid/xmpp/ftp
     // but blocks custom schemes. Tauri's `convertFileSrc()` returns
     // `asset://localhost/...` URLs, which we need to keep so pasted images

@@ -6,6 +6,7 @@
   import { attachScrollTracker, type ScrollTracker } from "./scroll-tracker";
   import { createPreviewMd, renderWithLineMap } from "./markdown-render";
   import { handleLinkClick } from "./link-click";
+  import { renderPlaceholders as renderMermaidPlaceholders } from "./mermaid.svelte";
 
   let { text }: { text: string } = $props();
 
@@ -73,6 +74,18 @@
     void html;
     void find.query;
     void find.open;
+  });
+
+  // Whenever the rendered HTML changes, kick the mermaid renderer to
+  // upgrade any placeholder divs into real SVGs. Defer to
+  // requestAnimationFrame so the {@html} update has definitely landed
+  // in the DOM before we walk it. Mermaid itself is code-split, so this
+  // stays cheap if no diagrams are present.
+  $effect(() => {
+    void html;
+    requestAnimationFrame(() => {
+      void renderMermaidPlaceholders(scroller ?? null);
+    });
   });
 
   onMount(() => {
@@ -221,5 +234,33 @@
   }
   .preview :global(img) {
     max-width: 100%;
+  }
+  /* Mermaid diagram placeholders. Center the rendered SVG and keep it
+     within the reading-column width. The error state is a red-tinted
+     pre so a busted diagram is visually clear but doesn't scream. */
+  .preview :global(.mddiff-mermaid) {
+    display: block;
+    margin: 1em auto;
+    text-align: center;
+    max-width: 100%;
+    overflow-x: auto;
+  }
+  .preview :global(.mddiff-mermaid svg) {
+    max-width: 100%;
+    height: auto;
+  }
+  .preview :global(.mddiff-mermaid-error) {
+    text-align: left;
+    border: 1px solid light-dark(#f5a5a5, #7a3a3a);
+    background: light-dark(#fff5f5, #2a1717);
+    border-radius: 6px;
+    padding: 0.75em 1em;
+  }
+  .preview :global(.mddiff-mermaid-error-msg) {
+    margin: 0;
+    color: light-dark(#a02020, #ff9b9b);
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 0.85em;
+    white-space: pre-wrap;
   }
 </style>
