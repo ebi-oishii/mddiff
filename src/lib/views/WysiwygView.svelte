@@ -317,8 +317,11 @@
     editor = null;
   });
 
+  // Check `ready` ($state) before `editor` (plain let, assigned after the
+  // async mount). Short-circuiting on a null `editor` in the first run left
+  // this effect with no dependencies, so `text` changes never reached it.
   $effect(() => {
-    if (editor && ready && text !== lastEmitted) {
+    if (ready && editor && text !== lastEmitted) {
       lastEmitted = text;
       editor.action(replaceAll(text));
     }
