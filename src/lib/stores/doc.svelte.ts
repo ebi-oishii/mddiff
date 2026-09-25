@@ -53,6 +53,13 @@ class DocStore {
    */
   snapshotsVersion = $state(0);
 
+  /**
+   * Bumped by every `load()`. WYSIWYG takes its content only at mount, so
+   * the page keys it on this to remount when a file is (re)loaded — but not
+   * on Save As, where the path changes and the content doesn't.
+   */
+  loadVersion = $state(0);
+
   /** Request the active view to scroll to a 1-based source line. */
   jumpToLine(line: number) {
     this.pendingScrollLine = line;
@@ -110,6 +117,7 @@ class DocStore {
     this.currentLine = 1;
     this.pendingDiskCompare = null;
     this.history = null;
+    this.loadVersion += 1;
   }
 
   /**

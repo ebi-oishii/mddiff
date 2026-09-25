@@ -713,8 +713,14 @@
     }
   });
 
+  // The banner is about the previous load; the remounted WYSIWYG raises it
+  // again if the new content gets normalized too.
   $effect(() => {
-    void doc.path;
+    void doc.loadVersion;
+    normalization = null;
+  });
+
+  $effect(() => {
     if (mode !== "wysiwyg") normalization = null;
   });
 
@@ -1090,11 +1096,16 @@
               onerror={(msg) => (error = msg)}
             />
           {:else if mode === "wysiwyg"}
-            <WysiwygView
-              text={doc.text}
-              onchange={(t) => doc.setText(t)}
-              onnormalize={handleNormalize}
-            />
+            <!-- WYSIWYG only takes its content at mount (normalization
+                 baseline, banner, line map all assume that), so remount it
+                 when a file is loaded. -->
+            {#key doc.loadVersion}
+              <WysiwygView
+                text={doc.text}
+                onchange={(t) => doc.setText(t)}
+                onnormalize={handleNormalize}
+              />
+            {/key}
           {:else if mode === "preview"}
             <PreviewView text={doc.text} />
           {:else}
@@ -1151,11 +1162,13 @@
                 onerror={(msg) => (error = msg)}
               />
             {:else if rightMode === "wysiwyg"}
-              <WysiwygView
-                text={doc.text}
-                onchange={(t) => doc.setText(t)}
-                onnormalize={() => {}}
-              />
+              {#key doc.loadVersion}
+                <WysiwygView
+                  text={doc.text}
+                  onchange={(t) => doc.setText(t)}
+                  onnormalize={() => {}}
+                />
+              {/key}
             {:else if rightMode === "preview"}
               <PreviewView text={doc.text} />
             {:else}
