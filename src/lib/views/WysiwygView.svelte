@@ -317,17 +317,10 @@
     editor = null;
   });
 
-  // Check `ready` ($state) before `editor` (plain let, assigned after the
-  // async mount). Short-circuiting on a null `editor` in the first run left
-  // this effect with no dependencies, so `text` changes never reached it.
-  //
-  // replaceAll makes the listener fire markdownUpdated ~200ms later with
-  // Milkdown's own serialization. Record that as lastEmitted so the listener
-  // doesn't write the normalized form back into doc.text.
   $effect(() => {
-    if (ready && editor && text !== lastEmitted) {
+    if (editor && ready && text !== lastEmitted) {
+      lastEmitted = text;
       editor.action(replaceAll(text));
-      lastEmitted = editor.action(getMarkdown());
     }
   });
 
