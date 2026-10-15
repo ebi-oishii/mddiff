@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleIdentifier</key>
+    <string>dev.ebioishii.mddiff.QuickLook</string>
+    <key>CFBundleExecutable</key>
+    <string>MddiffQuickLook</string>
+    <key>CFBundleName</key>
+    <string>Mddiff Quick Look</string>
+    <key>CFBundleDisplayName</key>
+    <string>Mddiff Quick Look</string>
+    <key>CFBundlePackageType</key>
+    <string>XPC!</string>
+    <key>CFBundleShortVersionString</key>
+    <string>1.0</string>
+    <key>CFBundleVersion</key>
+    <string>1</string>
+    <key>LSMinimumSystemVersion</key>
+    <string>11.0</string>
+    <key>NSExtension</key>
+    <dict>
+        <key>NSExtensionPointIdentifier</key>
+        <string>com.apple.quicklook.preview</string>
+        <key>NSExtensionPrincipalClass</key>
+        <string>MddiffQuickLook.PreviewProvider</string>
+        <key>NSExtensionAttributes</key>
+        <dict>
+            <!-- Register for every UTI we've seen macOS assign to a markdown
+                 file across versions: `net.daringfireball.markdown` is what
+                 GitHub/Marked/etc. seed into LaunchServices, and the more
+                 recent `public.markdown` is Apple's own conformance.
+                 Registering both maximizes hit rate without duplicating
+                 previews. -->
+            <key>QLSupportedContentTypes</key>
+            <array>
+                <string>net.daringfireball.markdown</string>
+                <string>public.markdown</string>
+            </array>
+            <key>QLSupportsSearchableItems</key>
+            <false/>
+        </dict>
+    </dict>
+</dict>
+</plist>
