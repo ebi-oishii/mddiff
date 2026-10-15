@@ -169,8 +169,11 @@
     font-size: 0.9em;
     font-family: ui-monospace, monospace;
   }
+  /* Frame + spacing for code blocks; background/foreground are painted by
+     the active highlight.js theme via the injected `.hljs` class (see
+     `highlight.svelte.ts`). Keeping padding + rounding here means the
+     theme's palette lands inside a consistent shape across theme swaps. */
   .preview :global(pre) {
-    background: light-dark(#f5f5f5, #1f1f1f);
     padding: 1em;
     border-radius: 6px;
     overflow: auto;
@@ -178,6 +181,12 @@
   .preview :global(pre code) {
     background: transparent;
     padding: 0;
+  }
+  /* Fallback background for pre elements that missed the `.hljs` class
+     (e.g. sanitizer stripped it). Never triggered in the default pipeline
+     but keeps us from showing bare text on a canvas-colored block. */
+  .preview :global(pre:not(.hljs)) {
+    background: light-dark(#f5f5f5, #1f1f1f);
   }
   .preview :global(blockquote) {
     margin: 1em 0;

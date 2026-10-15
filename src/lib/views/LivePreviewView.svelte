@@ -9,6 +9,7 @@
   import { settings } from "$lib/stores/settings.svelte";
   import { mddiffCmTheme } from "./cm-theme";
   import { markdownSpellcheckMask } from "./cm-spellcheck-mask";
+  import { codeHighlightPlugin } from "./cm-highlight";
   import FindBar from "$lib/components/FindBar.svelte";
   import { findExtension } from "./find-cm.svelte";
   import { useCmFind } from "./use-find.svelte";
@@ -69,6 +70,7 @@
         EditorView.lineWrapping,
         spellcheckComp.of(spellcheckExt(settings.spellcheck)),
         markdownSpellcheckMask,
+        codeHighlightPlugin,
         mddiffCmTheme,
         livePreviewExtension,
         EditorView.updateListener.of((u) => {

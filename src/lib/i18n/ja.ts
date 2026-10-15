@@ -70,6 +70,7 @@ export const ja: Dictionary = {
     sectionLanguage: "言語",
     sectionFile: "ファイル",
     sectionSource: "Source ビュー",
+    sectionCodeHighlight: "コードのシンタックスハイライト",
     sectionDiff: "Diff ビュー",
     theme: "テーマ",
     themeAuto: "自動（OS に追従）",
@@ -89,6 +90,15 @@ export const ja: Dictionary = {
     spellcheck: "スペルチェック",
     spellcheckHint:
       "OS / ブラウザの辞書を使用。Source / Live Preview / WYSIWYG の編集可能ビューで未知語に下線、右クリックで修正候補。Preview / Diff には作用しない。",
+    codeHighlightThemeLight: "コード配色（ライトモード）",
+    codeHighlightThemeDark: "コード配色（ダークモード）",
+    codeHighlightThemeHint:
+      "Preview と Live Preview のコードブロックに適用。ライト／ダークのペアはアプリの実効テーマに応じて自動で切り替わります。",
+    codeHighlightExtras: "追加言語",
+    codeHighlightExtrasNone: "選択なし",
+    codeHighlightExtrasCount: "{n} 言語を有効化",
+    codeHighlightExtrasHint:
+      "Common セット (JS/TS/Python/Rust/Go/C/C++/Java/Bash/JSON/YAML/HTML/CSS/SQL 等 ~35 言語) は常時ロード。少数派の言語は追加で有効化してください（初回使用時に遅延ロード）。",
     tabWidth: "タブ幅",
     tab2: "2 スペース",
     tab4: "4 スペース",

@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="preview.css">
+  <script src="highlight.min.js"></script>
+  <script src="markdown-it.min.js"></script>
+</head>
+<body>
+  <article class="preview" id="content"></article>
+  <script>
+    (function () {
+      var hljs = window.hljs;
+      var md = window.markdownit({
+        html: false,
+        linkify: true,
+        breaks: false,
+        typographer: true,
+        // Fenced code blocks with a known language get syntax highlighted;
+        // unknown ones fall back to plain-escaped output wrapped in the
+        // same `.hljs` class so the theme's frame still paints.
+        highlight: function (str, lang) {
+          if (lang && hljs && hljs.getLanguage(lang)) {
+            try {
+              return '<pre class="hljs"><code>' +
+                hljs.highlight(str, { language: lang, ignoreIllegals: true }).value +
+                '</code></pre>';
+            } catch (e) {
+              /* fall through */
+            }
+          }
+          return '<pre class="hljs"><code>' + md.utils.escapeHtml(str) + '</code></pre>';
+        },
+      });
+      // Injected by the Swift host as a JSON-encoded string literal so all
+      // escaping (quotes, backslashes, non-ASCII) rides on JSONEncoder's
+      // guarantees rather than fragile string substitution.
+      var src = {{MARKDOWN_JSON}};
+      document.getElementById("content").innerHTML = md.render(src);
+    })();
+  </script>
+</body>
+</html>

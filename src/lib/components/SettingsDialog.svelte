@@ -8,6 +8,11 @@
   } from "$lib/stores/settings.svelte";
   import type { DiffSubmode, Mode } from "$lib/types";
   import { i18n, type Locale } from "$lib/i18n/index.svelte";
+  import {
+    EXTRA_LANGUAGES,
+    THEMES_LIGHT,
+    THEMES_DARK,
+  } from "$lib/views/highlight.svelte";
 
   let { onClose }: { onClose: () => void } = $props();
 
@@ -179,6 +184,78 @@
       </select>
     </div>
 
+    <div class="section-title">{i18n.t("settings.sectionCodeHighlight")}</div>
+
+    <div class="row">
+      <label for="cheme-light">{i18n.t("settings.codeHighlightThemeLight")}</label>
+      <select
+        id="cheme-light"
+        value={settings.codeHighlightThemeLight}
+        onchange={(e) =>
+          persistChange(
+            "codeHighlightThemeLight",
+            (e.currentTarget as HTMLSelectElement).value,
+          )}
+      >
+        {#each THEMES_LIGHT as t}
+          <option value={t}>{t}</option>
+        {/each}
+      </select>
+    </div>
+
+    <div class="row">
+      <label for="cheme-dark">{i18n.t("settings.codeHighlightThemeDark")}</label>
+      <select
+        id="cheme-dark"
+        value={settings.codeHighlightThemeDark}
+        onchange={(e) =>
+          persistChange(
+            "codeHighlightThemeDark",
+            (e.currentTarget as HTMLSelectElement).value,
+          )}
+      >
+        {#each THEMES_DARK as t}
+          <option value={t}>{t}</option>
+        {/each}
+      </select>
+    </div>
+    <p class="row-hint">{i18n.t("settings.codeHighlightThemeHint")}</p>
+
+    <div class="row extras-row">
+      <label for="cheme-extras">{i18n.t("settings.codeHighlightExtras")}</label>
+      <div class="extras">
+        <details>
+          <summary>
+            {settings.codeHighlightExtras.length === 0
+              ? i18n.t("settings.codeHighlightExtrasNone")
+              : i18n.t("settings.codeHighlightExtrasCount", {
+                  n: String(settings.codeHighlightExtras.length),
+                })}
+          </summary>
+          <div class="extras-grid">
+            {#each EXTRA_LANGUAGES as name}
+              {@const checked = settings.codeHighlightExtras.includes(name)}
+              <label class="extras-item">
+                <input
+                  type="checkbox"
+                  {checked}
+                  onchange={(e) => {
+                    const on = (e.currentTarget as HTMLInputElement).checked;
+                    const next = on
+                      ? [...settings.codeHighlightExtras, name]
+                      : settings.codeHighlightExtras.filter((x) => x !== name);
+                    persistChange("codeHighlightExtras", next);
+                  }}
+                />
+                <span>{name}</span>
+              </label>
+            {/each}
+          </div>
+        </details>
+      </div>
+    </div>
+    <p class="row-hint">{i18n.t("settings.codeHighlightExtrasHint")}</p>
+
     <div class="section-title">{i18n.t("settings.sectionDiff")}</div>
 
     <div class="row">
@@ -303,6 +380,51 @@
     font-size: 0.78rem;
     color: var(--mddiff-text-mute);
     line-height: 1.4;
+  }
+  /* Extras: 156 language checkboxes are too many to show flat; wrap in a
+     collapsed <details> summary + a 3-column grid so the dialog stays
+     compact until the user opens it. */
+  .extras-row {
+    align-items: flex-start;
+  }
+  .extras {
+    flex: 1;
+    min-width: 0;
+  }
+  .extras summary {
+    cursor: pointer;
+    font-size: 0.85rem;
+    color: var(--mddiff-text);
+    padding: 0.35rem 0.5rem;
+    border: 1px solid var(--mddiff-border);
+    border-radius: 4px;
+    background: var(--mddiff-surface);
+  }
+  .extras summary:hover {
+    background: var(--mddiff-surface-hi);
+  }
+  .extras-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.15rem 0.75rem;
+    margin-top: 0.5rem;
+    max-height: 18rem;
+    overflow-y: auto;
+    padding: 0.4rem 0.5rem;
+    border: 1px solid var(--mddiff-border);
+    border-radius: 4px;
+    font-size: 0.8rem;
+  }
+  .extras-item {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    cursor: pointer;
+    color: var(--mddiff-text);
+    padding: 0.1rem 0;
+  }
+  .extras-item input {
+    margin: 0;
   }
   .actions {
     display: flex;
